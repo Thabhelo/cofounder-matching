@@ -6,7 +6,8 @@
       "WebFetch(domain:github.com)",
       "Bash(gh auth status:*)",
       "Bash(gh repo view:*)",
-      "Bash(gh repo rename:*)"
+      "Bash(gh repo rename:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []
