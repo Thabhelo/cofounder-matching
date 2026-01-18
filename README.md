@@ -4,7 +4,7 @@ Built for TechStars for Cofounders - A centralized platform that helps founders 
 
 ## Project Status
 
-**Planning Phase** - See [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md) for detailed implementation plan.
+**Planning Phase** - See [documentation](./docs/DOCUMENTATION.md) for detailed implementation plan.
 
 ## Overview
 
@@ -24,9 +24,5 @@ This platform helps founders:
 
 ## Documentation
 
-- [Implementation Plan](./IMPLEMENTATION_PLAN.md) - Detailed breakdown of architecture, database schema, API design, and development phases
-- [CLAUDE.md](./CLAUDE.md) - Coding guidelines and practices for AI-assisted development
-
-## Development
-
-See CLAUDE.md for development workflow, coding standards, and commands.
+- [Full Documentation](./docs/DOCUMENTATION.md) - Architecture, database schema, API design, and development phases
+- [License](./docs/LICENSE)

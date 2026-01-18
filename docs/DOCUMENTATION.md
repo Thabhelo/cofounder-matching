@@ -821,10 +821,10 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 This section logs major changes shipped to the project. Only significant changes are recorded here (new features, major refactors, architecture changes).
 
 ### 2026-01-18 00:43 - [d254671] Initial Setup
-- Created project documentation structure (CLAUDE.md, IMPLEMENTATION_PLAN.md, MCP_SETUP.md)
+- Created project documentation structure (CLAUDE.md, IMPLEMENTATION_PLAN.md)
 - Set up repository configuration (.gitignore, .gitattributes, .claudeignore)
-- Configured Claude Code workspace (.claude/ directory with commands and agents)
 - Renamed repository to cofounder-matching
 - Updated README.md with TechStars for Cofounders context
 - Installed Exa MCP server for enhanced search capabilities
+- Removed unnecessary .claude directory (keeping setup minimal)
 
