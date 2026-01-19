@@ -113,6 +113,10 @@ docker-compose down      # Stop database
 - Don't write unnecessary .gitignore entries for things not in the codebase
 - Don't create boilerplate comments that state the obvious
 - Don't add TODO comments without context
+- **Don't create unnecessary documentation files** - use existing files:
+  - Use DOCUMENTATION.md for tracking changes and changelog entries
+  - Use README.md for setup instructions and project overview
+  - Don't create duplicate documentation that already exists elsewhere
 
 ### Development Workflow
 - Don't commit without running the verification loop

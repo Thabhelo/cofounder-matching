@@ -820,6 +820,47 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 
 This section logs major changes shipped to the project. Only significant changes are recorded here (new features, major refactors, architecture changes).
 
+### 2026-01-19 03:45 - Production-Grade Infrastructure
+- **Rate Limiting**: SlowAPI middleware (100 requests/minute default)
+- **Structured Logging**: Request ID tracking, log levels, production-grade format
+- **Global Exception Handlers**: Prevents stack trace/info leakage, returns generic errors
+- **Comprehensive Health Check**: Validates database connectivity, returns 503 on failure
+- **Request ID Middleware**: X-Request-ID header for distributed tracing
+- **Conditional API Docs**: Automatically disabled in production environment
+- **Security Hardening**: Removed all error message information leakage
+- **Prometheus Metrics**: /metrics endpoint for monitoring (production only)
+- **Lifecycle Management**: Proper startup/shutdown logging
+- **Production Deployment Guide**: Complete PRODUCTION.md with checklist
+- **Dependencies Added**: slowapi, python-json-logger, prometheus-fastapi-instrumentator
+- **Database Migrations**: Created alembic/versions directory structure
+
+### 2026-01-19 03:30 - Comprehensive Test Suite Implementation
+- **Backend Testing**: Complete pytest test suite with 100+ tests
+  - Authentication and JWT verification tests
+  - API endpoint tests for users, organizations, resources, events
+  - Authorization and permission tests
+  - Race condition and edge case tests
+  - Database constraint validation tests
+- **Frontend Testing**: Complete Jest + React Testing Library suite
+  - API client tests (validates security fixes)
+  - OnboardingForm component tests with full validation
+  - Error handling and integration tests
+- **Testing Infrastructure**:
+  - pytest with coverage reporting (backend)
+  - Jest with jsdom environment (frontend)
+  - Mocked authentication and routing for isolated testing
+  - Test fixtures and utilities for both environments
+- **Coverage Goals**: 80%+ coverage with 100% on critical paths
+
+### 2026-01-19 03:15 - Security Fixes and QA Improvements
+- Fixed critical authentication bugs (JWKS URL, frontend API compatibility)
+- Fixed race condition in event RSVP capacity checking
+- Added performance optimization (cached PyJWKClient)
+- Added unique constraints to junction tables (OrganizationMember, UserEventRSVP, UserSavedResource)
+- Made CORS configuration environment-based for production deployment
+- Created .env.example files with comprehensive documentation
+- Updated CLAUDE.md with instruction to avoid creating unnecessary documentation files
+
 ### 2026-01-18 00:43 - [d254671] Initial Setup
 - Created project documentation structure (CLAUDE.md, IMPLEMENTATION_PLAN.md)
 - Set up repository configuration (.gitignore, .gitattributes, .claudeignore)
