@@ -42,7 +42,7 @@ jest.mock('@clerk/nextjs', () => ({
     },
     isLoaded: true,
   }),
-  ClerkProvider: ({ children }: { children: React.ReactNode }) => children,
+  ClerkProvider: ({ children }) => children,
 }))
 
 // Mock fetch globally
