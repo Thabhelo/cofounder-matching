@@ -48,8 +48,7 @@ class TestOrganizationCRUD:
         db.add(org1)
         db.commit()
         
-        with pytest.skip("Requires authentication mock"):
-            pass
+        pytest.skip("Requires authentication mock")
     
     def test_filter_by_type(self, client, db):
         """Test filtering organizations by type"""
@@ -89,10 +88,7 @@ class TestOrganizationAuthorization:
     
     def test_creator_auto_added_as_admin(self, client, db, test_user_data, test_organization_data):
         """Test that organization creator is automatically added as admin member"""
-        with pytest.skip("Requires authentication mock"):
-            # Create organization
-            # Verify creator is added as admin member with is_primary=True
-            pass
+        pytest.skip("Requires authentication mock")
     
     def test_non_member_cannot_update(self, client, db, test_user_data, test_organization_data):
         """Test that non-members cannot update organization"""
@@ -100,8 +96,7 @@ class TestOrganizationAuthorization:
         db.add(org)
         db.commit()
         
-        with pytest.skip("Requires authentication mock"):
-            pass
+        pytest.skip("Requires authentication mock")
     
     def test_staff_member_can_update(self, client, db, test_user_data, test_organization_data):
         """Test that staff members can update organization"""
@@ -119,8 +114,7 @@ class TestOrganizationAuthorization:
         db.add(member)
         db.commit()
         
-        with pytest.skip("Requires authentication mock"):
-            pass
+        pytest.skip("Requires authentication mock")
     
     def test_admin_member_can_update(self, client, db, test_user_data, test_organization_data):
         """Test that admin members can update organization"""
@@ -138,8 +132,7 @@ class TestOrganizationAuthorization:
         db.add(member)
         db.commit()
         
-        with pytest.skip("Requires authentication mock"):
-            pass
+        pytest.skip("Requires authentication mock")
 
 
 @pytest.mark.db

@@ -121,10 +121,7 @@ class TestResourceAuthorization:
         db.add(org)
         db.commit()
         
-        with pytest.skip("Requires authentication mock"):
-            # Attempt to create resource with organization_id
-            # Should get 403 Forbidden
-            pass
+        pytest.skip("Requires authentication mock")
     
     def test_org_member_can_create_resource(self, client, db, test_user_data, test_organization_data, test_resource_data):
         """Test that organization members can create resources"""
@@ -142,8 +139,7 @@ class TestResourceAuthorization:
         db.add(member)
         db.commit()
         
-        with pytest.skip("Requires authentication mock"):
-            pass
+        pytest.skip("Requires authentication mock")
     
     def test_creator_can_update_resource(self, client, db, test_user_data, test_resource_data):
         """Test that resource creator can update it"""
@@ -155,8 +151,7 @@ class TestResourceAuthorization:
         db.add(resource)
         db.commit()
         
-        with pytest.skip("Requires authentication mock"):
-            pass
+        pytest.skip("Requires authentication mock")
     
     def test_non_creator_cannot_update_resource(self, client, db, test_user_data, test_resource_data):
         """Test that non-creators cannot update resource"""
@@ -170,10 +165,7 @@ class TestResourceAuthorization:
         db.add(resource)
         db.commit()
         
-        with pytest.skip("Requires authentication mock"):
-            # user2 attempts to update resource created by user1
-            # Should get 403 Forbidden
-            pass
+        pytest.skip("Requires authentication mock")
     
     def test_org_member_can_update_org_resource(self, client, db, test_user_data, test_organization_data, test_resource_data):
         """Test that org members can update organization resources"""
@@ -196,9 +188,7 @@ class TestResourceAuthorization:
         db.add(resource)
         db.commit()
         
-        with pytest.skip("Requires authentication mock"):
-            # user2 should be able to update resource because they're org member
-            pass
+        pytest.skip("Requires authentication mock")
 
 
 @pytest.mark.db

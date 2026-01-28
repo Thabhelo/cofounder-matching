@@ -82,8 +82,7 @@ class TestEventRSVP:
         db.add(event)
         db.commit()
         
-        with pytest.skip("Requires authentication mock"):
-            pass
+        pytest.skip("Requires authentication mock")
     
     def test_capacity_limit_enforced(self, db, test_user_data):
         """Test that event capacity limit is enforced"""
@@ -117,8 +116,7 @@ class TestEventRSVP:
         assert event.current_attendees == event.max_attendees
         
         # Third user should not be able to RSVP as "going"
-        with pytest.skip("Requires authentication mock to test via API"):
-            pass
+        pytest.skip("Requires authentication mock to test via API")
     
     def test_changing_rsvp_from_maybe_to_going(self, db, test_user_data):
         """Test changing RSVP status from maybe to going"""
@@ -208,8 +206,7 @@ class TestEventRSVP:
         
         # User2 tries to RSVP as "going" - should be rejected (capacity full)
         # This would be tested via API with proper logic
-        with pytest.skip("Requires API test for race condition prevention"):
-            pass
+        pytest.skip("Requires API test for race condition prevention")
 
 
 @pytest.mark.api
@@ -224,10 +221,7 @@ class TestEventAuthorization:
         db.add(org)
         db.commit()
         
-        with pytest.skip("Requires authentication mock"):
-            # Attempt to create event with organization_id
-            # Should get 403 Forbidden
-            pass
+        pytest.skip("Requires authentication mock")
     
     def test_org_member_can_create_event(self, client, db, test_user_data, test_organization_data, test_event_data):
         """Test that organization members can create events"""
@@ -245,8 +239,7 @@ class TestEventAuthorization:
         db.add(member)
         db.commit()
         
-        with pytest.skip("Requires authentication mock"):
-            pass
+        pytest.skip("Requires authentication mock")
 
 
 @pytest.mark.db
