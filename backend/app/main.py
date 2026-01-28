@@ -7,6 +7,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from prometheus_fastapi_instrumentator import Instrumentator
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import text
 import logging
 import uuid
 from contextlib import asynccontextmanager
@@ -30,6 +31,16 @@ limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
 async def lifespan(app: FastAPI):
     """Lifecycle events for startup and shutdown"""
     logger.info(f"Starting {settings.PROJECT_NAME} in {settings.ENVIRONMENT} mode")
+    
+    # Validate critical configuration at startup
+    try:
+        # Validate JWKS URL configuration early to fail fast
+        jwks_url = settings.get_clerk_jwks_url()
+        logger.info(f"Clerk JWKS URL configured: {jwks_url}")
+    except ValueError as e:
+        logger.error(f"Configuration error: {str(e)}")
+        raise RuntimeError(f"Invalid configuration: {str(e)}") from e
+    
     yield
     logger.info(f"Shutting down {settings.PROJECT_NAME}")
 
@@ -146,7 +157,7 @@ async def health_check():
     # Check database connectivity
     try:
         db = SessionLocal()
-        db.execute("SELECT 1")
+        db.execute(text("SELECT 1"))
         db.close()
         health_status["database"] = "connected"
     except SQLAlchemyError as e:

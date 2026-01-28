@@ -5,33 +5,63 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 import jwt
 from datetime import datetime, timedelta
-from typing import Generator, Dict
+from typing import Dict
 
-from app.main import app
+# Import all models so they register with Base before table creation
+import app.models  # noqa: F401
 from app.database import Base, get_db
-from app.config import settings
 
-# Use in-memory SQLite for testing
-SQLALCHEMY_TEST_DATABASE_URL = "sqlite:///:memory:"
+# Import app after models to ensure proper initialization
+from app.main import app as fastapi_app
 
-engine = create_engine(
-    SQLALCHEMY_TEST_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
+# Use PostgreSQL in CI, SQLite locally for testing
+import os
+if os.getenv("DATABASE_URL"):
+    # CI environment - use PostgreSQL
+    SQLALCHEMY_TEST_DATABASE_URL = os.getenv("DATABASE_URL")
+    from sqlalchemy.pool import NullPool
+    engine = create_engine(
+        SQLALCHEMY_TEST_DATABASE_URL,
+        poolclass=NullPool,  # Don't pool connections in tests
+    )
+else:
+    # Local testing - use in-memory SQLite
+    SQLALCHEMY_TEST_DATABASE_URL = "sqlite:///:memory:"
+    engine = create_engine(
+        SQLALCHEMY_TEST_DATABASE_URL,
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 @pytest.fixture(scope="function")
 def db():
     """Create a fresh database for each test"""
+    # Create all tables if they don't exist
     Base.metadata.create_all(bind=engine)
-    db = TestingSessionLocal()
+    connection = engine.connect()
+    # Force single-row inserts for PostgreSQL as a safety measure
+    # With the GUID type fix (UUID objects instead of strings), this may no longer be needed
+    # but keeping it as a fallback until verified in CI
+    if os.getenv("DATABASE_URL"):
+        connection = connection.execution_options(insertmanyvalues_page_size=1)
+    # Start a transaction that wraps the entire test
+    transaction = connection.begin()
+    # Create a session bound to this connection
+    db = TestingSessionLocal(bind=connection)
+    
     try:
         yield db
     finally:
+        # Always rollback the outer transaction to ensure clean state
+        # This undoes all changes, even if tests called commit()
         db.close()
-        Base.metadata.drop_all(bind=engine)
+        try:
+            transaction.rollback()
+        except Exception:
+            pass  # Transaction may already be rolled back
+        connection.close()
 
 
 @pytest.fixture(scope="function")
@@ -43,10 +73,10 @@ def client(db):
         finally:
             pass
     
-    app.dependency_overrides[get_db] = override_get_db
-    with TestClient(app) as test_client:
+    fastapi_app.dependency_overrides[get_db] = override_get_db
+    with TestClient(fastapi_app) as test_client:
         yield test_client
-    app.dependency_overrides.clear()
+    fastapi_app.dependency_overrides.clear()
 
 
 @pytest.fixture
@@ -105,7 +135,8 @@ def test_event_data() -> Dict:
         "title": "Test Networking Event",
         "description": "A test networking event for testing purposes and validation",
         "event_type": "networking",
-        "start_datetime": future_date.isoformat(),
+        "start_datetime": future_date,  # Return datetime object, not string
+        "timezone": "America/Chicago",  # Required field
         "location_type": "in_person",
         "location_address": "123 Test St, San Francisco, CA",
         "max_attendees": 50

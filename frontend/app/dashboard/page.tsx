@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useAuth, useUser } from "@clerk/nextjs"
+import { useAuth, useUser, UserButton } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { api } from "@/lib/api"
@@ -69,6 +69,7 @@ export default function DashboardPage() {
               <Link href="/organizations" className="text-gray-700 hover:text-blue-600">
                 Organizations
               </Link>
+              <UserButton afterSignOutUrl="/" />
             </div>
           </div>
         </div>
@@ -80,7 +81,7 @@ export default function DashboardPage() {
             Welcome back, {user?.name}!
           </h2>
           <p className="text-gray-600">
-            Here's what's happening in your entrepreneurial journey
+            Here&apos;s what&apos;s happening in your entrepreneurial journey
           </p>
         </div>
 

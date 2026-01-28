@@ -16,9 +16,9 @@ class APIError extends Error {
 async function request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
   const { token, ...fetchOptions } = options
 
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...fetchOptions.headers,
+    ...(fetchOptions.headers as Record<string, string>),
   }
 
   if (token) {
@@ -31,8 +31,38 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
   })
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: "Request failed" }))
-    throw new APIError(response.status, error.detail || `HTTP ${response.status}`)
+    let errorMessage = `HTTP ${response.status}`
+    try {
+      const error = await response.json()
+      
+      // FastAPI returns validation errors as an array in detail field
+      if (Array.isArray(error.detail)) {
+        // Format validation errors: extract messages from each error object
+        const messages = error.detail.map((err: any) => {
+          const field = err.loc?.slice(-1)[0] || "field"
+          const msg = err.msg || "Invalid value"
+          return `${field}: ${msg}`
+        })
+        errorMessage = messages.join(". ") || errorMessage
+      } else if (typeof error.detail === "string") {
+        // Simple string error
+        errorMessage = error.detail
+      } else if (error.message) {
+        errorMessage = error.message
+      } else if (error.detail) {
+        // If detail exists but isn't string/array, try to stringify it
+        errorMessage = JSON.stringify(error.detail)
+      }
+    } catch {
+      // If response is not JSON, try to get text
+      try {
+        const text = await response.text()
+        if (text) errorMessage = text
+      } catch {
+        // Fallback to status code
+      }
+    }
+    throw new APIError(response.status, errorMessage)
   }
 
   if (response.status === 204) {

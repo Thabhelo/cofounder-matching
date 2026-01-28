@@ -8,8 +8,7 @@ class TestUserOnboarding:
     
     def test_create_user_success(self, client, db, test_user_data):
         """Test successful user creation during onboarding"""
-        with pytest.skip("Requires mock Clerk token verification"):
-            pass
+        pytest.skip("Requires mock Clerk token verification")
     
     def test_duplicate_clerk_id_rejected(self, client, db, test_user_data):
         """Test that duplicate clerk_id is rejected"""
@@ -19,8 +18,7 @@ class TestUserOnboarding:
         db.commit()
         
         # Attempt to create second user with same clerk_id
-        with pytest.skip("Requires mock Clerk token verification"):
-            pass
+        pytest.skip("Requires mock Clerk token verification")
     
     def test_duplicate_email_rejected(self, client, db, test_user_data):
         """Test that duplicate email is rejected"""
@@ -31,8 +29,7 @@ class TestUserOnboarding:
         db.commit()
         
         # Attempt to create second user with same email
-        with pytest.skip("Requires mock Clerk token verification"):
-            pass
+        pytest.skip("Requires mock Clerk token verification")
 
 
 @pytest.mark.api
@@ -45,8 +42,7 @@ class TestUserProfile:
         db.add(user)
         db.commit()
         
-        with pytest.skip("Requires mock Clerk token verification"):
-            pass
+        pytest.skip("Requires mock Clerk token verification")
     
     def test_update_own_profile(self, client, db, test_user_data):
         """Test updating authenticated user's profile"""
@@ -54,8 +50,7 @@ class TestUserProfile:
         db.add(user)
         db.commit()
         
-        with pytest.skip("Requires mock Clerk token verification"):
-            pass
+        pytest.skip("Requires mock Clerk token verification")
     
     def test_get_public_profile(self, client, db, test_user_data):
         """Test getting public user profile (no auth required)"""

@@ -7,7 +7,10 @@ engine = create_engine(
     settings.DATABASE_URL,
     pool_pre_ping=True,
     pool_size=10,
-    max_overflow=20
+    max_overflow=20,
+    # Disable insertmanyvalues optimization as fallback if UUID sentinel matching still fails
+    # This can be removed once GUID type fix is verified to work correctly
+    # use_insertmanyvalues=False
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

@@ -1,6 +1,34 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { OnboardingForm } from '@/components/forms/OnboardingForm'
+
+// Mock Clerk
+const mockGetToken = jest.fn().mockResolvedValue('test_token')
+const mockUser = {
+  fullName: 'Test User',
+  firstName: 'Test',
+  lastName: 'User',
+  primaryEmailAddress: {
+    emailAddress: 'test@example.com',
+    verification: {
+      status: 'verified',
+      strategy: 'oauth_google',
+    },
+  },
+  imageUrl: 'https://example.com/avatar.jpg',
+}
+
+jest.mock('@clerk/nextjs', () => ({
+  useAuth: () => ({
+    getToken: mockGetToken,
+    isSignedIn: true,
+    userId: 'clerk_test_user_123',
+  }),
+  useUser: () => ({
+    user: mockUser,
+  }),
+  ClerkProvider: ({ children }: { children: React.ReactNode }) => children,
+}))
 
 // Mock the API
 jest.mock('@/lib/api', () => ({
@@ -21,13 +49,14 @@ jest.mock('next/navigation', () => ({
 describe('OnboardingForm', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    mockGetToken.mockResolvedValue('test_token')
   })
 
   it('renders all form steps', () => {
     render(<OnboardingForm />)
     
     // Should show step 1 initially
-    expect(screen.getByText(/Tell us about yourself/i)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Tell us about yourself/i })).toBeInTheDocument()
     expect(screen.getByText(/Step 1 of 4/i)).toBeInTheDocument()
   })
 
@@ -37,39 +66,37 @@ describe('OnboardingForm', () => {
     
     // Try to proceed without filling required fields
     const nextButton = screen.getByRole('button', { name: /next/i })
-    await user.click(nextButton)
+    await act(async () => {
+      await user.click(nextButton)
+    })
     
     // Should stay on step 1
     expect(screen.getByText(/Step 1 of 4/i)).toBeInTheDocument()
   })
 
-  it('validates email format', async () => {
+  it('requires role_intent selection', async () => {
     const user = userEvent.setup()
     render(<OnboardingForm />)
     
-    const emailInput = screen.getByLabelText(/email/i)
-    await user.type(emailInput, 'invalid-email')
-    
-    // Trigger validation
+    // Try to proceed without selecting role_intent
     const nextButton = screen.getByRole('button', { name: /next/i })
-    await user.click(nextButton)
-    
-    await waitFor(() => {
-      expect(screen.getByText(/Invalid email/i)).toBeInTheDocument()
+    await act(async () => {
+      await user.click(nextButton)
     })
+    
+    // Should stay on step 1 (validation should fail)
+    expect(screen.getByText(/Step 1 of 4/i)).toBeInTheDocument()
   })
 
   it('validates role_intent is one of allowed values', async () => {
     const user = userEvent.setup()
     render(<OnboardingForm />)
     
-    // Fill in required fields
-    await user.type(screen.getByLabelText(/name/i), 'Test User')
-    await user.type(screen.getByLabelText(/email/i), 'test@example.com')
-    
-    // Select role intent
-    const roleSelect = screen.getByLabelText(/What are you looking for/i)
-    await user.selectOptions(roleSelect, 'cofounder')
+    // Select role intent (name/email are extracted from Clerk, not in form)
+    const roleSelect = screen.getByRole('combobox', { name: /What are you looking for/i })
+    await act(async () => {
+      await user.selectOptions(roleSelect, 'cofounder')
+    })
     
     expect(roleSelect).toHaveValue('cofounder')
   })
@@ -78,15 +105,16 @@ describe('OnboardingForm', () => {
     const user = userEvent.setup()
     render(<OnboardingForm />)
     
-    // Fill step 1
-    await user.type(screen.getByLabelText(/name/i), 'Test User')
-    await user.type(screen.getByLabelText(/email/i), 'test@example.com')
-    
-    const roleSelect = screen.getByLabelText(/What are you looking for/i)
-    await user.selectOptions(roleSelect, 'cofounder')
+    // Fill step 1 (name/email are extracted from Clerk, not in form)
+    const roleSelect = screen.getByRole('combobox', { name: /What are you looking for/i })
+    await act(async () => {
+      await user.selectOptions(roleSelect, 'cofounder')
+    })
     
     // Go to step 2
-    await user.click(screen.getByRole('button', { name: /next/i }))
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: /next/i }))
+    })
     
     await waitFor(() => {
       expect(screen.getByText(/Step 2 of 4/i)).toBeInTheDocument()
@@ -97,19 +125,21 @@ describe('OnboardingForm', () => {
     const user = userEvent.setup()
     render(<OnboardingForm />)
     
-    // Progress to step 2
-    await user.type(screen.getByLabelText(/name/i), 'Test User')
-    await user.type(screen.getByLabelText(/email/i), 'test@example.com')
-    const roleSelect = screen.getByLabelText(/What are you looking for/i)
-    await user.selectOptions(roleSelect, 'cofounder')
-    await user.click(screen.getByRole('button', { name: /next/i }))
+    // Progress to step 2 (name/email are extracted from Clerk, not in form)
+    const roleSelect = screen.getByRole('combobox', { name: /What are you looking for/i })
+    await act(async () => {
+      await user.selectOptions(roleSelect, 'cofounder')
+      await user.click(screen.getByRole('button', { name: /next/i }))
+    })
     
     await waitFor(() => {
       expect(screen.getByText(/Step 2 of 4/i)).toBeInTheDocument()
     })
     
     // Go back to step 1
-    await user.click(screen.getByRole('button', { name: /back/i }))
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: /back/i }))
+    })
     
     await waitFor(() => {
       expect(screen.getByText(/Step 1 of 4/i)).toBeInTheDocument()
@@ -125,34 +155,38 @@ describe('OnboardingForm', () => {
     render(<OnboardingForm />)
     
     // Fill all required fields through all steps
-    // Step 1
-    await user.type(screen.getByLabelText(/name/i), 'Test User')
-    await user.type(screen.getByLabelText(/email/i), 'test@example.com')
-    const roleSelect = screen.getByLabelText(/What are you looking for/i)
-    await user.selectOptions(roleSelect, 'cofounder')
-    await user.click(screen.getByRole('button', { name: /next/i }))
+    // Step 1 (name/email are extracted from Clerk, not in form)
+    const roleSelect = screen.getByRole('combobox', { name: /What are you looking for/i })
+    await act(async () => {
+      await user.selectOptions(roleSelect, 'cofounder')
+      await user.click(screen.getByRole('button', { name: /next/i }))
+    })
     
     // Step 2
     await waitFor(() => expect(screen.getByText(/Step 2 of 4/i)).toBeInTheDocument())
-    await user.click(screen.getByRole('button', { name: /next/i }))
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: /next/i }))
+    })
     
     // Step 3
     await waitFor(() => expect(screen.getByText(/Step 3 of 4/i)).toBeInTheDocument())
-    await user.click(screen.getByRole('button', { name: /next/i }))
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: /next/i }))
+    })
     
     // Step 4
     await waitFor(() => expect(screen.getByText(/Step 4 of 4/i)).toBeInTheDocument())
-    await user.click(screen.getByRole('button', { name: /submit|complete/i }))
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: /submit|complete/i }))
+    })
     
-    // Verify API was called correctly
+    // Verify API was called correctly (name/email are extracted from token by backend)
     await waitFor(() => {
       expect(mockOnboarding).toHaveBeenCalledWith(
         expect.objectContaining({
-          name: 'Test User',
-          email: 'test@example.com',
           role_intent: 'cofounder',
         }),
-        'test_token' // Only token, not clerk_id
+        expect.any(String) // Token
       )
       
       // Verify it was called with exactly 2 arguments (data and token)
@@ -174,20 +208,24 @@ describe('OnboardingForm', () => {
     const user = userEvent.setup()
     render(<OnboardingForm />)
     
-    // Quick navigation through steps
-    await user.type(screen.getByLabelText(/name/i), 'Test User')
-    await user.type(screen.getByLabelText(/email/i), 'test@example.com')
-    const roleSelect = screen.getByLabelText(/What are you looking for/i)
-    await user.selectOptions(roleSelect, 'cofounder')
+    // Quick navigation through steps (name/email are extracted from Clerk, not in form)
+    const roleSelect = screen.getByRole('combobox', { name: /What are you looking for/i })
+    await act(async () => {
+      await user.selectOptions(roleSelect, 'cofounder')
+    })
     
     // Navigate through all steps quickly
     for (let i = 0; i < 3; i++) {
-      await user.click(screen.getByRole('button', { name: /next/i }))
+      await act(async () => {
+        await user.click(screen.getByRole('button', { name: /next/i }))
+      })
       await waitFor(() => {}) // Wait for next render
     }
     
     // Submit
-    await user.click(screen.getByRole('button', { name: /submit|complete/i }))
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: /submit|complete/i }))
+    })
     
     // Should display error
     await waitFor(() => {

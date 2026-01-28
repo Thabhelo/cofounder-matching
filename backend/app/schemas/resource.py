@@ -13,8 +13,8 @@ class ResourceCreate(BaseModel):
     stage_eligibility: Optional[list[str]] = Field(None, max_items=10)
     location_eligibility: Optional[list[str]] = Field(None, max_items=50)
     other_eligibility: Optional[str] = Field(None, max_length=1000)
-    amount_min: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
-    amount_max: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
+    amount_min: Optional[Decimal] = Field(None, ge=0)
+    amount_max: Optional[Decimal] = Field(None, ge=0)
     currency: str = Field("USD", min_length=3, max_length=3)
     application_url: Optional[str] = Field(None, max_length=500)
     deadline: Optional[date] = None
@@ -37,8 +37,8 @@ class ResourceUpdate(BaseModel):
     stage_eligibility: Optional[list[str]] = Field(None, max_items=10)
     location_eligibility: Optional[list[str]] = Field(None, max_items=50)
     other_eligibility: Optional[str] = Field(None, max_length=1000)
-    amount_min: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
-    amount_max: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
+    amount_min: Optional[Decimal] = Field(None, ge=0)
+    amount_max: Optional[Decimal] = Field(None, ge=0)
     application_url: Optional[str] = Field(None, max_length=500)
     deadline: Optional[date] = None
     tags: Optional[list[str]] = Field(None, max_items=20)
