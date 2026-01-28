@@ -117,7 +117,7 @@ class UserResponse(BaseModel):
     communication_preference: Optional[str] = None
     skills: Optional[list] = None
     experience_years: Optional[int] = None
-    previous_startups: int = 0  # Default to 0 to match model default
+    previous_startups: Optional[int] = Field(default=0, ge=0, le=50)  # Optional to handle None from DB, default to 0
     proof_of_work: Optional[list] = None
     github_url: Optional[str] = None
     portfolio_url: Optional[str] = None
@@ -134,6 +134,12 @@ class UserResponse(BaseModel):
     is_active: bool = True
     is_banned: bool = False  # Add missing field from model
 
+    @field_validator("previous_startups", mode="before")
+    @classmethod
+    def normalize_previous_startups(cls, v):
+        """Convert None to 0 for previous_startups"""
+        return 0 if v is None else v
+
     class Config:
         from_attributes = True
 
@@ -149,10 +155,16 @@ class UserPublicResponse(BaseModel):
     location: Optional[str] = None
     skills: Optional[list] = None
     experience_years: Optional[int] = None
-    previous_startups: int = 0  # Default to match model
+    previous_startups: Optional[int] = Field(default=0, ge=0, le=50)  # Optional to handle None from DB, default to 0
     trust_score: int = 0  # Default since not in model
     is_verified: bool = False  # Default since not in model
     availability_status: Optional[str] = None
+
+    @field_validator("previous_startups", mode="before")
+    @classmethod
+    def normalize_previous_startups(cls, v):
+        """Convert None to 0 for previous_startups"""
+        return 0 if v is None else v
 
     class Config:
         from_attributes = True
