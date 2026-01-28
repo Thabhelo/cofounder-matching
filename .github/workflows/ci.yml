@@ -65,6 +65,7 @@ jobs:
           DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
           CLERK_PUBLISHABLE_KEY: ${{ secrets.CLERK_PUBLISHABLE_KEY }}
+          CLERK_FRONTEND_API: https://api.clerk.test
           ENVIRONMENT: test
           PYTHONPATH: .
         run: |
