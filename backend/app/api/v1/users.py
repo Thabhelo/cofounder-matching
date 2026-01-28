@@ -202,8 +202,8 @@ async def get_user_profile(
     
     user = db.query(User).filter(
         User.id == user_uuid,
-        User.is_active,
-        not User.is_banned
+        User.is_active == True,
+        User.is_banned == False
     ).first()
 
     if not user:
@@ -227,8 +227,8 @@ async def search_users(
 ):
     """Search users with filters"""
     query = db.query(User).filter(
-        User.is_active,
-        not User.is_banned
+        User.is_active == True,
+        User.is_banned == False
     )
 
     if role_intent:
