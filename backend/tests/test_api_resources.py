@@ -1,6 +1,5 @@
 import pytest
 from decimal import Decimal
-from datetime import date, timedelta
 from app.models.resource import Resource, UserSavedResource
 from app.models.user import User
 from app.models.organization import Organization, OrganizationMember

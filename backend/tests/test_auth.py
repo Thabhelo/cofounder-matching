@@ -1,10 +1,7 @@
 import pytest
-from fastapi import HTTPException
 from unittest.mock import Mock, patch
 import jwt
-from datetime import datetime, timedelta
 
-from app.api.deps import verify_clerk_token, get_clerk_id_from_token
 from app.models.user import User
 
 

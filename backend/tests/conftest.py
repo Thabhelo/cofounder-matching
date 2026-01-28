@@ -5,11 +5,10 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 import jwt
 from datetime import datetime, timedelta
-from typing import Generator, Dict
+from typing import Dict
 
 from app.main import app
 from app.database import Base, get_db
-from app.config import settings
 
 # Use in-memory SQLite for testing
 SQLALCHEMY_TEST_DATABASE_URL = "sqlite:///:memory:"

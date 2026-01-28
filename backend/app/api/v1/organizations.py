@@ -22,12 +22,12 @@ async def list_organizations(
     current_user: Optional[User] = Depends(get_optional_current_user)
 ):
     """List organizations with optional filters - public endpoint"""
-    query = db.query(Organization).filter(Organization.is_active == True)
+    query = db.query(Organization).filter(Organization.is_active)
 
     if org_type:
         query = query.filter(Organization.org_type == org_type)
     if verified_only:
-        query = query.filter(Organization.is_verified == True)
+        query = query.filter(Organization.is_verified)
     if location:
         query = query.filter(Organization.location.ilike(f"%{location}%"))
 
@@ -48,7 +48,7 @@ async def get_organization(
     """Get organization by ID or slug - public endpoint"""
     org = db.query(Organization).filter(
         (Organization.id == org_id_or_slug) | (Organization.slug == org_id_or_slug),
-        Organization.is_active == True
+        Organization.is_active
     ).first()
 
     if not org:

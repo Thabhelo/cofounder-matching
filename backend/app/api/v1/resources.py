@@ -24,7 +24,7 @@ async def list_resources(
     current_user: Optional[User] = Depends(get_optional_current_user)
 ):
     """List resources with optional filters - public endpoint"""
-    query = db.query(Resource).filter(Resource.is_active == True)
+    query = db.query(Resource).filter(Resource.is_active)
 
     if category:
         query = query.filter(Resource.category == category)
@@ -33,7 +33,7 @@ async def list_resources(
     if stage:
         query = query.filter(Resource.stage_eligibility.contains([stage]))
     if featured_only:
-        query = query.filter(Resource.is_featured == True)
+        query = query.filter(Resource.is_featured)
 
     resources = query.order_by(
         Resource.is_featured.desc(),
@@ -52,7 +52,7 @@ async def get_resource(
     """Get resource by ID - public endpoint"""
     resource = db.query(Resource).filter(
         Resource.id == resource_id,
-        Resource.is_active == True
+        Resource.is_active
     ).first()
 
     if not resource:

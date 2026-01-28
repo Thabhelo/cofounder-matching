@@ -9,19 +9,6 @@ sys.path.insert(0, os.path.realpath(os.path.join(os.path.dirname(__file__), '..'
 
 from app.config import settings
 from app.database import Base
-from app.models import (
-    User,
-    Organization,
-    OrganizationMember,
-    Resource,
-    UserSavedResource,
-    Event,
-    UserEventRSVP,
-    Match,
-    Message,
-    News,
-    Report,
-)
 
 config = context.config
 

@@ -25,7 +25,7 @@ async def list_events(
     current_user: Optional[User] = Depends(get_optional_current_user)
 ):
     """List events with optional filters - public endpoint"""
-    query = db.query(Event).filter(Event.is_active == True)
+    query = db.query(Event).filter(Event.is_active)
 
     if event_type:
         query = query.filter(Event.event_type == event_type)
@@ -34,7 +34,7 @@ async def list_events(
     if upcoming_only:
         query = query.filter(Event.start_datetime >= datetime.utcnow())
     if featured_only:
-        query = query.filter(Event.is_featured == True)
+        query = query.filter(Event.is_featured)
 
     events = query.order_by(
         Event.is_featured.desc(),
@@ -53,7 +53,7 @@ async def get_event(
     """Get event by ID - public endpoint"""
     event = db.query(Event).filter(
         Event.id == event_id,
-        Event.is_active == True
+        Event.is_active
     ).first()
 
     if not event:
@@ -166,7 +166,7 @@ async def rsvp_to_event(
     """RSVP to an event - requires authentication"""
     event = db.query(Event).filter(
         Event.id == event_id,
-        Event.is_active == True
+        Event.is_active
     ).first()
 
     if not event:
