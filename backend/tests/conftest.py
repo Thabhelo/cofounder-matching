@@ -7,10 +7,12 @@ import jwt
 from datetime import datetime, timedelta
 from typing import Dict
 
-from app.main import app
-from app.database import Base, get_db
 # Import all models so they register with Base before table creation
 import app.models  # noqa: F401
+from app.database import Base, get_db
+
+# Import app after models to ensure proper initialization
+from app.main import app as fastapi_app
 
 # Use PostgreSQL in CI, SQLite locally for testing
 import os
@@ -38,13 +40,20 @@ def db():
     """Create a fresh database for each test"""
     # Create all tables if they don't exist
     Base.metadata.create_all(bind=engine)
-    db = TestingSessionLocal()
+    connection = engine.connect()
+    # Start a transaction that wraps the entire test
+    transaction = connection.begin()
+    # Create a session bound to this connection
+    db = TestingSessionLocal(bind=connection)
+    
     try:
         yield db
     finally:
-        # Rollback any uncommitted changes
-        db.rollback()
+        # Always rollback the outer transaction to ensure clean state
+        # This undoes all changes, even if tests called commit()
         db.close()
+        transaction.rollback()
+        connection.close()
 
 
 @pytest.fixture(scope="function")
@@ -56,10 +65,10 @@ def client(db):
         finally:
             pass
     
-    app.dependency_overrides[get_db] = override_get_db
-    with TestClient(app) as test_client:
+    fastapi_app.dependency_overrides[get_db] = override_get_db
+    with TestClient(fastapi_app) as test_client:
         yield test_client
-    app.dependency_overrides.clear()
+    fastapi_app.dependency_overrides.clear()
 
 
 @pytest.fixture
