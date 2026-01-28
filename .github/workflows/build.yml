@@ -64,15 +64,27 @@ jobs:
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
+        id: trivy-backend
+        continue-on-error: true
         with:
           image-ref: ${{ steps.meta.outputs.tags }}
           format: 'sarif'
           output: 'trivy-backend-results.sarif'
           exit-code: '0'
 
+      - name: Check if SARIF file exists
+        id: check-sarif-backend
+        if: always() && steps.trivy-backend.outcome == 'success'
+        run: |
+          if [ -f "trivy-backend-results.sarif" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Upload Trivy results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        if: always() && steps.check-sarif-backend.outputs.exists == 'true'
         with:
           sarif_file: 'trivy-backend-results.sarif'
 
@@ -129,15 +141,27 @@ jobs:
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
+        id: trivy-frontend
+        continue-on-error: true
         with:
           image-ref: ${{ steps.meta.outputs.tags }}
           format: 'sarif'
           output: 'trivy-frontend-results.sarif'
           exit-code: '0'
 
+      - name: Check if SARIF file exists
+        id: check-sarif-frontend
+        if: always() && steps.trivy-frontend.outcome == 'success'
+        run: |
+          if [ -f "trivy-frontend-results.sarif" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Upload Trivy results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        if: always() && steps.check-sarif-frontend.outputs.exists == 'true'
         with:
           sarif_file: 'trivy-frontend-results.sarif'
 
