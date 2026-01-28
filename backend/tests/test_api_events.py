@@ -11,7 +11,7 @@ class TestEventCRUD:
     
     def test_list_events(self, client, db, test_event_data):
         """Test listing events (public endpoint)"""
-        event = Event(**test_event_data, start_datetime=datetime.fromisoformat(test_event_data["start_datetime"]))
+        event = Event(**test_event_data)
         db.add(event)
         db.commit()
         
@@ -25,12 +25,14 @@ class TestEventCRUD:
         past_event = Event(
             title="Past Event",
             description="This event is in the past for testing purposes",
-            start_datetime=datetime.utcnow() - timedelta(days=7)
+            start_datetime=datetime.utcnow() - timedelta(days=7),
+            timezone="America/Chicago"
         )
         future_event = Event(
             title="Future Event",
             description="This event is in the future for testing purposes",
-            start_datetime=datetime.utcnow() + timedelta(days=7)
+            start_datetime=datetime.utcnow() + timedelta(days=7),
+            timezone="America/Chicago"
         )
         db.add(past_event)
         db.add(future_event)
@@ -51,13 +53,15 @@ class TestEventCRUD:
                 title="Workshop 1",
                 description="A workshop event for testing purposes and validation",
                 event_type="workshop",
-                start_datetime=datetime.utcnow() + timedelta(days=7)
+                start_datetime=datetime.utcnow() + timedelta(days=7),
+                timezone="America/Chicago"
             ),
             Event(
                 title="Networking 1",
                 description="A networking event for testing purposes and validation",
                 event_type="networking",
-                start_datetime=datetime.utcnow() + timedelta(days=7)
+                start_datetime=datetime.utcnow() + timedelta(days=7),
+                timezone="America/Chicago"
             ),
         ]
         for event in events:
@@ -77,7 +81,7 @@ class TestEventRSVP:
     def test_rsvp_to_event(self, client, db, test_user_data, test_event_data):
         """Test RSVP to an event"""
         user = User(**test_user_data, clerk_id="clerk_rsvp_test")
-        event = Event(**test_event_data, start_datetime=datetime.fromisoformat(test_event_data["start_datetime"]))
+        event = Event(**test_event_data)
         db.add(user)
         db.add(event)
         db.commit()
@@ -91,6 +95,7 @@ class TestEventRSVP:
             title="Limited Event",
             description="Event with limited capacity for testing purposes",
             start_datetime=datetime.utcnow() + timedelta(days=7),
+            timezone="America/Chicago",
             max_attendees=2,
             current_attendees=0
         )
@@ -124,6 +129,7 @@ class TestEventRSVP:
             title="Change RSVP Event",
             description="Event for testing RSVP changes and validation",
             start_datetime=datetime.utcnow() + timedelta(days=7),
+            timezone="America/Chicago",
             max_attendees=10,
             current_attendees=5
         )
@@ -151,6 +157,7 @@ class TestEventRSVP:
             title="Cancel RSVP Event",
             description="Event for testing RSVP cancellation and validation",
             start_datetime=datetime.utcnow() + timedelta(days=7),
+            timezone="America/Chicago",
             max_attendees=10,
             current_attendees=5
         )
@@ -179,6 +186,7 @@ class TestEventRSVP:
             title="Race Condition Test",
             description="Event for testing concurrent RSVP race conditions",
             start_datetime=datetime.utcnow() + timedelta(days=7),
+            timezone="America/Chicago",
             max_attendees=1,
             current_attendees=0
         )
@@ -252,7 +260,8 @@ class TestEventRSVPConstraints:
         event = Event(
             title="Unique RSVP Test",
             description="Event for testing unique RSVP constraint validation",
-            start_datetime=datetime.utcnow() + timedelta(days=7)
+            start_datetime=datetime.utcnow() + timedelta(days=7),
+            timezone="America/Chicago"
         )
         db.add(user)
         db.add(event)

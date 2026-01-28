@@ -10,27 +10,39 @@ from typing import Dict
 from app.main import app
 from app.database import Base, get_db
 
-# Use in-memory SQLite for testing
-SQLALCHEMY_TEST_DATABASE_URL = "sqlite:///:memory:"
-
-engine = create_engine(
-    SQLALCHEMY_TEST_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
+# Use PostgreSQL in CI, SQLite locally for testing
+import os
+if os.getenv("DATABASE_URL"):
+    # CI environment - use PostgreSQL
+    SQLALCHEMY_TEST_DATABASE_URL = os.getenv("DATABASE_URL")
+    from sqlalchemy.pool import NullPool
+    engine = create_engine(
+        SQLALCHEMY_TEST_DATABASE_URL,
+        poolclass=NullPool,  # Don't pool connections in tests
+    )
+else:
+    # Local testing - use in-memory SQLite
+    SQLALCHEMY_TEST_DATABASE_URL = "sqlite:///:memory:"
+    engine = create_engine(
+        SQLALCHEMY_TEST_DATABASE_URL,
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 @pytest.fixture(scope="function")
 def db():
     """Create a fresh database for each test"""
+    # Create all tables if they don't exist
     Base.metadata.create_all(bind=engine)
     db = TestingSessionLocal()
     try:
         yield db
     finally:
+        # Rollback any uncommitted changes
+        db.rollback()
         db.close()
-        Base.metadata.drop_all(bind=engine)
 
 
 @pytest.fixture(scope="function")
@@ -104,7 +116,8 @@ def test_event_data() -> Dict:
         "title": "Test Networking Event",
         "description": "A test networking event for testing purposes and validation",
         "event_type": "networking",
-        "start_datetime": future_date.isoformat(),
+        "start_datetime": future_date,  # Return datetime object, not string
+        "timezone": "America/Chicago",  # Required field
         "location_type": "in_person",
         "location_address": "123 Test St, San Francisco, CA",
         "max_attendees": 50
