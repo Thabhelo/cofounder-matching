@@ -7,6 +7,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from prometheus_fastapi_instrumentator import Instrumentator
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import text
 import logging
 import uuid
 from contextlib import asynccontextmanager
@@ -146,7 +147,7 @@ async def health_check():
     # Check database connectivity
     try:
         db = SessionLocal()
-        db.execute("SELECT 1")
+        db.execute(text("SELECT 1"))
         db.close()
         health_status["database"] = "connected"
     except SQLAlchemyError as e:

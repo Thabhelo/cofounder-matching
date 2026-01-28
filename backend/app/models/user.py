@@ -20,6 +20,20 @@ class User(Base):
     name = Column[str](String(255), nullable=False)
     bio = Column[str](Text)
     avatar_url = Column[str](String(500))
+
+    # Onboarding fields
+    role_intent = Column[str](String(50))  # founder, cofounder, early_employee
+    stage_preference = Column[str](String(50))  # idea, mvp, revenue, growth
+    commitment = Column[str](String(50))  # full_time, part_time, exploratory
+    location = Column[str](String(255))
+    working_style = Column[str](String(50))  # structured, chaotic, flexible
+    communication_preference = Column[str](String(50))  # async, sync, mixed
+    experience_years = Column[int](Integer)
+    previous_startups = Column[int](Integer)
+    github_url = Column[str](String(500))
+    portfolio_url = Column[str](String(500))
+    linkedin_url = Column[str](String(500))
+
     created_at = Column[datetime](TIMESTAMP, default=func.now())
     updated_at = Column[datetime](TIMESTAMP, default=func.now(), onupdate=func.now())
 
