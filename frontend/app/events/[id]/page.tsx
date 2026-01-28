@@ -55,7 +55,7 @@ export default function EventDetailPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-900"></div>
       </div>
     )
   }
@@ -65,7 +65,7 @@ export default function EventDetailPage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Event not found</h2>
-          <Link href="/events" className="text-blue-600 hover:underline">
+          <Link href="/events" className="text-zinc-900 hover:underline">
             Back to Events
           </Link>
         </div>
@@ -79,14 +79,14 @@ export default function EventDetailPage() {
     <div className="min-h-screen bg-gray-50">
       <nav className="bg-white shadow-sm border-b">
         <div className="container mx-auto px-4 py-4">
-          <Link href="/dashboard" className="text-2xl font-bold text-blue-600">
+          <Link href="/dashboard" className="text-2xl font-bold text-zinc-900">
             CoFounder Match
           </Link>
         </div>
       </nav>
 
       <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <Link href="/events" className="text-blue-600 hover:underline mb-6 inline-block">
+        <Link href="/events" className="text-zinc-900 hover:underline mb-6 inline-block">
           ← Back to Events
         </Link>
 
@@ -94,7 +94,7 @@ export default function EventDetailPage() {
           <div className="mb-6">
             <div className="flex items-center gap-2 mb-3">
               {event.event_type && (
-                <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded">
+                <span className="px-3 py-1 bg-zinc-100 text-black text-sm font-medium rounded">
                   {event.event_type}
                 </span>
               )}
@@ -151,7 +151,7 @@ export default function EventDetailPage() {
                   href={event.location_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline"
+                  className="text-zinc-900 hover:underline"
                 >
                   {event.location_url}
                 </a>
@@ -166,7 +166,7 @@ export default function EventDetailPage() {
                 </p>
                 <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
                   <div
-                    className="bg-blue-600 h-2 rounded-full transition-all"
+                    className="bg-zinc-900 h-2 rounded-full transition-all"
                     style={{
                       width: `${Math.min((event.current_attendees / event.max_attendees) * 100, 100)}%`
                     }}
@@ -195,14 +195,14 @@ export default function EventDetailPage() {
                 <button
                   onClick={() => handleRSVP("going")}
                   disabled={rsvpLoading || isAtCapacity}
-                  className="flex-1 px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="flex-1 px-6 py-3 bg-zinc-900 text-white font-medium rounded-lg hover:bg-black disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {rsvpLoading ? "Loading..." : "I'm Going"}
                 </button>
                 <button
                   onClick={() => handleRSVP("maybe")}
                   disabled={rsvpLoading}
-                  className="flex-1 px-6 py-3 border-2 border-blue-600 text-blue-600 font-medium rounded-lg hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="flex-1 px-6 py-3 border-2 border-zinc-900 text-zinc-900 font-medium rounded-lg hover:bg-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   Maybe
                 </button>
@@ -210,7 +210,7 @@ export default function EventDetailPage() {
             ) : (
               <Link
                 href="/onboarding"
-                className="block text-center px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700"
+                className="block text-center px-6 py-3 bg-zinc-900 text-white font-medium rounded-lg hover:bg-black"
               >
                 Sign in to RSVP
               </Link>

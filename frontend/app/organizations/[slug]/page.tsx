@@ -30,7 +30,7 @@ export default function OrganizationDetailPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-900"></div>
       </div>
     )
   }
@@ -40,7 +40,7 @@ export default function OrganizationDetailPage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Organization not found</h2>
-          <Link href="/organizations" className="text-blue-600 hover:underline">
+          <Link href="/organizations" className="text-zinc-900 hover:underline">
             Back to Organizations
           </Link>
         </div>
@@ -52,14 +52,14 @@ export default function OrganizationDetailPage() {
     <div className="min-h-screen bg-gray-50">
       <nav className="bg-white shadow-sm border-b">
         <div className="container mx-auto px-4 py-4">
-          <Link href="/dashboard" className="text-2xl font-bold text-blue-600">
+          <Link href="/dashboard" className="text-2xl font-bold text-zinc-900">
             CoFounder Match
           </Link>
         </div>
       </nav>
 
       <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <Link href="/organizations" className="text-blue-600 hover:underline mb-6 inline-block">
+        <Link href="/organizations" className="text-zinc-900 hover:underline mb-6 inline-block">
           ← Back to Organizations
         </Link>
 
@@ -79,7 +79,7 @@ export default function OrganizationDetailPage() {
               <div className="flex items-center gap-3 mb-2">
                 <h1 className="text-3xl font-bold text-gray-900">{organization.name}</h1>
                 {organization.is_verified && (
-                  <svg className="w-8 h-8 text-blue-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <svg className="w-8 h-8 text-zinc-900 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                   </svg>
                 )}
@@ -87,7 +87,7 @@ export default function OrganizationDetailPage() {
 
               <div className="flex items-center gap-2 mb-3">
                 {organization.org_type && (
-                  <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded">
+                  <span className="px-3 py-1 bg-zinc-100 text-black text-sm font-medium rounded">
                     {organization.org_type}
                   </span>
                 )}
@@ -125,7 +125,7 @@ export default function OrganizationDetailPage() {
                   href={organization.website_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline"
+                  className="text-zinc-900 hover:underline"
                 >
                   {organization.website_url}
                 </a>
@@ -139,7 +139,7 @@ export default function OrganizationDetailPage() {
                   {organization.contact_email && (
                     <p className="text-gray-900">
                       <span className="font-medium">Email:</span>{" "}
-                      <a href={`mailto:${organization.contact_email}`} className="text-blue-600 hover:underline">
+                      <a href={`mailto:${organization.contact_email}`} className="text-zinc-900 hover:underline">
                         {organization.contact_email}
                       </a>
                     </p>
@@ -154,14 +154,14 @@ export default function OrganizationDetailPage() {
             )}
 
             {organization.is_verified && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="bg-zinc-100 border border-zinc-300 rounded-lg p-4">
                 <div className="flex items-center gap-2">
-                  <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                  <svg className="w-5 h-5 text-zinc-900" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                   </svg>
                   <div>
-                    <p className="font-medium text-blue-900">Verified Organization</p>
-                    <p className="text-sm text-blue-700">
+                    <p className="font-medium text-zinc-900">Verified Organization</p>
+                    <p className="text-sm text-zinc-700">
                       This organization has been verified by our team
                     </p>
                   </div>
@@ -176,7 +176,7 @@ export default function OrganizationDetailPage() {
                 href={organization.website_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-block px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                className="inline-block px-6 py-3 bg-zinc-900 text-white font-medium rounded-lg hover:bg-black transition-colors"
               >
                 Visit Website →
               </a>

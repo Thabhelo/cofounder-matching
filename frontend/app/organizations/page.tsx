@@ -35,7 +35,7 @@ export default function OrganizationsPage() {
     <div className="min-h-screen bg-gray-50">
       <nav className="bg-white shadow-sm border-b">
         <div className="container mx-auto px-4 py-4">
-          <Link href="/dashboard" className="text-2xl font-bold text-blue-600">
+          <Link href="/dashboard" className="text-2xl font-bold text-zinc-900">
             CoFounder Match
           </Link>
         </div>
@@ -53,7 +53,7 @@ export default function OrganizationsPage() {
           <select
             value={selectedType}
             onChange={e => setSelectedType(e.target.value as OrgType | "")}
-            className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-zinc-900"
           >
             <option value="">All Types</option>
             <option value="accelerator">Accelerator</option>
@@ -69,7 +69,7 @@ export default function OrganizationsPage() {
               type="checkbox"
               checked={verifiedOnly}
               onChange={e => setVerifiedOnly(e.target.checked)}
-              className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+              className="w-4 h-4 text-zinc-900 rounded focus:ring-2 focus:ring-zinc-900"
             />
             <span className="text-sm text-gray-700">Verified only</span>
           </label>
@@ -77,7 +77,7 @@ export default function OrganizationsPage() {
 
         {loading ? (
           <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-900"></div>
           </div>
         ) : organizations.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-lg">
@@ -106,7 +106,7 @@ export default function OrganizationsPage() {
                     <h3 className="text-lg font-semibold text-gray-900 mb-1">{org.name}</h3>
                   </div>
                   {org.is_verified && (
-                    <svg className="w-6 h-6 text-blue-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="w-6 h-6 text-zinc-900 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
                   )}
@@ -114,7 +114,7 @@ export default function OrganizationsPage() {
 
                 <div className="flex items-center gap-2 mb-3">
                   {org.org_type && (
-                    <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded">
+                    <span className="px-2 py-1 bg-zinc-100 text-zinc-900 text-xs font-medium rounded">
                       {org.org_type}
                     </span>
                   )}

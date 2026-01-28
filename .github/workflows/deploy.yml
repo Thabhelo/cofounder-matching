@@ -81,7 +81,6 @@ jobs:
     environment:
       name: production
       url: https://cofounder-matching.com
-    needs: [deploy-staging]
     permissions:
       contents: read
       packages: read
@@ -147,7 +146,7 @@ jobs:
   rollback-staging:
     name: Rollback Staging Deployment
     runs-on: ubuntu-latest
-    if: failure() && (github.ref == 'refs/heads/main' || github.event.inputs.environment == 'staging')
+    if: failure()
     needs: [deploy-staging]
 
     steps:
@@ -160,7 +159,7 @@ jobs:
   rollback-production:
     name: Rollback Production Deployment
     runs-on: ubuntu-latest
-    if: failure() && (startsWith(github.ref, 'refs/tags/v') || github.event.inputs.environment == 'production')
+    if: failure()
     needs: [deploy-production]
 
     steps:
