@@ -9,6 +9,8 @@ from typing import Dict
 
 from app.main import app
 from app.database import Base, get_db
+# Import all models so they register with Base before table creation
+import app.models  # noqa: F401
 
 # Use PostgreSQL in CI, SQLite locally for testing
 import os
