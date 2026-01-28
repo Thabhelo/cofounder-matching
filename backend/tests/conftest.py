@@ -41,8 +41,9 @@ def db():
     # Create all tables if they don't exist
     Base.metadata.create_all(bind=engine)
     connection = engine.connect()
-    # Force single-row inserts for PostgreSQL to avoid UUID sentinel matching issues
-    # Setting to 1 forces row-by-row inserts which avoids the UUID matching problem
+    # Force single-row inserts for PostgreSQL as a safety measure
+    # With the GUID type fix (UUID objects instead of strings), this may no longer be needed
+    # but keeping it as a fallback until verified in CI
     if os.getenv("DATABASE_URL"):
         connection = connection.execution_options(insertmanyvalues_page_size=1)
     # Start a transaction that wraps the entire test

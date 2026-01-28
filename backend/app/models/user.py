@@ -17,7 +17,9 @@ class GUID(TypeDecorator):
 
     def load_dialect_impl(self, dialect):
         if dialect.name == 'postgresql':
-            return dialect.type_descriptor(PostgreSQL_UUID())
+            # Use as_uuid=True to ensure UUID objects are used (not strings)
+            # This matches the pattern used in other models and fixes sentinel matching
+            return dialect.type_descriptor(PostgreSQL_UUID(as_uuid=True))
         else:
             return dialect.type_descriptor(CHAR(36))
 
@@ -25,7 +27,9 @@ class GUID(TypeDecorator):
         if value is None:
             return value
         elif dialect.name == 'postgresql':
-            return str(value)
+            # Return UUID object directly - PostgreSQL UUID type handles it natively
+            # This is critical for SQLAlchemy 2.0's sentinel matching to work correctly
+            return value
         else:
             if isinstance(value, uuid.UUID):
                 return str(value)
