@@ -84,9 +84,16 @@ jobs:
 
       - name: Upload Trivy results to GitHub Security
         uses: github/codeql-action/upload-sarif@v4
-        if: always() && steps.check-sarif-backend.outputs.exists == 'true'
+        # Skip SARIF upload on PRs - GitHub restricts security-events permission on pull_request events
+        if: always() && steps.check-sarif-backend.outputs.exists == 'true' && github.event_name != 'pull_request'
         with:
           sarif_file: 'trivy-backend-results.sarif'
+
+      - name: Display scan results for PR
+        if: always() && steps.check-sarif-backend.outputs.exists == 'true' && github.event_name == 'pull_request'
+        run: |
+          echo "## Backend Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "Trivy scan completed. Full results will be available after merge." >> $GITHUB_STEP_SUMMARY
 
   build-frontend:
     name: Build Frontend Image
@@ -161,9 +168,16 @@ jobs:
 
       - name: Upload Trivy results to GitHub Security
         uses: github/codeql-action/upload-sarif@v4
-        if: always() && steps.check-sarif-frontend.outputs.exists == 'true'
+        # Skip SARIF upload on PRs - GitHub restricts security-events permission on pull_request events
+        if: always() && steps.check-sarif-frontend.outputs.exists == 'true' && github.event_name != 'pull_request'
         with:
           sarif_file: 'trivy-frontend-results.sarif'
+
+      - name: Display scan results for PR
+        if: always() && steps.check-sarif-frontend.outputs.exists == 'true' && github.event_name == 'pull_request'
+        run: |
+          echo "## Frontend Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "Trivy scan completed. Full results will be available after merge." >> $GITHUB_STEP_SUMMARY
 
   image-scan-summary:
     name: Security Scan Summary
