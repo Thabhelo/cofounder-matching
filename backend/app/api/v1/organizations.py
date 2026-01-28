@@ -46,10 +46,20 @@ async def get_organization(
     current_user: Optional[User] = Depends(get_optional_current_user)
 ):
     """Get organization by ID or slug - public endpoint"""
-    org = db.query(Organization).filter(
-        (Organization.id == org_id_or_slug) | (Organization.slug == org_id_or_slug),
-        Organization.is_active
-    ).first()
+    # Try to match by UUID first, then by slug
+    import uuid
+    try:
+        org_uuid = uuid.UUID(org_id_or_slug)
+        org = db.query(Organization).filter(
+            Organization.id == org_uuid,
+            Organization.is_active
+        ).first()
+    except (ValueError, TypeError):
+        # Not a valid UUID, try slug
+        org = db.query(Organization).filter(
+            Organization.slug == org_id_or_slug,
+            Organization.is_active
+        ).first()
 
     if not org:
         raise HTTPException(

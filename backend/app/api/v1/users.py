@@ -191,8 +191,17 @@ async def get_user_profile(
     db: Session = Depends(get_db)
 ):
     """Get public user profile - limited information for privacy"""
+    import uuid
+    try:
+        user_uuid = uuid.UUID(user_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
     user = db.query(User).filter(
-        User.id == user_id,
+        User.id == user_uuid,
         User.is_active,
         not User.is_banned
     ).first()
@@ -231,5 +240,5 @@ async def search_users(
     if availability_status:
         query = query.filter(User.availability_status == availability_status)
 
-    users = query.order_by(User.trust_score.desc()).offset(skip).limit(limit).all()
+    users = query.order_by(User.created_at.desc()).offset(skip).limit(limit).all()
     return users

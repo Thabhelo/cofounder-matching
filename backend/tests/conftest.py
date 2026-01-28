@@ -41,6 +41,9 @@ def db():
     # Create all tables if they don't exist
     Base.metadata.create_all(bind=engine)
     connection = engine.connect()
+    # Disable insertmanyvalues for PostgreSQL to avoid UUID sentinel matching issues
+    if os.getenv("DATABASE_URL"):
+        connection = connection.execution_options(insertmanyvalues_page_size=0)
     # Start a transaction that wraps the entire test
     transaction = connection.begin()
     # Create a session bound to this connection
@@ -52,7 +55,10 @@ def db():
         # Always rollback the outer transaction to ensure clean state
         # This undoes all changes, even if tests called commit()
         db.close()
-        transaction.rollback()
+        try:
+            transaction.rollback()
+        except Exception:
+            pass  # Transaction may already be rolled back
         connection.close()
 
 
