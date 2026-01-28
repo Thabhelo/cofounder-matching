@@ -28,9 +28,15 @@ COPY --from=deps /app/node_modules ./node_modules
 # Copy application code
 COPY . .
 
-# Set environment to production
+# Accept build arguments
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+
+# Set environment to production and build-time variables
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
 
 # Ensure public directory exists
 RUN mkdir -p public

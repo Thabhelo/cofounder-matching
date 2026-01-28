@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { api } from "@/lib/api"
 import type { Organization, OrgType } from "@/lib/types"
 
@@ -93,10 +94,13 @@ export default function OrganizationsPage() {
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
                     {org.logo_url && (
-                      <img
+                      <Image
                         src={org.logo_url}
                         alt={org.name}
+                        width={64}
+                        height={64}
                         className="w-16 h-16 object-contain mb-3"
+                        unoptimized
                       />
                     )}
                     <h3 className="text-lg font-semibold text-gray-900 mb-1">{org.name}</h3>

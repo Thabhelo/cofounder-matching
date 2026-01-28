@@ -2,22 +2,19 @@ import { authMiddleware } from "@clerk/nextjs";
 
 export default authMiddleware({
   // Routes that can be accessed while signed out
-  publicRoutes: ["/", "/sign-in", "/sign-up"],
+  publicRoutes: ["/"],
   // Routes that can always be accessed, and have
   // no authentication information
   ignoredRoutes: ["/api/health"],
   // After sign in, redirect to onboarding or dashboard
   afterAuth(auth, req) {
-    // If user is signed in and accessing sign-in/sign-up, redirect to dashboard
-    if (auth.userId && (req.nextUrl.pathname === "/sign-in" || req.nextUrl.pathname === "/sign-up")) {
-      const dashboard = new URL("/dashboard", req.url);
-      return Response.redirect(dashboard);
-    }
-    // If user is not signed in and accessing protected route, redirect to sign-in
+    // If user is not signed in and accessing protected route, redirect to home page
+    // The home page has modal-based sign-in/sign-up buttons (SignInButton/SignUpButton)
     if (!auth.userId && !auth.isPublicRoute) {
-      const signIn = new URL("/sign-in", req.url);
-      signIn.searchParams.set("redirect_url", req.url);
-      return Response.redirect(signIn);
+      const home = new URL("/", req.url);
+      // Store the original URL in a query parameter so we can redirect after sign-in
+      home.searchParams.set("redirect_url", req.url);
+      return Response.redirect(home);
     }
   },
 });

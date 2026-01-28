@@ -209,10 +209,11 @@ export function OnboardingForm() {
           )}
 
           <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-2">
+            <label htmlFor="role_intent" className="block text-sm font-medium text-zinc-700 mb-2">
               What are you looking for? *
             </label>
             <select
+              id="role_intent"
               {...register("role_intent")}
               className="w-full px-4 py-3 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-zinc-900 focus:border-zinc-900 transition-colors"
             >

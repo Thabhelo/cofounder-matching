@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { SignInButton, SignUpButton, SignedIn, SignedOut } from "@clerk/nextjs"
+import { SignInButton, SignUpButton, SignedIn, SignedOut, UserButton, useUser } from "@clerk/nextjs"
 
 export default function Home() {
   return (
@@ -22,12 +22,15 @@ export default function Home() {
               </SignUpButton>
             </SignedOut>
             <SignedIn>
-              <Link
-                href="/dashboard"
-                className="px-5 py-2 bg-zinc-900 text-white text-sm font-medium rounded-lg hover:bg-zinc-800 transition-colors shadow-sm"
-              >
-                Dashboard
-              </Link>
+              <div className="flex items-center gap-3">
+                <Link
+                  href="/dashboard"
+                  className="px-5 py-2 bg-zinc-900 text-white text-sm font-medium rounded-lg hover:bg-zinc-800 transition-colors shadow-sm"
+                >
+                  Dashboard
+                </Link>
+                <UserButton afterSignOutUrl="/" />
+              </div>
             </SignedIn>
           </div>
         </div>
@@ -103,24 +106,6 @@ export default function Home() {
               </p>
             </div>
           </div>
-
-          {/* Stats Section */}
-          <div className="border-t border-zinc-200 py-16 md:py-20">
-            <div className="grid grid-cols-3 gap-8 text-center">
-              <div>
-                <div className="text-3xl md:text-4xl font-semibold text-zinc-900 mb-2">1,000+</div>
-                <div className="text-sm text-zinc-600">Active Founders</div>
-              </div>
-              <div>
-                <div className="text-3xl md:text-4xl font-semibold text-zinc-900 mb-2">500+</div>
-                <div className="text-sm text-zinc-600">Successful Matches</div>
-              </div>
-              <div>
-                <div className="text-3xl md:text-4xl font-semibold text-zinc-900 mb-2">50+</div>
-                <div className="text-sm text-zinc-600">Events Monthly</div>
-              </div>
-            </div>
-          </div>
         </div>
       </main>
 
@@ -128,7 +113,7 @@ export default function Home() {
       <footer className="border-t border-zinc-200 mt-20">
         <div className="container mx-auto px-4 py-8">
           <div className="text-center text-sm text-zinc-600">
-            © 2024 CoFounder Match. All rights reserved.
+            &copy; 2026 TechStars - CoFounder Matching. All rights reserved.
           </div>
         </div>
       </footer>

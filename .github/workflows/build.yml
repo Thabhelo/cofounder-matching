@@ -51,6 +51,7 @@ jobs:
 
       - name: Build and push backend image
         uses: docker/build-push-action@v5
+        id: build-backend
         with:
           context: ./backend
           file: ./backend/Dockerfile
@@ -64,9 +65,10 @@ jobs:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:${{ github.sha }}
+          image-ref: ${{ steps.meta.outputs.tags }}
           format: 'sarif'
           output: 'trivy-backend-results.sarif'
+          exit-code: '0'
 
       - name: Upload Trivy results to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
@@ -111,6 +113,7 @@ jobs:
 
       - name: Build and push frontend image
         uses: docker/build-push-action@v5
+        id: build-frontend
         with:
           context: ./frontend
           file: ./frontend/Dockerfile
@@ -127,9 +130,10 @@ jobs:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ github.sha }}
+          image-ref: ${{ steps.meta.outputs.tags }}
           format: 'sarif'
           output: 'trivy-frontend-results.sarif'
+          exit-code: '0'
 
       - name: Upload Trivy results to GitHub Security
         uses: github/codeql-action/upload-sarif@v3

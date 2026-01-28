@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useParams } from "next/navigation"
 import Link from "next/link"
+import Image from "next/image"
 import { api } from "@/lib/api"
 import type { Organization } from "@/lib/types"
 
@@ -65,10 +66,13 @@ export default function OrganizationDetailPage() {
         <div className="bg-white rounded-lg shadow-sm p-8">
           <div className="flex items-start gap-6 mb-6">
             {organization.logo_url && (
-              <img
+              <Image
                 src={organization.logo_url}
                 alt={organization.name}
+                width={96}
+                height={96}
                 className="w-24 h-24 object-contain flex-shrink-0"
+                unoptimized
               />
             )}
             <div className="flex-1">
