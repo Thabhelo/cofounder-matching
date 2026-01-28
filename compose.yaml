@@ -29,11 +29,12 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       CLERK_SECRET_KEY: ${CLERK_SECRET_KEY}
       CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY}
+      CLERK_FRONTEND_API: ${CLERK_FRONTEND_API}
       ENVIRONMENT: ${ENVIRONMENT:-development}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:3001}
       API_V1_PREFIX: ${API_V1_PREFIX:-/api/v1}
       PROJECT_NAME: ${PROJECT_NAME:-Co-Founder Matching Platform}
-    # Note: CLERK_JWKS_URL is automatically derived from CLERK_PUBLISHABLE_KEY in backend/app/config.py
+    # Note: CLERK_JWKS_URL is automatically derived from CLERK_FRONTEND_API in backend/app/config.py
     ports:
       - "8000:8000"
     depends_on:
