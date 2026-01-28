@@ -36,7 +36,7 @@ export default function EventsPage() {
     <div className="min-h-screen bg-gray-50">
       <nav className="bg-white shadow-sm border-b">
         <div className="container mx-auto px-4 py-4">
-          <Link href="/dashboard" className="text-2xl font-bold text-blue-600">
+          <Link href="/dashboard" className="text-2xl font-bold text-zinc-900">
             CoFounder Match
           </Link>
         </div>
@@ -54,7 +54,7 @@ export default function EventsPage() {
           <select
             value={selectedType}
             onChange={e => setSelectedType(e.target.value as EventType | "")}
-            className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-zinc-900"
           >
             <option value="">All Event Types</option>
             <option value="workshop">Workshop</option>
@@ -68,7 +68,7 @@ export default function EventsPage() {
           <select
             value={selectedLocationType}
             onChange={e => setSelectedLocationType(e.target.value as LocationType | "")}
-            className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-zinc-900"
           >
             <option value="">All Locations</option>
             <option value="in_person">In-Person</option>
@@ -79,7 +79,7 @@ export default function EventsPage() {
 
         {loading ? (
           <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-900"></div>
           </div>
         ) : events.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-lg">
@@ -96,7 +96,7 @@ export default function EventsPage() {
                 <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded">
+                      <span className="px-2 py-1 bg-zinc-100 text-black text-xs font-medium rounded">
                         {event.event_type || "Event"}
                       </span>
                       {event.location_type && (
@@ -144,7 +144,7 @@ export default function EventsPage() {
                   </div>
 
                   <div className="flex-shrink-0">
-                    <div className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium">
+                    <div className="px-4 py-2 bg-zinc-900 text-white rounded-lg text-sm font-medium">
                       View Details →
                     </div>
                   </div>

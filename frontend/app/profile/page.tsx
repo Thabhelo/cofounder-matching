@@ -59,7 +59,7 @@ export default function ProfilePage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-900"></div>
       </div>
     )
   }
@@ -69,7 +69,7 @@ export default function ProfilePage() {
       <nav className="bg-white shadow-sm border-b">
         <div className="container mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
-            <Link href="/dashboard" className="text-2xl font-bold text-blue-600">
+            <Link href="/dashboard" className="text-2xl font-bold text-zinc-900">
               CoFounder Match
             </Link>
             <Link href="/dashboard" className="text-gray-600 hover:text-gray-900">
@@ -89,7 +89,7 @@ export default function ProfilePage() {
             {!isEditing ? (
               <button
                 onClick={() => setIsEditing(true)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                className="px-4 py-2 bg-zinc-900 text-white rounded-lg hover:bg-black"
               >
                 Edit Profile
               </button>
@@ -107,7 +107,7 @@ export default function ProfilePage() {
                 <button
                   onClick={handleSave}
                   disabled={saving}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                  className="px-4 py-2 bg-zinc-900 text-white rounded-lg hover:bg-black disabled:opacity-50"
                 >
                   {saving ? "Saving..." : "Save Changes"}
                 </button>
@@ -251,7 +251,7 @@ export default function ProfilePage() {
                 {user?.github_url && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">GitHub</label>
-                    <a href={user.github_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                    <a href={user.github_url} target="_blank" rel="noopener noreferrer" className="text-zinc-900 hover:underline">
                       {user.github_url}
                     </a>
                   </div>
@@ -259,7 +259,7 @@ export default function ProfilePage() {
                 {user?.portfolio_url && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Portfolio</label>
-                    <a href={user.portfolio_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                    <a href={user.portfolio_url} target="_blank" rel="noopener noreferrer" className="text-zinc-900 hover:underline">
                       {user.portfolio_url}
                     </a>
                   </div>
@@ -267,7 +267,7 @@ export default function ProfilePage() {
                 {user?.linkedin_url && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">LinkedIn</label>
-                    <a href={user.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                    <a href={user.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-zinc-900 hover:underline">
                       {user.linkedin_url}
                     </a>
                   </div>
@@ -280,7 +280,7 @@ export default function ProfilePage() {
               <div className="grid md:grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-gray-600">Trust Score:</span>
-                  <span className="ml-2 font-semibold text-blue-600">{user?.trust_score}</span>
+                  <span className="ml-2 font-semibold text-zinc-900">{user?.trust_score}</span>
                 </div>
                 <div>
                   <span className="text-gray-600">Verified:</span>

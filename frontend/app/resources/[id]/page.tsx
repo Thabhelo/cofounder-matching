@@ -30,7 +30,7 @@ export default function ResourceDetailPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-900"></div>
       </div>
     )
   }
@@ -40,7 +40,7 @@ export default function ResourceDetailPage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Resource not found</h2>
-          <Link href="/resources" className="text-blue-600 hover:underline">
+          <Link href="/resources" className="text-zinc-900 hover:underline">
             Back to Resources
           </Link>
         </div>
@@ -52,21 +52,21 @@ export default function ResourceDetailPage() {
     <div className="min-h-screen bg-gray-50">
       <nav className="bg-white shadow-sm border-b">
         <div className="container mx-auto px-4 py-4">
-          <Link href="/dashboard" className="text-2xl font-bold text-blue-600">
+          <Link href="/dashboard" className="text-2xl font-bold text-zinc-900">
             CoFounder Match
           </Link>
         </div>
       </nav>
 
       <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <Link href="/resources" className="text-blue-600 hover:underline mb-6 inline-block">
+        <Link href="/resources" className="text-zinc-900 hover:underline mb-6 inline-block">
           ← Back to Resources
         </Link>
 
         <div className="bg-white rounded-lg shadow-sm p-8">
           <div className="mb-6">
             <div className="flex items-center gap-2 mb-3">
-              <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded">
+              <span className="px-3 py-1 bg-zinc-100 text-black text-sm font-medium rounded">
                 {resource.category}
               </span>
               {resource.resource_type && (
@@ -155,7 +155,7 @@ export default function ResourceDetailPage() {
                 href={resource.application_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-block px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                className="inline-block px-6 py-3 bg-zinc-900 text-white font-medium rounded-lg hover:bg-black transition-colors"
               >
                 Apply Now →
               </a>

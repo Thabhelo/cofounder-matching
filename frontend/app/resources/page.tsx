@@ -35,7 +35,7 @@ export default function ResourcesPage() {
     <div className="min-h-screen bg-gray-50">
       <nav className="bg-white shadow-sm border-b">
         <div className="container mx-auto px-4 py-4">
-          <Link href="/dashboard" className="text-2xl font-bold text-blue-600">
+          <Link href="/dashboard" className="text-2xl font-bold text-zinc-900">
             CoFounder Match
           </Link>
         </div>
@@ -53,7 +53,7 @@ export default function ResourcesPage() {
           <select
             value={selectedCategory}
             onChange={e => setSelectedCategory(e.target.value as ResourceCategory | "")}
-            className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-zinc-900"
           >
             <option value="">All Categories</option>
             <option value="funding">Funding</option>
@@ -68,7 +68,7 @@ export default function ResourcesPage() {
           <select
             value={selectedType}
             onChange={e => setSelectedType(e.target.value)}
-            className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-zinc-900"
           >
             <option value="">All Types</option>
             <option value="grant">Grant</option>
@@ -81,7 +81,7 @@ export default function ResourcesPage() {
 
         {loading ? (
           <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-900"></div>
           </div>
         ) : resources.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-lg">
@@ -97,7 +97,7 @@ export default function ResourcesPage() {
               >
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <span className="inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded">
+                    <span className="inline-block px-2 py-1 bg-zinc-100 text-black text-xs font-medium rounded">
                       {resource.category}
                     </span>
                     {resource.is_featured && (

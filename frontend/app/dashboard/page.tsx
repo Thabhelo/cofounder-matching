@@ -40,7 +40,7 @@ export default function DashboardPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-900 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       </div>
@@ -52,21 +52,21 @@ export default function DashboardPage() {
       <nav className="bg-white shadow-sm border-b">
         <div className="container mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-blue-600">CoFounder Match</h1>
+            <h1 className="text-2xl font-bold text-zinc-900">CoFounder Match</h1>
             <div className="flex items-center gap-6">
-              <Link href="/dashboard" className="text-gray-700 hover:text-blue-600">
+              <Link href="/dashboard" className="text-gray-700 hover:text-zinc-900">
                 Dashboard
               </Link>
-              <Link href="/profile" className="text-gray-700 hover:text-blue-600">
+              <Link href="/profile" className="text-gray-700 hover:text-zinc-900">
                 Profile
               </Link>
-              <Link href="/resources" className="text-gray-700 hover:text-blue-600">
+              <Link href="/resources" className="text-gray-700 hover:text-zinc-900">
                 Resources
               </Link>
-              <Link href="/events" className="text-gray-700 hover:text-blue-600">
+              <Link href="/events" className="text-gray-700 hover:text-zinc-900">
                 Events
               </Link>
-              <Link href="/organizations" className="text-gray-700 hover:text-blue-600">
+              <Link href="/organizations" className="text-gray-700 hover:text-zinc-900">
                 Organizations
               </Link>
               <UserButton afterSignOutUrl="/" />
@@ -89,12 +89,12 @@ export default function DashboardPage() {
           <div className="bg-white rounded-lg shadow-sm p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-gray-900">Your Profile</h3>
-              <span className="text-2xl font-bold text-blue-600">{user?.trust_score || 0}</span>
+              <span className="text-2xl font-bold text-zinc-900">{user?.trust_score || 0}</span>
             </div>
             <p className="text-sm text-gray-600 mb-4">Trust Score</p>
             <Link
               href="/profile"
-              className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+              className="text-sm text-zinc-900 hover:text-black font-medium"
             >
               View Profile →
             </Link>
@@ -103,14 +103,14 @@ export default function DashboardPage() {
           <div className="bg-white rounded-lg shadow-sm p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-gray-900">Resources</h3>
-              <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-8 h-8 text-zinc-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
               </svg>
             </div>
             <p className="text-sm text-gray-600 mb-4">Discover funding and support</p>
             <Link
               href="/resources"
-              className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+              className="text-sm text-zinc-900 hover:text-black font-medium"
             >
               Browse Resources →
             </Link>
@@ -119,14 +119,14 @@ export default function DashboardPage() {
           <div className="bg-white rounded-lg shadow-sm p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-gray-900">Events</h3>
-              <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-8 h-8 text-zinc-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
             </div>
             <p className="text-sm text-gray-600 mb-4">Network and learn</p>
             <Link
               href="/events"
-              className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+              className="text-sm text-zinc-900 hover:text-black font-medium"
             >
               View Events →
             </Link>
@@ -138,7 +138,7 @@ export default function DashboardPage() {
           <div className="grid md:grid-cols-2 gap-4">
             <Link
               href="/profile"
-              className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-600 hover:bg-blue-50 transition-colors"
+              className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-zinc-900 hover:bg-zinc-100 transition-colors"
             >
               <div className="font-medium text-gray-900 mb-1">Complete Your Profile</div>
               <div className="text-sm text-gray-600">
@@ -147,7 +147,7 @@ export default function DashboardPage() {
             </Link>
             <Link
               href="/resources"
-              className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-600 hover:bg-blue-50 transition-colors"
+              className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-zinc-900 hover:bg-zinc-100 transition-colors"
             >
               <div className="font-medium text-gray-900 mb-1">Explore Resources</div>
               <div className="text-sm text-gray-600">
