@@ -60,3 +60,6 @@ htmlcov/
 *.pyc
 dist/
 build/
+
+# Claude-specific files
+docs/CLAUDE.md
