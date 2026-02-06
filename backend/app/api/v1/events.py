@@ -15,31 +15,61 @@ router = APIRouter()
 
 @router.get("", response_model=List[EventResponse])
 async def list_events(
+    q: str = Query(None, description="Search query for title or description"),
     event_type: Optional[str] = Query(None, description="Filter by event type"),
     location_type: Optional[str] = Query(None, description="Filter by location type"),
+    organization_id: Optional[str] = Query(None, description="Filter by organization"),
     upcoming_only: bool = Query(True, description="Show only upcoming events"),
     featured_only: bool = Query(False, description="Show only featured events"),
+    sort_by: str = Query("date", description="Sort by: date, relevance, featured"),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_current_user)
 ):
-    """List events with optional filters - public endpoint"""
+    """List events with search and filters - public endpoint"""
+    from sqlalchemy import or_
+    
     query = db.query(Event).filter(Event.is_active)
 
+    # Full-text search on title and description
+    if q:
+        search_term = f"%{q}%"
+        query = query.filter(
+            or_(
+                Event.title.ilike(search_term),
+                Event.description.ilike(search_term)
+            )
+        )
+
+    # Filters
     if event_type:
         query = query.filter(Event.event_type == event_type)
     if location_type:
         query = query.filter(Event.location_type == location_type)
+    if organization_id:
+        query = query.filter(Event.organization_id == organization_id)
     if upcoming_only:
         query = query.filter(Event.start_datetime >= datetime.utcnow())
     if featured_only:
         query = query.filter(Event.is_featured)
 
-    events = query.order_by(
-        Event.is_featured.desc(),
-        Event.start_datetime.asc()
-    ).offset(skip).limit(limit).all()
+    # Sorting
+    if sort_by == "relevance":
+        # For relevance, prioritize featured and upcoming
+        query = query.order_by(
+            Event.is_featured.desc(),
+            Event.start_datetime.asc()
+        )
+    elif sort_by == "featured":
+        query = query.order_by(
+            Event.is_featured.desc(),
+            Event.start_datetime.asc()
+        )
+    else:  # date (default)
+        query = query.order_by(Event.start_datetime.asc())
+
+    events = query.offset(skip).limit(limit).all()
 
     return events
 

@@ -13,17 +13,32 @@ router = APIRouter()
 
 @router.get("", response_model=List[OrganizationResponse])
 async def list_organizations(
+    q: str = Query(None, description="Search query for name or description"),
     org_type: Optional[str] = Query(None, description="Filter by organization type"),
     verified_only: bool = Query(False, description="Show only verified organizations"),
     location: Optional[str] = Query(None, description="Filter by location"),
+    sort_by: str = Query("recent", description="Sort by: recent, verified"),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_current_user)
 ):
-    """List organizations with optional filters - public endpoint"""
+    """List organizations with search and filters - public endpoint"""
+    from sqlalchemy import or_
+    
     query = db.query(Organization).filter(Organization.is_active)
 
+    # Full-text search on name and description
+    if q:
+        search_term = f"%{q}%"
+        query = query.filter(
+            or_(
+                Organization.name.ilike(search_term),
+                Organization.description.ilike(search_term)
+            )
+        )
+
+    # Filters
     if org_type:
         query = query.filter(Organization.org_type == org_type)
     if verified_only:
@@ -31,10 +46,16 @@ async def list_organizations(
     if location:
         query = query.filter(Organization.location.ilike(f"%{location}%"))
 
-    organizations = query.order_by(
-        Organization.is_verified.desc(),
-        Organization.created_at.desc()
-    ).offset(skip).limit(limit).all()
+    # Sorting
+    if sort_by == "verified":
+        query = query.order_by(
+            Organization.is_verified.desc(),
+            Organization.created_at.desc()
+        )
+    else:  # recent (default)
+        query = query.order_by(Organization.created_at.desc())
+
+    organizations = query.offset(skip).limit(limit).all()
 
     return organizations
 
