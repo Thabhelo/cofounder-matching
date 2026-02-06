@@ -61,10 +61,16 @@ export type UserPublic = {
   avatar_url?: string
   role_intent: RoleIntent
   stage_preference?: Stage
+  commitment?: Commitment
   location?: string
+  working_style?: WorkingStyle
+  communication_preference?: CommunicationPreference
   skills?: SkillItem[]
   experience_years?: number
   previous_startups: number
+  github_url?: string
+  linkedin_url?: string
+  portfolio_url?: string
   trust_score: number
   is_verified: boolean
   availability_status?: AvailabilityStatus

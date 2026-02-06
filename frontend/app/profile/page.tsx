@@ -230,6 +230,72 @@ export default function ProfilePage() {
                   <p className="text-gray-900">{user?.previous_startups || 0}</p>
                 )}
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Working Style</label>
+                {isEditing ? (
+                  <select
+                    value={formData.working_style || ""}
+                    onChange={e => setFormData({ ...formData, working_style: e.target.value as any })}
+                    className="w-full px-4 py-2 border rounded-lg"
+                  >
+                    <option value="">Select working style</option>
+                    <option value="structured">Structured</option>
+                    <option value="chaotic">Move fast</option>
+                    <option value="flexible">Flexible</option>
+                  </select>
+                ) : (
+                  <p className="text-gray-900 capitalize">
+                    {user?.working_style === "structured" ? "Structured" :
+                     user?.working_style === "chaotic" ? "Move fast" :
+                     user?.working_style === "flexible" ? "Flexible" : "Not specified"}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Communication Preference</label>
+                {isEditing ? (
+                  <select
+                    value={formData.communication_preference || ""}
+                    onChange={e => setFormData({ ...formData, communication_preference: e.target.value as any })}
+                    className="w-full px-4 py-2 border rounded-lg"
+                  >
+                    <option value="">Select preference</option>
+                    <option value="async">Async (Slack, email)</option>
+                    <option value="sync">Sync (calls, meetings)</option>
+                    <option value="mixed">Mixed</option>
+                  </select>
+                ) : (
+                  <p className="text-gray-900">
+                    {user?.communication_preference === "async" ? "Async (Slack, email)" :
+                     user?.communication_preference === "sync" ? "Sync (calls, meetings)" :
+                     user?.communication_preference === "mixed" ? "Mixed" : "Not specified"}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Availability</label>
+                {isEditing ? (
+                  <select
+                    value={formData.availability_status || ""}
+                    onChange={e => setFormData({ ...formData, availability_status: e.target.value as any })}
+                    className="w-full px-4 py-2 border rounded-lg"
+                  >
+                    <option value="">Select availability</option>
+                    <option value="actively_looking">Available now</option>
+                    <option value="open">Currently busy</option>
+                    <option value="not_looking">Not looking</option>
+                  </select>
+                ) : (
+                  <p className="text-gray-900">
+                    {user?.availability_status === "actively_looking" ? "Available now" :
+                     user?.availability_status === "open" ? "Currently busy" :
+                     user?.availability_status === "not_looking" ? "Not looking" : "Not specified"}
+                  </p>
+                )}
+              </div>
             </div>
 
             <div>
@@ -249,30 +315,63 @@ export default function ProfilePage() {
             <div className="border-t pt-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Social Links</h3>
               <div className="space-y-4">
-                {user?.github_url && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">GitHub</label>
-                    <a href={user.github_url} target="_blank" rel="noopener noreferrer" className="text-zinc-900 hover:underline">
-                      {user.github_url}
-                    </a>
-                  </div>
-                )}
-                {user?.portfolio_url && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Portfolio</label>
-                    <a href={user.portfolio_url} target="_blank" rel="noopener noreferrer" className="text-zinc-900 hover:underline">
-                      {user.portfolio_url}
-                    </a>
-                  </div>
-                )}
-                {user?.linkedin_url && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">LinkedIn</label>
-                    <a href={user.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-zinc-900 hover:underline">
-                      {user.linkedin_url}
-                    </a>
-                  </div>
-                )}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">GitHub URL</label>
+                  {isEditing ? (
+                    <input
+                      value={formData.github_url || ""}
+                      onChange={e => setFormData({ ...formData, github_url: e.target.value })}
+                      placeholder="https://github.com/yourusername"
+                      className="w-full px-4 py-2 border rounded-lg"
+                    />
+                  ) : (
+                    user?.github_url ? (
+                      <a href={user.github_url} target="_blank" rel="noopener noreferrer" className="text-zinc-900 hover:underline">
+                        {user.github_url}
+                      </a>
+                    ) : (
+                      <p className="text-gray-900">Not specified</p>
+                    )
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">LinkedIn URL</label>
+                  {isEditing ? (
+                    <input
+                      value={formData.linkedin_url || ""}
+                      onChange={e => setFormData({ ...formData, linkedin_url: e.target.value })}
+                      placeholder="https://linkedin.com/in/yourprofile"
+                      className="w-full px-4 py-2 border rounded-lg"
+                    />
+                  ) : (
+                    user?.linkedin_url ? (
+                      <a href={user.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-zinc-900 hover:underline">
+                        {user.linkedin_url}
+                      </a>
+                    ) : (
+                      <p className="text-gray-900">Not specified</p>
+                    )
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Portfolio URL</label>
+                  {isEditing ? (
+                    <input
+                      value={formData.portfolio_url || ""}
+                      onChange={e => setFormData({ ...formData, portfolio_url: e.target.value })}
+                      placeholder="https://yourportfolio.com"
+                      className="w-full px-4 py-2 border rounded-lg"
+                    />
+                  ) : (
+                    user?.portfolio_url ? (
+                      <a href={user.portfolio_url} target="_blank" rel="noopener noreferrer" className="text-zinc-900 hover:underline">
+                        {user.portfolio_url}
+                      </a>
+                    ) : (
+                      <p className="text-gray-900">Not specified</p>
+                    )
+                  )}
+                </div>
               </div>
             </div>
 

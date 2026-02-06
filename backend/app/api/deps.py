@@ -98,7 +98,12 @@ async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db)
 ) -> User:
-    """Get current authenticated user from Clerk token"""
+    """Get current authenticated user from Clerk token
+
+    Auto-creates user on first login if they don't exist yet.
+    This eliminates forced onboarding - users are created with minimal data
+    from their Clerk OAuth profile and can complete their profile later.
+    """
     token = credentials.credentials
 
     try:
@@ -113,11 +118,36 @@ async def get_current_user(
 
         user = db.query(User).filter(User.clerk_id == clerk_id).first()
 
+        # Auto-create user if they don't exist (first login)
         if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found. Please complete onboarding first."
+            # Extract user info from Clerk token
+            clerk_info = await get_clerk_user_info_from_token(credentials)
+
+            if not clerk_info.get("email"):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Email is required. Please ensure your OAuth provider includes email."
+                )
+
+            if not clerk_info.get("name"):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Name is required. Please ensure your OAuth provider includes name."
+                )
+
+            # Create minimal user record from OAuth data
+            user = User(
+                clerk_id=clerk_id,
+                email=clerk_info["email"],
+                name=clerk_info["name"],
+                avatar_url=clerk_info.get("avatar_url"),
+                is_active=True,
+                is_banned=False,
+                previous_startups=0  # Default value
             )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
 
         if user.is_banned:
             raise HTTPException(

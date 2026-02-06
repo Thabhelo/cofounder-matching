@@ -269,6 +269,18 @@ export const api = {
         token,
       }),
 
+    unsave: (profileId: string, token: string) =>
+      request<{ message: string; profile_id: string }>(`/api/v1/profiles/${profileId}/save`, {
+        method: "DELETE",
+        token,
+      }),
+
+    unskip: (profileId: string, token: string) =>
+      request<{ message: string; profile_id: string }>(`/api/v1/profiles/${profileId}/skip`, {
+        method: "DELETE",
+        token,
+      }),
+
     getSaved: (params?: { skip?: number; limit?: number }, token?: string) => {
       const queryParams = new URLSearchParams(
         Object.entries(params || {})
@@ -286,6 +298,70 @@ export const api = {
       )
       return request<UserPublic[]>(`/api/v1/profiles/skipped?${queryParams}`, { token })
     },
+  },
+
+  matches: {
+    sendInvite: (profileId: string, message: string, token: string) =>
+      request<{ message: string; match_id: string; invites_remaining: number; auto_connected?: boolean }>(
+        `/api/v1/matches/invite/${profileId}`,
+        {
+          method: "POST",
+          body: JSON.stringify({ message }),
+          token,
+        }
+      ),
+
+    getAll: (token: string, params?: { status_filter?: string; skip?: number; limit?: number }) => {
+      const queryParams = new URLSearchParams(
+        Object.entries(params || {})
+          .filter(([, value]) => value !== undefined)
+          .map(([key, value]) => [key, String(value)])
+      )
+      return request<any[]>(`/api/v1/matches?${queryParams}`, { token })
+    },
+
+    respondToInvite: (matchId: string, accept: boolean, message: string, token: string) =>
+      request<{ message: string; match_id: string; accepted: boolean; status: string }>(
+        `/api/v1/matches/${matchId}/intro/respond`,
+        {
+          method: "POST",
+          body: JSON.stringify({ accept, message }),
+          token,
+        }
+      ),
+  },
+
+  messages: {
+    getConversations: (token: string, params?: { skip?: number; limit?: number }) => {
+      const queryParams = new URLSearchParams(
+        Object.entries(params || {})
+          .filter(([, value]) => value !== undefined)
+          .map(([key, value]) => [key, String(value)])
+      )
+      return request<any[]>(`/api/v1/messages?${queryParams}`, { token })
+    },
+
+    getMessages: (matchId: string, token: string, params?: { skip?: number; limit?: number }) => {
+      const queryParams = new URLSearchParams(
+        Object.entries(params || {})
+          .filter(([, value]) => value !== undefined)
+          .map(([key, value]) => [key, String(value)])
+      )
+      return request<any[]>(`/api/v1/messages/${matchId}?${queryParams}`, { token })
+    },
+
+    send: (matchId: string, content: string, token: string) =>
+      request<any>("/api/v1/messages", {
+        method: "POST",
+        body: JSON.stringify({ match_id: matchId, content }),
+        token,
+      }),
+
+    markRead: (messageId: string, token: string) =>
+      request<any>(`/api/v1/messages/${messageId}/read`, {
+        method: "PUT",
+        token,
+      }),
   },
 }
 

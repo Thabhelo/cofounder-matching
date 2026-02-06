@@ -152,10 +152,16 @@ class UserPublicResponse(BaseModel):
     avatar_url: Optional[str] = None
     role_intent: Optional[str] = None  # Made optional to match model
     stage_preference: Optional[str] = None
+    commitment: Optional[str] = None
     location: Optional[str] = None
+    working_style: Optional[str] = None
+    communication_preference: Optional[str] = None
     skills: Optional[list] = None
     experience_years: Optional[int] = None
     previous_startups: Optional[int] = Field(default=0, ge=0, le=50)  # Optional to handle None from DB, default to 0
+    github_url: Optional[str] = None
+    linkedin_url: Optional[str] = None
+    portfolio_url: Optional[str] = None
     trust_score: int = 0  # Default since not in model
     is_verified: bool = False  # Default since not in model
     availability_status: Optional[str] = None

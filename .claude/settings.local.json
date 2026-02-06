@@ -1,4 +1,5 @@
 {
+  "includeCoAuthoredBy": false,
   "permissions": {
     "allow": [
       "Bash(python3:*)",
@@ -33,7 +34,12 @@
       "Bash(git add:*)",
       "Bash(git rm:*)",
       "Bash(git commit:*)",
-      "Bash(gh pr create:*)"
+      "Bash(gh pr create:*)",
+      "Bash(chmod:*)",
+      "Bash(git diff:*)",
+      "Bash(npm run typecheck:*)",
+      "Bash(PYTHONPATH=. DATABASE_URL=postgresql://user:password@localhost:5432/cofounder_matching CLERK_FRONTEND_API=https://api.clerk.test ENVIRONMENT=test pytest:*)",
+      "Bash(cd:*)"
     ]
   }
 }
