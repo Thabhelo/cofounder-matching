@@ -21,7 +21,7 @@ export default function ProfilePage() {
       try {
         const token = await getToken()
         if (!token) {
-          router.push("/onboarding")
+          router.push("/dashboard")
           return
         }
 
@@ -30,7 +30,8 @@ export default function ProfilePage() {
         setFormData(userData)
       } catch (error) {
         console.error("Failed to load user:", error)
-        router.push("/onboarding")
+        // Don't redirect - allow user to update profile even if there's an error
+        // They can always access dashboard
       } finally {
         setLoading(false)
       }
