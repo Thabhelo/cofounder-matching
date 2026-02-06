@@ -64,3 +64,5 @@ build/
 # Claude-specific files
 docs/CLAUDE.md
 .claude/
+.claudeignore
+.gitattributes
