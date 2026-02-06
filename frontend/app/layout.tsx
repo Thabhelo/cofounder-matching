@@ -44,12 +44,6 @@ export default function RootLayout({
             "border-zinc-300 focus:border-zinc-900 focus:ring-zinc-900",
           footerActionLink: "text-zinc-900 hover:text-zinc-700",
         },
-        signIn: {
-          fallbackRedirectUrl: "/dashboard",
-        },
-        signUp: {
-          fallbackRedirectUrl: "/dashboard",
-        },
       }}
     >
       <html lang="en" suppressHydrationWarning>
