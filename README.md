@@ -2,10 +2,6 @@
 
 Built for TechStars for Cofounders - A centralized platform that helps founders find co-founders with complementary skills, discover entrepreneurial resources, and navigate the startup ecosystem.
 
-## Project Status
-
-**Planning Phase** - See [documentation](./docs/DOCUMENTATION.md) for detailed implementation plan.
-
 ## Overview
 
 This platform helps founders:

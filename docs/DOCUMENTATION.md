@@ -5,9 +5,8 @@
 2. [API Design](#api-design)
 3. [Frontend Architecture](#frontend-architecture)
 4. [Matching Algorithm](#matching-algorithm)
-6. [Development Phases](#development-phases)
-7. [Tech Stack Setup](#tech-stack-setup)
-8. [Key Decisions](#key-decisions)
+5. [Tech Stack Setup](#tech-stack-setup)
+6. [Key Decisions](#key-decisions)
 
 ---
 
@@ -572,51 +571,6 @@ components/
 
 ---
 
-## Development Phases
-
-### Phase 1: Foundation (Week 1-2)
-- [ ] Project setup (backend + frontend)
-- [ ] Database schema implementation
-- [ ] Authentication integration (Clerk)
-- [ ] Basic user CRUD
-- [ ] Basic organization CRUD
-- [ ] Database migrations setup
-
-### Phase 2: Core Features (Week 3-4)
-- [ ] User profile with onboarding flow
-- [ ] Organization profiles and member associations
-- [ ] Resource CRUD
-- [ ] Event CRUD
-- [ ] Basic search functionality
-
-### Phase 3: Matching System (Week 5-6)
-- [ ] Matching algorithm implementation
-- [ ] Match scoring and explanation
-- [ ] Match discovery and filtering
-- [ ] Save/dismiss matches
-- [ ] Match recommendations
-
-### Phase 4: Communication (Week 7)
-- [ ] Messaging system
-- [ ] Intro request workflow
-- [ ] Notification setup
-
-### Phase 5: Polish and Admin (Week 8)
-- [ ] Admin dashboard
-- [ ] Reporting system
-- [ ] Verification workflows
-- [ ] Trust and safety features
-- [ ] UI/UX improvements
-
-### Phase 6: Testing and Launch Prep (Week 9-10)
-- [ ] End-to-end testing
-- [ ] Performance optimization
-- [ ] Security audit
-- [ ] Documentation
-- [ ] Deployment setup
-
----
-
 ## Tech Stack Setup
 
 ### Backend Setup
@@ -696,6 +650,33 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 ## Development Changelog
 
 This section logs major changes shipped to the project. Only significant changes are recorded here (new features, major refactors, architecture changes).
+
+### 2026-02-05 - Introduction & Connection System, Search & Filtering, Messaging System
+- **Introduction & Connection System**: Complete workflow for requesting and accepting introductions
+  - POST /api/v1/matches/{match_id}/intro - Request introduction with personalized message (100-500 chars)
+  - POST /api/v1/matches/{match_id}/intro/respond - Accept/decline introduction requests
+  - PUT /api/v1/matches/{match_id}/status - Update match status (viewed, saved, dismissed)
+  - Rate limiting: 20 intro requests per day per user
+  - Connection states: pending, viewed, saved, intro_requested, connected, dismissed
+- **Advanced Search & Filtering**: Enhanced search across all entities
+  - User search: Full-text search on name/bio, filters (role, stage, commitment, location), sorting options
+  - Resource search: Search by title/description, filters (category, type, stage, organization), sorting
+  - Event search: Search by title/description, filters (type, location, organization, date), sorting
+  - Organization search: Search by name/description, filters (type, verified, location), sorting
+- **Messaging System**: Complete messaging API for connected users
+  - GET /api/v1/messages - Get all conversations with unread counts
+  - GET /api/v1/messages/{match_id} - Get message thread with pagination
+  - POST /api/v1/messages - Send message (rate limited: 50/day)
+  - PUT /api/v1/messages/{message_id}/read - Mark message as read
+  - PUT /api/v1/messages/match/{match_id}/read-all - Mark all messages in thread as read
+  - GET /api/v1/messages/unread/count - Get unread message counts
+  - Polling-based delivery (WebSockets planned for V2)
+  - Only connected users can message each other
+- **Dashboard & Profile Discovery UI**: Frontend implementation for core user flows
+  - Dashboard page with match counts and quick actions
+  - Profile discovery page with YC-style matching flow
+  - Improved authentication redirect flow
+  - User onboarding completion tracking
 
 ### 2026-01-28 - [1a5dbd2] Docker Containerization, CI/CD Pipelines 
 - **Docker Containerization**: Production-ready Dockerfiles for backend and frontend
