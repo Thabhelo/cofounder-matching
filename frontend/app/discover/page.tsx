@@ -22,7 +22,7 @@ export default function DiscoverPage() {
       try {
         const token = await getToken()
         if (!token) {
-          router.push("/onboarding")
+          router.push("/")
           return
         }
 

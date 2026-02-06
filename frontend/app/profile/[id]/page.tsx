@@ -23,7 +23,7 @@ export default function ProfileDetailPage() {
       try {
         const token = await getToken()
         if (!token) {
-          router.push("/onboarding")
+          router.push("/")
           return
         }
 

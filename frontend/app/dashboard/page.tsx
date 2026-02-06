@@ -27,7 +27,7 @@ export default function DashboardPage() {
       try {
         const token = await getToken()
         if (!token) {
-          router.push("/onboarding")
+          router.push("/")
           return
         }
 
@@ -39,7 +39,8 @@ export default function DashboardPage() {
         setCounts(countsData)
       } catch (error) {
         console.error("Failed to load data:", error)
-        router.push("/onboarding")
+        // Don't redirect to onboarding - allow access to dashboard even if profile incomplete
+        // User can update profile later via /profile page
       } finally {
         setLoading(false)
       }

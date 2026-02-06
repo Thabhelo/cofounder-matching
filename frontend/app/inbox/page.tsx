@@ -16,12 +16,12 @@ export default function InboxPage() {
       try {
         const token = await getToken()
         if (!token) {
-          router.push("/onboarding")
+          router.push("/")
           return
         }
       } catch (error) {
         console.error("Failed to check auth:", error)
-        router.push("/onboarding")
+        router.push("/")
       } finally {
         setLoading(false)
       }
