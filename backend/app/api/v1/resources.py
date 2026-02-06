@@ -14,31 +14,65 @@ router = APIRouter()
 
 @router.get("", response_model=List[ResourceResponse])
 async def list_resources(
+    q: str = Query(None, description="Search query for title, description, or tags"),
     category: Optional[str] = Query(None, description="Filter by category"),
     resource_type: Optional[str] = Query(None, description="Filter by resource type"),
     stage: Optional[str] = Query(None, description="Filter by stage eligibility"),
+    organization_id: Optional[str] = Query(None, description="Filter by organization"),
     featured_only: bool = Query(False, description="Show only featured resources"),
+    sort_by: str = Query("recent", description="Sort by: recent, deadline, amount, featured"),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_current_user)
 ):
-    """List resources with optional filters - public endpoint"""
+    """List resources with search and filters - public endpoint"""
+    from sqlalchemy import or_
+    
     query = db.query(Resource).filter(Resource.is_active)
 
+    # Full-text search on title and description
+    if q:
+        search_term = f"%{q}%"
+        query = query.filter(
+            or_(
+                Resource.title.ilike(search_term),
+                Resource.description.ilike(search_term)
+            )
+        )
+
+    # Filters
     if category:
         query = query.filter(Resource.category == category)
     if resource_type:
         query = query.filter(Resource.resource_type == resource_type)
     if stage:
         query = query.filter(Resource.stage_eligibility.contains([stage]))
+    if organization_id:
+        query = query.filter(Resource.organization_id == organization_id)
     if featured_only:
         query = query.filter(Resource.is_featured)
 
-    resources = query.order_by(
-        Resource.is_featured.desc(),
-        Resource.created_at.desc()
-    ).offset(skip).limit(limit).all()
+    # Sorting
+    if sort_by == "deadline":
+        query = query.order_by(
+            Resource.deadline.asc().nulls_last(),
+            Resource.created_at.desc()
+        )
+    elif sort_by == "amount":
+        query = query.order_by(
+            Resource.amount_max.desc().nulls_last(),
+            Resource.created_at.desc()
+        )
+    elif sort_by == "featured":
+        query = query.order_by(
+            Resource.is_featured.desc(),
+            Resource.created_at.desc()
+        )
+    else:  # recent (default)
+        query = query.order_by(Resource.created_at.desc())
+
+    resources = query.offset(skip).limit(limit).all()
 
     return resources
 

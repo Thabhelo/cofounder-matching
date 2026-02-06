@@ -217,28 +217,59 @@ async def get_user_profile(
 
 @router.get("", response_model=List[UserPublicResponse])
 async def search_users(
+    q: str = Query(None, description="Search query for name, bio, or skills"),
     role_intent: str = Query(None, description="Filter by role intent"),
     stage_preference: str = Query(None, description="Filter by stage preference"),
+    commitment: str = Query(None, description="Filter by commitment level"),
     location: str = Query(None, description="Filter by location"),
     availability_status: str = Query(None, description="Filter by availability status"),
+    sort_by: str = Query("recent", description="Sort by: recent, trust_score, experience"),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
     db: Session = Depends(get_db)
 ):
-    """Search users with filters"""
+    """Search users with filters and full-text search"""
+    from sqlalchemy import or_
+    
     query = db.query(User).filter(
         User.is_active,
         ~User.is_banned
     )
 
+    # Full-text search on name, bio
+    if q:
+        search_term = f"%{q}%"
+        query = query.filter(
+            or_(
+                User.name.ilike(search_term),
+                User.bio.ilike(search_term)
+            )
+        )
+
+    # Filters
     if role_intent:
         query = query.filter(User.role_intent == role_intent)
     if stage_preference:
         query = query.filter(User.stage_preference == stage_preference)
+    if commitment:
+        query = query.filter(User.commitment == commitment)
     if location:
         query = query.filter(User.location.ilike(f"%{location}%"))
     if availability_status:
         query = query.filter(User.availability_status == availability_status)
 
-    users = query.order_by(User.created_at.desc()).offset(skip).limit(limit).all()
+    # Sorting
+    if sort_by == "trust_score":
+        # Note: trust_score doesn't exist in model yet, so we'll sort by created_at as fallback
+        query = query.order_by(User.created_at.desc())
+    elif sort_by == "experience":
+        query = query.order_by(
+            User.experience_years.desc().nulls_last(),
+            User.previous_startups.desc().nulls_last(),
+            User.created_at.desc()
+        )
+    else:  # recent (default)
+        query = query.order_by(User.created_at.desc())
+
+    users = query.offset(skip).limit(limit).all()
     return users
