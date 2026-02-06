@@ -240,6 +240,53 @@ export const api = {
         token,
       }),
   },
+
+  profiles: {
+    discover: (params?: { skip?: number; limit?: number }, token?: string) => {
+      const queryParams = new URLSearchParams(
+        Object.entries(params || {})
+          .filter(([, value]) => value !== undefined)
+          .map(([key, value]) => [key, String(value)])
+      )
+      return request<UserPublic[]>(`/api/v1/profiles/discover?${queryParams}`, { token })
+    },
+
+    getCounts: (token: string) =>
+      request<{ discover_count: number; saved_count: number; matches_count: number }>(
+        "/api/v1/profiles/count",
+        { token }
+      ),
+
+    save: (profileId: string, token: string) =>
+      request<{ message: string; match_id: string }>(`/api/v1/profiles/${profileId}/save`, {
+        method: "POST",
+        token,
+      }),
+
+    skip: (profileId: string, token: string) =>
+      request<{ message: string; match_id: string }>(`/api/v1/profiles/${profileId}/skip`, {
+        method: "POST",
+        token,
+      }),
+
+    getSaved: (params?: { skip?: number; limit?: number }, token?: string) => {
+      const queryParams = new URLSearchParams(
+        Object.entries(params || {})
+          .filter(([, value]) => value !== undefined)
+          .map(([key, value]) => [key, String(value)])
+      )
+      return request<UserPublic[]>(`/api/v1/profiles/saved?${queryParams}`, { token })
+    },
+
+    getSkipped: (params?: { skip?: number; limit?: number }, token?: string) => {
+      const queryParams = new URLSearchParams(
+        Object.entries(params || {})
+          .filter(([, value]) => value !== undefined)
+          .map(([key, value]) => [key, String(value)])
+      )
+      return request<UserPublic[]>(`/api/v1/profiles/skipped?${queryParams}`, { token })
+    },
+  },
 }
 
 export { APIError }
