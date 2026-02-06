@@ -14,24 +14,21 @@ from app.database import Base, get_db
 # Import app after models to ensure proper initialization
 from app.main import app as fastapi_app
 
-# Use PostgreSQL in CI, SQLite locally for testing
+# Use PostgreSQL for tests (required for UUID support)
 import os
 if os.getenv("DATABASE_URL"):
     # CI environment - use PostgreSQL
     SQLALCHEMY_TEST_DATABASE_URL = os.getenv("DATABASE_URL")
-    from sqlalchemy.pool import NullPool
-    engine = create_engine(
-        SQLALCHEMY_TEST_DATABASE_URL,
-        poolclass=NullPool,  # Don't pool connections in tests
-    )
 else:
-    # Local testing - use in-memory SQLite
-    SQLALCHEMY_TEST_DATABASE_URL = "sqlite:///:memory:"
-    engine = create_engine(
-        SQLALCHEMY_TEST_DATABASE_URL,
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
+    # Local testing - use PostgreSQL container (docker-compose)
+    # Use main database but wrap in transactions (rolled back after each test)
+    SQLALCHEMY_TEST_DATABASE_URL = "postgresql://user:password@localhost:5432/cofounder_matching"
+
+from sqlalchemy.pool import NullPool
+engine = create_engine(
+    SQLALCHEMY_TEST_DATABASE_URL,
+    poolclass=NullPool,  # Don't pool connections in tests
+)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 

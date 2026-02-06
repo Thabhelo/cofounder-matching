@@ -20,11 +20,11 @@ async def discover_profiles(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Discover profiles to browse - excludes already saved/skipped profiles"""
+    """Discover profiles to browse - excludes already saved/skipped/invited profiles"""
     # Get IDs of profiles user has already interacted with
     interacted_matches = db.query(Match.target_user_id).filter(
         Match.user_id == current_user.id,
-        Match.status.in_(["saved", "dismissed", "viewed"])
+        Match.status.in_(["saved", "dismissed", "viewed", "intro_requested", "connected"])
     ).all()
     interacted_ids = [match[0] for match in interacted_matches]
 
@@ -183,6 +183,70 @@ async def skip_profile(
         db.commit()
         db.refresh(new_match)
         return {"message": "Profile skipped", "match_id": str(new_match.id)}
+
+
+@router.delete("/{profile_id}/save", status_code=status.HTTP_200_OK)
+async def unsave_profile(
+    profile_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Unsave a profile - removes it from saved list and returns it to discover pool"""
+    try:
+        target_user_id = uuid.UUID(profile_id)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid profile ID")
+
+    # Find the match
+    match = db.query(Match).filter(
+        Match.user_id == current_user.id,
+        Match.target_user_id == target_user_id,
+        Match.status == "saved"
+    ).first()
+
+    if not match:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Saved profile not found"
+        )
+
+    # Delete the match to return profile to discover pool
+    db.delete(match)
+    db.commit()
+
+    return {"message": "Profile unsaved", "profile_id": profile_id}
+
+
+@router.delete("/{profile_id}/skip", status_code=status.HTTP_200_OK)
+async def unskip_profile(
+    profile_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Unskip a profile - removes it from skipped list and returns it to discover pool"""
+    try:
+        target_user_id = uuid.UUID(profile_id)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid profile ID")
+
+    # Find the match
+    match = db.query(Match).filter(
+        Match.user_id == current_user.id,
+        Match.target_user_id == target_user_id,
+        Match.status == "dismissed"
+    ).first()
+
+    if not match:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Skipped profile not found"
+        )
+
+    # Delete the match to return profile to discover pool
+    db.delete(match)
+    db.commit()
+
+    return {"message": "Profile unskipped", "profile_id": profile_id}
 
 
 @router.get("/saved", response_model=List[UserPublicResponse])

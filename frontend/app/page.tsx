@@ -59,10 +59,10 @@ export default function Home() {
               </SignedOut>
               <SignedIn>
                 <Link
-                  href="/onboarding"
+                  href="/dashboard"
                   className="inline-block px-8 py-3 bg-zinc-900 text-white font-medium rounded-lg hover:bg-zinc-800 transition-colors shadow-soft"
                 >
-                  Complete Your Profile
+                  Go to Dashboard
                 </Link>
               </SignedIn>
             </div>

@@ -36,13 +36,25 @@ async def get_conversations(
         )
     ).all()
 
+    # Deduplicate - only show one conversation per pair of users
+    seen_pairs = set()
     conversations = []
+
     for match in matches:
         # Determine the other user
         if match.user_id == current_user.id:
             other_user_id = match.target_user_id
         else:
             other_user_id = match.user_id
+
+        # Create a pair identifier (sorted to avoid duplicates)
+        pair = tuple(sorted([str(current_user.id), str(other_user_id)]))
+
+        # Skip if we've already seen this pair
+        if pair in seen_pairs:
+            continue
+
+        seen_pairs.add(pair)
 
         other_user = db.query(User).filter(
             User.id == other_user_id,
