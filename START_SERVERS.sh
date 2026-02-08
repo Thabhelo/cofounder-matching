@@ -1,5 +1,25 @@
 #!/bin/bash
 
+# ==========================================
+# Helper Function: Wait for a port to open
+# ==========================================
+wait_for_port() {
+  local port=$1
+  local name=$2
+  local retries=30
+  echo -n "Waiting for $name to be ready on port $port..."
+  while ! nc -z localhost $port 2>/dev/null; do
+    sleep 1
+    retries=$((retries - 1))
+    if [ $retries -eq 0 ]; then
+      echo -e "\n${RED}[ERROR] Timed out waiting for $name${NC}"
+      exit 1
+    fi
+    echo -n "."
+  done
+  echo -e " ${GREEN}Done!${NC}"
+}
+
 echo "=================================="
 echo "Co-Founder Matching Platform Setup"
 echo "=================================="
@@ -30,9 +50,7 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# Wait for PostgreSQL to be ready
-echo "Waiting for PostgreSQL to be ready..."
-sleep 5
+wait_for_port 5432 "PostgreSQL"
 
 # Backend setup
 echo ""
@@ -63,10 +81,15 @@ fi
 echo "Running database migrations..."
 alembic upgrade head
 if [ $? -ne 0 ]; then
-    echo -e "${YELLOW}[WARNING] Database migrations not generated yet${NC}"
-    echo "Generating initial migration..."
-    alembic revision --autogenerate -m "Initial schema"
-    alembic upgrade head
+    echo -e "${RED}[ERROR] Database migration failed${NC}"
+    echo ""
+    echo "Common fixes:"
+    echo "  1. If this is a fresh database, generate initial migration:"
+    echo "     cd backend && alembic revision --autogenerate -m 'Initial schema'"
+    echo "  2. If you switched branches, check out the correct migrations"
+    echo "  3. Check logs/backend.log for details"
+    echo ""
+    exit 1
 fi
 
 # Clear Python cache before starting (ensures fresh imports)
@@ -92,6 +115,9 @@ if kill -0 $BACKEND_PID 2>/dev/null; then
 else
     echo -e "${RED}[ERROR] Backend failed to start. Check logs/backend.log${NC}"
 fi
+
+# Wait for backend to actually be up before starting frontend
+wait_for_port 8000 "Backend API"
 
 cd ..
 

@@ -1,70 +1,68 @@
 #!/bin/bash
 
+# ==========================================
+# Helper: Kill process on specific port
+# ==========================================
+kill_port() {
+  local port=$1
+  local name=$2
+
+  if lsof -ti:$port > /dev/null 2>&1; then
+    echo "  $name found on port $port. Killing..."
+    # Try graceful kill first
+    lsof -ti:$port | xargs kill -15 2>/dev/null
+    sleep 1
+    # Force kill if still there
+    if lsof -ti:$port > /dev/null 2>&1; then
+       echo "  $name stubborn. Force killing..."
+       lsof -ti:$port | xargs kill -9 2>/dev/null
+    fi
+    echo "  [OK] Port $port freed."
+  else
+    echo "  [OK] Port $port is already free."
+  fi
+}
+
 echo "=================================="
-echo "Stopping all servers..."
+echo "Stopping Development Environment"
 echo "=================================="
 echo ""
 
-# Stop backend - try multiple methods to ensure it's killed
-echo "Stopping backend server..."
+# 1. Stop Backend (Port 8000)
+echo "Stopping Backend..."
+kill_port 8000 "Backend"
 
-# Method 1: Kill by PID file (if exists)
-if [ -f logs/backend.pid ]; then
-    BACKEND_PID=$(cat logs/backend.pid)
-    if kill -0 $BACKEND_PID 2>/dev/null; then
-        echo "  Killing backend process (PID: $BACKEND_PID)..."
-        kill $BACKEND_PID 2>/dev/null
-        sleep 1
-        # Force kill if still running
-        if kill -0 $BACKEND_PID 2>/dev/null; then
-            kill -9 $BACKEND_PID 2>/dev/null
-        fi
-    fi
-    rm -f logs/backend.pid
+# Cleanup specific uvicorn workers just in case
+pkill -f "uvicorn app.main:app" 2>/dev/null
+
+# 2. Stop Frontend (Port 3000)
+echo ""
+echo "Stopping Frontend..."
+kill_port 3000 "Frontend"
+
+# Cleanup generic next-server instances if safe
+# (Only do this if you don't have other Next.js apps running!)
+pkill -f "next-server" 2>/dev/null
+
+# 3. Housekeeping
+echo ""
+echo "Cleaning up..."
+rm -f logs/*.pid 2>/dev/null
+
+# Clear Python Cache (prevents import errors on restart)
+if [ -d "backend" ]; then
+    echo "  Clearing Python cache..."
+    find backend -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null
+    find backend -name "*.pyc" -delete 2>/dev/null
 fi
 
-# Method 2: Kill all uvicorn processes (in case PID file is stale)
-echo "  Checking for other uvicorn processes..."
-pkill -f "uvicorn app.main:app" 2>/dev/null && echo "  [OK] Killed additional uvicorn processes" || true
-sleep 1
-
-# Stop frontend - try multiple methods
+# 4. Stop Docker (Preserve data/networks for faster restart)
 echo ""
-echo "Stopping frontend server..."
-
-# Method 1: Kill by PID file (if exists)
-if [ -f logs/frontend.pid ]; then
-    FRONTEND_PID=$(cat logs/frontend.pid)
-    if kill -0 $FRONTEND_PID 2>/dev/null; then
-        echo "  Killing frontend process (PID: $FRONTEND_PID)..."
-        kill $FRONTEND_PID 2>/dev/null
-        sleep 1
-        # Force kill if still running
-        if kill -0 $FRONTEND_PID 2>/dev/null; then
-            kill -9 $FRONTEND_PID 2>/dev/null
-        fi
-    fi
-    rm -f logs/frontend.pid
-fi
-
-# Method 2: Kill all node/npm processes on port 3000 (in case PID file is stale)
-echo "  Checking for other Next.js processes..."
-pkill -f "next-server" 2>/dev/null && echo "  [OK] Killed additional Next.js processes" || true
-# Kill processes using port 3000
-lsof -ti:3000 2>/dev/null | xargs kill -9 2>/dev/null && echo "  [OK] Killed processes on port 3000" || true
-sleep 1
-
-# Clear Python cache to ensure fresh imports on next start
-echo ""
-echo "Clearing Python cache..."
-cd backend 2>/dev/null && find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null && find . -name "*.pyc" -delete 2>/dev/null && cd .. && echo "  [OK] Python cache cleared" || echo "  [WARNING] Could not clear cache (backend directory may not exist)"
-
-# Stop PostgreSQL
-echo ""
-echo "Stopping PostgreSQL..."
-docker compose down 2>/dev/null && echo "  [OK] PostgreSQL stopped" || echo "  [WARNING] PostgreSQL may not be running"
+echo "Stopping Database..."
+# 'stop' pauses containers (fast). 'down' destroys them (slow).
+docker compose stop 2>/dev/null || echo "  [WARNING] Docker not running or compose file missing."
 
 echo ""
 echo "=================================="
-echo "[OK] All servers stopped!"
+echo "[OK] Environment Shutdown Complete"
 echo "=================================="
