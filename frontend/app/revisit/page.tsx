@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import { useAuth } from "@clerk/nextjs"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
@@ -11,11 +11,11 @@ import type { UserPublic } from "@/lib/types"
 
 type Tab = "saved" | "skipped"
 
-export default function RevisitPage() {
+function RevisitPageContent() {
   const { getToken } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [activeTab, setActiveTab] = useState<Tab>((searchParams.get("tab") as Tab) || "saved")
+  const [activeTab, setActiveTab] = useState<Tab>((searchParams?.get("tab") as Tab) || "saved")
   const [savedProfiles, setSavedProfiles] = useState<UserPublic[]>([])
   const [skippedProfiles, setSkippedProfiles] = useState<UserPublic[]>([])
   const [loading, setLoading] = useState(true)
@@ -232,5 +232,23 @@ export default function RevisitPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function RevisitPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex">
+        <Sidebar />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-900 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading...</p>
+          </div>
+        </div>
+      </div>
+    }>
+      <RevisitPageContent />
+    </Suspense>
   )
 }
