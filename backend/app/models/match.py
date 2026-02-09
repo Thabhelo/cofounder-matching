@@ -19,11 +19,11 @@ class Match(Base):
 
     # Score Breakdown (for transparency)
     complementarity_score = Column(Integer, nullable=True)
-    stage_alignment_score = Column(Integer, nullable=True)
     commitment_alignment_score = Column(Integer, nullable=True)
-    working_style_score = Column(Integer, nullable=True)
     location_fit_score = Column(Integer, nullable=True)
     intent_score = Column(Integer, nullable=True)
+    interest_overlap_score = Column(Integer, nullable=True)
+    preference_alignment_score = Column(Integer, nullable=True)
 
     # Status
     status = Column(String(50), default="pending", nullable=False, index=True)

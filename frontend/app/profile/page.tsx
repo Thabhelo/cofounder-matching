@@ -167,25 +167,6 @@ export default function ProfilePage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Stage Preference</label>
-                {isEditing ? (
-                  <select
-                    value={formData.stage_preference || ""}
-                    onChange={e => setFormData({ ...formData, stage_preference: e.target.value as any })}
-                    className="w-full px-4 py-2 border rounded-lg"
-                  >
-                    <option value="">Select stage</option>
-                    <option value="idea">Idea</option>
-                    <option value="mvp">MVP</option>
-                    <option value="revenue">Revenue</option>
-                    <option value="growth">Growth</option>
-                  </select>
-                ) : (
-                  <p className="text-gray-900 capitalize">{user?.stage_preference || "Not specified"}</p>
-                )}
-              </div>
-
-              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Commitment</label>
                 {isEditing ? (
                   <select
@@ -228,50 +209,6 @@ export default function ProfilePage() {
                   />
                 ) : (
                   <p className="text-gray-900">{user?.previous_startups || 0}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Working Style</label>
-                {isEditing ? (
-                  <select
-                    value={formData.working_style || ""}
-                    onChange={e => setFormData({ ...formData, working_style: e.target.value as any })}
-                    className="w-full px-4 py-2 border rounded-lg"
-                  >
-                    <option value="">Select working style</option>
-                    <option value="structured">Structured</option>
-                    <option value="chaotic">Move fast</option>
-                    <option value="flexible">Flexible</option>
-                  </select>
-                ) : (
-                  <p className="text-gray-900 capitalize">
-                    {user?.working_style === "structured" ? "Structured" :
-                     user?.working_style === "chaotic" ? "Move fast" :
-                     user?.working_style === "flexible" ? "Flexible" : "Not specified"}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Communication Preference</label>
-                {isEditing ? (
-                  <select
-                    value={formData.communication_preference || ""}
-                    onChange={e => setFormData({ ...formData, communication_preference: e.target.value as any })}
-                    className="w-full px-4 py-2 border rounded-lg"
-                  >
-                    <option value="">Select preference</option>
-                    <option value="async">Async (Slack, email)</option>
-                    <option value="sync">Sync (calls, meetings)</option>
-                    <option value="mixed">Mixed</option>
-                  </select>
-                ) : (
-                  <p className="text-gray-900">
-                    {user?.communication_preference === "async" ? "Async (Slack, email)" :
-                     user?.communication_preference === "sync" ? "Sync (calls, meetings)" :
-                     user?.communication_preference === "mixed" ? "Mixed" : "Not specified"}
-                  </p>
                 )}
               </div>
 

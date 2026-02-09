@@ -83,7 +83,6 @@ def test_user_data() -> Dict:
         "name": "Test User",
         "role_intent": "cofounder",
         "bio": "Test bio for testing purposes",
-        "stage_preference": "mvp",
         "commitment": "full_time",
         "location": "San Francisco, CA",
         "previous_startups": 1

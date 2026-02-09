@@ -219,7 +219,6 @@ async def get_user_profile(
 async def search_users(
     q: str = Query(None, description="Search query for name, bio, or skills"),
     role_intent: str = Query(None, description="Filter by role intent"),
-    stage_preference: str = Query(None, description="Filter by stage preference"),
     commitment: str = Query(None, description="Filter by commitment level"),
     location: str = Query(None, description="Filter by location"),
     availability_status: str = Query(None, description="Filter by availability status"),
@@ -249,8 +248,6 @@ async def search_users(
     # Filters
     if role_intent:
         query = query.filter(User.role_intent == role_intent)
-    if stage_preference:
-        query = query.filter(User.stage_preference == stage_preference)
     if commitment:
         query = query.filter(User.commitment == commitment)
     if location:

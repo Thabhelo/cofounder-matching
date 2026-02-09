@@ -1,8 +1,5 @@
 export type RoleIntent = "founder" | "cofounder" | "early_employee"
-export type Stage = "idea" | "mvp" | "revenue" | "growth"
 export type Commitment = "full_time" | "part_time" | "exploratory"
-export type WorkingStyle = "structured" | "chaotic" | "flexible"
-export type CommunicationPreference = "async" | "sync" | "mixed"
 export type AvailabilityStatus = "actively_looking" | "open" | "not_looking"
 export type EventType = "workshop" | "networking" | "pitch" | "conference" | "webinar" | "other"
 export type LocationType = "in_person" | "virtual" | "hybrid"
@@ -29,13 +26,10 @@ export type User = {
   bio?: string
   avatar_url?: string
   role_intent: RoleIntent
-  stage_preference?: Stage
   commitment?: Commitment
   location?: string
   location_preference?: string[]
   travel_tolerance?: string
-  working_style?: WorkingStyle
-  communication_preference?: CommunicationPreference
   skills?: SkillItem[]
   experience_years?: number
   previous_startups: number
@@ -60,11 +54,8 @@ export type UserPublic = {
   bio?: string
   avatar_url?: string
   role_intent: RoleIntent
-  stage_preference?: Stage
   commitment?: Commitment
   location?: string
-  working_style?: WorkingStyle
-  communication_preference?: CommunicationPreference
   skills?: SkillItem[]
   experience_years?: number
   previous_startups: number

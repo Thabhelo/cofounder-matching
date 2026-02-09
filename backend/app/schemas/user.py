@@ -28,11 +28,8 @@ class UserOnboarding(BaseModel):
     name: Optional[str] = None
     role_intent: str = Field(..., description="founder, cofounder, early_employee")
     bio: Optional[str] = Field(None, max_length=2000)
-    stage_preference: Optional[str] = Field(None, description="idea, mvp, revenue, growth")
     commitment: Optional[str] = Field(None, description="full_time, part_time, exploratory")
     location: Optional[str] = Field(None, max_length=255, description="City, State/Province format recommended (e.g., 'San Francisco, CA' or 'Remote')")
-    working_style: Optional[str] = Field(None, description="structured, chaotic, flexible")
-    communication_preference: Optional[str] = Field(None, description="async, sync, mixed")
     skills: Optional[list[SkillItem]] = None
     experience_years: Optional[int] = Field(None, ge=0, le=70)
     previous_startups: int = Field(0, ge=0, le=50)
@@ -82,13 +79,10 @@ class UserUpdate(BaseModel):
     bio: Optional[str] = Field(None, max_length=2000)
     avatar_url: Optional[str] = Field(None, max_length=500)
     role_intent: Optional[str] = None
-    stage_preference: Optional[str] = None
     commitment: Optional[str] = None
     location: Optional[str] = Field(None, max_length=255)
     location_preference: Optional[list[str]] = None
     travel_tolerance: Optional[str] = None
-    working_style: Optional[str] = None
-    communication_preference: Optional[str] = None
     skills: Optional[list[SkillItem]] = None
     experience_years: Optional[int] = Field(None, ge=0, le=70)
     previous_startups: Optional[int] = Field(None, ge=0, le=50)
@@ -107,14 +101,11 @@ class UserResponse(BaseModel):
     bio: Optional[str] = None
     avatar_url: Optional[str] = None
     role_intent: Optional[str] = None  # Made optional to match model
-    stage_preference: Optional[str] = None
     commitment: Optional[str] = None
     location: Optional[str] = None
     # Fields not in User model - made optional with defaults
     location_preference: Optional[list] = None
     travel_tolerance: Optional[str] = None
-    working_style: Optional[str] = None
-    communication_preference: Optional[str] = None
     skills: Optional[list] = None
     experience_years: Optional[int] = None
     previous_startups: Optional[int] = Field(default=0, ge=0, le=50)  # Optional to handle None from DB, default to 0
@@ -151,11 +142,8 @@ class UserPublicResponse(BaseModel):
     bio: Optional[str] = None
     avatar_url: Optional[str] = None
     role_intent: Optional[str] = None  # Made optional to match model
-    stage_preference: Optional[str] = None
     commitment: Optional[str] = None
     location: Optional[str] = None
-    working_style: Optional[str] = None
-    communication_preference: Optional[str] = None
     skills: Optional[list] = None
     experience_years: Optional[int] = None
     previous_startups: Optional[int] = Field(default=0, ge=0, le=50)  # Optional to handle None from DB, default to 0
