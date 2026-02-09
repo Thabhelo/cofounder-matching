@@ -73,9 +73,6 @@ export default function DashboardPage() {
     if (user.location) {
       parts.push(`in ${user.location}`)
     }
-    if (user.stage_preference) {
-      parts.push(`at ${user.stage_preference} stage`)
-    }
     
     return parts.length > 0 ? parts.join(", ") : "No filters set"
   }
