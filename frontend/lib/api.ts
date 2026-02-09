@@ -96,7 +96,6 @@ export const api = {
 
     search: (params?: {
       role_intent?: string
-      stage_preference?: string
       location?: string
       availability_status?: string
       skip?: number

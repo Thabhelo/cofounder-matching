@@ -191,13 +191,6 @@ export default function ProfileDetailPage() {
               </div>
             )}
 
-            {profile.stage_preference && (
-              <div className="mb-6">
-                <h2 className="text-xl font-semibold text-zinc-900 mb-3">Stage Preference</h2>
-                <p className="text-zinc-700 capitalize">{profile.stage_preference.replace("_", " ")}</p>
-              </div>
-            )}
-
             <div className="flex items-center gap-4 pt-6 border-t border-zinc-200">
               <button
                 onClick={handleSkip}

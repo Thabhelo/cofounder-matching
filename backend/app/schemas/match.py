@@ -26,11 +26,11 @@ class MatchResponse(BaseModel):
     match_score: int
     match_explanation: Optional[str] = None
     complementarity_score: Optional[int] = None
-    stage_alignment_score: Optional[int] = None
     commitment_alignment_score: Optional[int] = None
-    working_style_score: Optional[int] = None
     location_fit_score: Optional[int] = None
     intent_score: Optional[int] = None
+    interest_overlap_score: Optional[int] = None
+    preference_alignment_score: Optional[int] = None
     status: str
     intro_requested_at: Optional[datetime] = None
     intro_accepted_at: Optional[datetime] = None
@@ -49,11 +49,11 @@ class MatchWithUserResponse(BaseModel):
     match_score: int
     match_explanation: Optional[str] = None
     complementarity_score: Optional[int] = None
-    stage_alignment_score: Optional[int] = None
     commitment_alignment_score: Optional[int] = None
-    working_style_score: Optional[int] = None
     location_fit_score: Optional[int] = None
     intent_score: Optional[int] = None
+    interest_overlap_score: Optional[int] = None
+    preference_alignment_score: Optional[int] = None
     status: str
     intro_requested_at: Optional[datetime] = None
     intro_accepted_at: Optional[datetime] = None

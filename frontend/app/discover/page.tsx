@@ -239,34 +239,6 @@ export default function DiscoverPage() {
                         <span className="font-medium">Previous startups:</span> {currentProfile.previous_startups}
                       </p>
                     )}
-                    {currentProfile.stage_preference && (
-                      <p className="text-zinc-700">
-                        <span className="font-medium">Stage preference:</span>{" "}
-                        {currentProfile.stage_preference === "idea" ? "Idea stage" :
-                         currentProfile.stage_preference === "mvp" ? "MVP stage" :
-                         currentProfile.stage_preference === "revenue" ? "Revenue stage" : "Growth stage"}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-semibold text-zinc-900 mb-3">Working Style</h3>
-                  <div className="space-y-2 text-sm">
-                    {currentProfile.working_style && (
-                      <p className="text-zinc-700">
-                        <span className="font-medium">Style:</span>{" "}
-                        {currentProfile.working_style === "structured" ? "Structured" :
-                         currentProfile.working_style === "chaotic" ? "Move fast" : "Flexible"}
-                      </p>
-                    )}
-                    {currentProfile.communication_preference && (
-                      <p className="text-zinc-700">
-                        <span className="font-medium">Communication:</span>{" "}
-                        {currentProfile.communication_preference === "async" ? "Async (Slack, email)" :
-                         currentProfile.communication_preference === "sync" ? "Sync (calls, meetings)" : "Mixed"}
-                      </p>
-                    )}
                     {currentProfile.availability_status && (
                       <p className="text-zinc-700">
                         <span className="font-medium">Availability:</span>{" "}

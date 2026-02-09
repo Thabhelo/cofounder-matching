@@ -26,17 +26,12 @@ CREATE TABLE users (
     
     -- Role and Intent
     role_intent VARCHAR(50) NOT NULL,  -- 'founder', 'cofounder', 'early_employee'
-    stage_preference VARCHAR(50),      -- 'idea', 'mvp', 'revenue', 'growth'
     commitment VARCHAR(50),            -- 'full_time', 'part_time', 'exploratory'
     
     -- Location
     location VARCHAR(255),
     location_preference VARCHAR(255),  -- JSON array of acceptable locations
     travel_tolerance VARCHAR(50),      -- 'none', 'occasional', 'frequent'
-    
-    -- Working Style
-    working_style VARCHAR(50),        -- 'structured', 'chaotic', 'flexible'
-    communication_preference VARCHAR(50), -- 'async', 'sync', 'mixed'
     
     -- Skills and Experience
     skills JSONB,                     -- Array of skill objects {name, level, years}
@@ -67,7 +62,6 @@ CREATE TABLE users (
 );
 
 CREATE INDEX idx_users_role_intent ON users(role_intent);
-CREATE INDEX idx_users_stage_preference ON users(stage_preference);
 CREATE INDEX idx_users_location ON users(location);
 CREATE INDEX idx_users_availability_status ON users(availability_status);
 CREATE INDEX idx_users_trust_score ON users(trust_score DESC);
@@ -250,9 +244,9 @@ CREATE TABLE matches (
     
     -- Score Breakdown (for transparency)
     complementarity_score INTEGER,
-    stage_alignment_score INTEGER,
     commitment_alignment_score INTEGER,
-    working_style_score INTEGER,
+    interest_overlap_score INTEGER,
+    preference_alignment_score INTEGER,
     location_fit_score INTEGER,
     intent_score INTEGER,
     
@@ -769,6 +763,31 @@ This section logs major changes shipped to the project. Only significant changes
 - Made CORS configuration environment-based for production deployment
 - Created .env.example files with comprehensive documentation
 - Updated CLAUDE.md with instruction to avoid creating unnecessary documentation files
+
+### 2026-02-08 - [62592bc] Send Invitation Feature Fix
+- **Database Migration Applied**: Fixed Send Invitation button that was failing with missing column error
+  - Applied migration e86e4d681466 to add interest_overlap_score and preference_alignment_score columns to matches table
+  - Removed deprecated stage_alignment_score and working_style_score columns from matches table
+  - Removed deprecated user fields: stage_preference, working_style, communication_preference
+  - Updated Match and User models, schemas, and frontend types to reflect new field structure
+  - Removed related UI fields from profile editing pages
+- **Root Cause**: Migration file existed but hadn't been applied to database, causing 500 errors when sending invitations
+- **Impact**: Send Invitation button on /discover page now works correctly
+
+### 2026-02-08 - [915ec27] Clerk Authentication Upgrade & Modal Sign-In Fix
+- **Clerk SDK Upgrade**: Upgraded @clerk/nextjs from v4.31.8 to v6.37.3
+  - Fixed critical aria-hidden focus trap bug causing modal sign-in to hang infinitely
+  - Bug pattern: Sign-up worked, subsequent sign-ins hung with loading spinner forever
+  - Modal received 200 OK from Clerk API but failed to close/redirect due to focus management bug
+- **Breaking Changes Migration**: Updated authentication middleware
+  - Migrated from deprecated authMiddleware() to clerkMiddleware()
+  - Updated route protection patterns with createRouteMatcher()
+  - Maintained backward compatibility for all client-side useAuth() hooks
+  - Updated middleware matcher patterns for better static file handling
+- **Development Scripts Hardening**:
+  - Removed dangerous Alembic autogenerate fallback from START_SERVERS.sh
+  - Rewrote STOP_SERVERS.sh to use port-based cleanup instead of PID files (prevents killing wrong processes after system restart)
+- **Impact**: All user accounts can now sign in successfully via email/password modal
 
 ### 2026-01-18 00:43 - [d254671] Initial Setup
 - Created project documentation structure (CLAUDE.md, IMPLEMENTATION_PLAN.md)

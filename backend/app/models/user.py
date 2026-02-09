@@ -54,11 +54,8 @@ class User(Base):
 
     # Onboarding fields
     role_intent = Column(String(50), nullable=True)  # founder, cofounder, early_employee
-    stage_preference = Column(String(50), nullable=True)  # idea, mvp, revenue, growth
     commitment = Column(String(50), nullable=True)  # full_time, part_time, exploratory
     location = Column(String(255), nullable=True)
-    working_style = Column(String(50), nullable=True)  # structured, chaotic, flexible
-    communication_preference = Column(String(50), nullable=True)  # async, sync, mixed
     experience_years = Column(Integer, nullable=True)
     previous_startups = Column(Integer, nullable=True)
     github_url = Column(String(500), nullable=True)
