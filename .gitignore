@@ -63,6 +63,12 @@ test-results/
 dist/
 build/
 
+# Markdown: do not track except DOCUMENTATION.md and LICENSE
+*.md
+!docs/DOCUMENTATION.md
+!LICENSE
+!LICENSE.md
+
 # Claude-specific files
 docs/CLAUDE.md
 .claude/

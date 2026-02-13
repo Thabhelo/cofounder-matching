@@ -416,6 +416,8 @@ PUT    /api/v1/matches/{match_id}/status  # Update match status (save/dismiss)
 GET    /api/v1/matches/recommendations    # Get match recommendations
 ```
 
+**Introduction and privacy:** Users can see another user's **profile** (name, bio, skills, links, etc.) before requesting or accepting an introduction. This is intentional so both sides can evaluate the match. **Email and direct contact details are not exposed** in match or discover responses; they are only available after both parties are connected (intro accepted). Public profile responses use `UserPublicResponse`, which excludes email.
+
 #### Messages
 ```
 GET    /api/v1/messages                   # Get messages (conversations)
@@ -562,6 +564,17 @@ components/
    - One has proof: 6 points
    - Neither: 3 points
    - Availability status bonus: +2 if both "actively_looking"
+
+### Additions from implementation plan
+
+The following enhancements are planned:
+
+- **Skill topology** – Beyond a simple technical/non-technical flag: cluster skills into complementary domains (e.g. Frontend/Backend/AI/Business). Two technical co-founders is treated as a valid, strong pairing (complementary technical types or same cluster).
+- **Anti-preferences** – Explicit “avoid” lists (industries, roles) extracted from profiles; matches that violate these are filtered or zeroed out (dealbreaker filter).
+- **Dynamic weighting** – User-defined importance (e.g. sliders) for each score component so weights can be personalized.
+- **Pipeline** – Hard filters (SQL) first; then retrieval (rule-based for MVP; optional later: hybrid pgvector + BM25 with Reciprocal Rank Fusion); then rule-based scoring; optional LLM re-rank on top N for negation and “too many chiefs” detection.
+- **Bonus components** – Interest overlap (+5) and preference alignment (+5) as separate bonuses where interests and cofounder preferences exist.
+- **Threshold and explanations** – Filter out matches below a minimum score (e.g. 40); generate human-readable explanations from the score breakdown for each match.
 
 ---
 
