@@ -7,7 +7,11 @@ from app.schemas.user import UserPublicResponse
 
 
 class IntroRequest(BaseModel):
-    message: str = Field(..., min_length=100, max_length=500, description="Personalized introduction message (100-500 characters)")
+    message: str = Field(
+        default="",
+        max_length=500,
+        description="Introduction message (max 500 characters).",
+    )
 
 
 class IntroResponse(BaseModel):
