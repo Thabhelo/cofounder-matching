@@ -1,5 +1,6 @@
 from sqlalchemy import Column, String, Text, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID, TIMESTAMP
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import uuid
 
@@ -28,6 +29,9 @@ class Report(Base):
 
     # Metadata
     created_at = Column(TIMESTAMP, server_default=func.now(), nullable=False)
+
+    reporter = relationship("User", foreign_keys=[reporter_id])
+    reported_user = relationship("User", foreign_keys=[reported_user_id])
 
     def __repr__(self) -> str:
         return f"<Report type={self.report_type} status={self.status}>"

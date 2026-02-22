@@ -12,6 +12,8 @@ export type ReadyToStart = "now" | "1_month" | "3_months" | "6_months" | "explor
 export type ImportanceLevel = "required" | "preferred" | "not_important"
 export type ProfileStatus = "incomplete" | "pending_review" | "approved" | "rejected"
 export type WorkLocationPreference = "remote" | "in_person" | "hybrid"
+export type ReportType = "spam" | "abuse" | "inappropriate" | "fake" | "other"
+export type ReportStatus = "pending" | "reviewed" | "resolved" | "dismissed"
 
 export type SkillItem = {
   name: string
@@ -183,4 +185,21 @@ export type Event = {
   is_active: boolean
   created_at: string
   updated_at: string
+}
+
+export type ReportListItem = {
+  id: string
+  reporter_id: string | null
+  reported_user_id: string | null
+  report_type: ReportType
+  description: string
+  status: ReportStatus
+  reviewed_by: string | null
+  reviewed_at: string | null
+  resolution_notes: string | null
+  created_at: string
+  reporter_name: string | null
+  reporter_email: string | null
+  reported_user_name: string | null
+  reported_user_email: string | null
 }
