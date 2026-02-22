@@ -18,6 +18,7 @@ from app.schemas.match import (
 )
 from app.schemas.user import UserPublicResponse
 from app.api.deps import get_current_user
+from app.services.matching import score_match, MIN_MATCH_SCORE
 
 router = APIRouter()
 
@@ -100,46 +101,66 @@ async def send_invite_to_profile(
 
     # If reciprocal match exists, auto-connect both matches
     if reciprocal_match:
-        # Create or update current user's match as connected
         if existing_match:
             match = existing_match
             match.status = "connected"  # type: ignore[assignment]
             match.intro_requested_at = datetime.utcnow()  # type: ignore[assignment]
             match.intro_accepted_at = datetime.utcnow()  # type: ignore[assignment]
             match.updated_at = datetime.utcnow()  # type: ignore[assignment]
+            if match.match_score == 0:
+                inv_result = score_match(current_user, target_user)
+                match.match_score = inv_result["match_score"]
+                match.match_explanation = inv_result["match_explanation"]
+                match.complementarity_score = inv_result["complementarity_score"]
+                match.commitment_alignment_score = inv_result["commitment_alignment_score"]
+                match.location_fit_score = inv_result["location_fit_score"]
+                match.intent_score = inv_result["intent_score"]
+                match.interest_overlap_score = inv_result["interest_overlap_score"]
+                match.preference_alignment_score = inv_result["preference_alignment_score"]
         else:
+            inv_result = score_match(current_user, target_user)
             match = Match(
                 user_id=current_user.id,
                 target_user_id=target_user_id,
-                match_score=0,
+                match_score=inv_result["match_score"],
+                match_explanation=inv_result["match_explanation"],
+                complementarity_score=inv_result["complementarity_score"],
+                commitment_alignment_score=inv_result["commitment_alignment_score"],
+                location_fit_score=inv_result["location_fit_score"],
+                intent_score=inv_result["intent_score"],
+                interest_overlap_score=inv_result["interest_overlap_score"],
+                preference_alignment_score=inv_result["preference_alignment_score"],
                 status="connected",
                 intro_requested_at=datetime.utcnow(),
                 intro_accepted_at=datetime.utcnow()
             )
             db.add(match)
+            db.flush()
 
-        # Update reciprocal match to connected
+        if reciprocal_match.match_score == 0:
+            rec_result = score_match(target_user, current_user)
+            reciprocal_match.match_score = rec_result["match_score"]
+            reciprocal_match.match_explanation = rec_result["match_explanation"]
+            reciprocal_match.complementarity_score = rec_result["complementarity_score"]
+            reciprocal_match.commitment_alignment_score = rec_result["commitment_alignment_score"]
+            reciprocal_match.location_fit_score = rec_result["location_fit_score"]
+            reciprocal_match.intent_score = rec_result["intent_score"]
+            reciprocal_match.interest_overlap_score = rec_result["interest_overlap_score"]
+            reciprocal_match.preference_alignment_score = rec_result["preference_alignment_score"]
         reciprocal_match.status = "connected"  # type: ignore[assignment]
         reciprocal_match.intro_accepted_at = datetime.utcnow()  # type: ignore[assignment]
         reciprocal_match.updated_at = datetime.utcnow()  # type: ignore[assignment]
 
-        # Create intro message
         intro_message = Message(
-            match_id=match.id if existing_match else None,
+            match_id=match.id,
             sender_id=current_user.id,
             recipient_id=target_user_id,
             content=intro_request.message,
             message_type="intro_request"
         )
-
+        db.add(intro_message)
         db.commit()
         db.refresh(match)
-
-        # Set match_id for message if it was a new match
-        if not existing_match:
-            intro_message.match_id = match.id
-            db.add(intro_message)
-            db.commit()
 
         return {
             "message": "You're now connected! Check your inbox to start chatting.",
@@ -154,33 +175,45 @@ async def send_invite_to_profile(
         match.status = "intro_requested"  # type: ignore[assignment]
         match.intro_requested_at = datetime.utcnow()  # type: ignore[assignment]
         match.updated_at = datetime.utcnow()  # type: ignore[assignment]
+        if match.match_score == 0:
+            inv_result = score_match(current_user, target_user)
+            match.match_score = inv_result["match_score"]
+            match.match_explanation = inv_result["match_explanation"]
+            match.complementarity_score = inv_result["complementarity_score"]
+            match.commitment_alignment_score = inv_result["commitment_alignment_score"]
+            match.location_fit_score = inv_result["location_fit_score"]
+            match.intent_score = inv_result["intent_score"]
+            match.interest_overlap_score = inv_result["interest_overlap_score"]
+            match.preference_alignment_score = inv_result["preference_alignment_score"]
     else:
+        inv_result = score_match(current_user, target_user)
         match = Match(
             user_id=current_user.id,
             target_user_id=target_user_id,
-            match_score=0,
+            match_score=inv_result["match_score"],
+            match_explanation=inv_result["match_explanation"],
+            complementarity_score=inv_result["complementarity_score"],
+            commitment_alignment_score=inv_result["commitment_alignment_score"],
+            location_fit_score=inv_result["location_fit_score"],
+            intent_score=inv_result["intent_score"],
+            interest_overlap_score=inv_result["interest_overlap_score"],
+            preference_alignment_score=inv_result["preference_alignment_score"],
             status="intro_requested",
             intro_requested_at=datetime.utcnow()
         )
         db.add(match)
+        db.flush()
 
-    # Create intro request message
     intro_message = Message(
-        match_id=match.id if existing_match else None,
+        match_id=match.id,
         sender_id=current_user.id,
         recipient_id=target_user_id,
         content=intro_request.message,
         message_type="intro_request"
     )
-
+    db.add(intro_message)
     db.commit()
     db.refresh(match)
-
-    # Set match_id for message if it was a new match
-    if not existing_match:
-        intro_message.match_id = match.id
-        db.add(intro_message)
-        db.commit()
 
     return {
         "message": "Invitation sent successfully",
@@ -257,26 +290,31 @@ async def get_match_recommendations(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get match recommendations - users you haven't interacted with yet"""
-    # Get IDs of profiles user has already interacted with
+    """Get match recommendations - scored and ordered by match quality."""
     interacted_matches = db.query(Match.target_user_id).filter(
         Match.user_id == current_user.id
     ).all()
     interacted_ids = [match[0] for match in interacted_matches]
 
-    # Get profiles excluding current user and already interacted profiles
     query = db.query(User).filter(
         User.is_active,
         ~User.is_banned,
         User.id != current_user.id
     )
-
     if interacted_ids:
         query = query.filter(~User.id.in_(interacted_ids))
 
-    # Role-based complementary matching (founder/cofounder) was removed on this branch;
-    # return all eligible users. Matching algorithm may be re-added in a later branch.
-    profiles = query.order_by(User.created_at.desc()).offset(skip).limit(limit).all()
+    # Fetch a pool, score and filter, then paginate over the scored results so each
+    # page returns up to `limit` results from the ranked list (not from raw candidates).
+    CANDIDATE_POOL_SIZE = 500
+    candidates = query.order_by(User.created_at.desc()).limit(CANDIDATE_POOL_SIZE).all()
+    scored: List[tuple[User, int]] = []
+    for other in candidates:
+        result = score_match(current_user, other)
+        if result["match_score"] >= MIN_MATCH_SCORE:
+            scored.append((other, result["match_score"]))
+    scored.sort(key=lambda x: x[1], reverse=True)
+    profiles = [u for u, _ in scored[skip : skip + limit]]
     return profiles
 
 
