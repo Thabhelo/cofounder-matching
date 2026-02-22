@@ -74,6 +74,12 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
 
 export const api = {
   users: {
+    acceptBehaviorAgreement: (token: string) =>
+      request<User>("/api/v1/users/accept-behavior-agreement", {
+        method: "POST",
+        token,
+      }),
+
     onboarding: (data: unknown, token: string) =>
       request<User>("/api/v1/users/onboarding", {
         method: "POST",
@@ -95,9 +101,9 @@ export const api = {
       request<UserPublic>(`/api/v1/users/${userId}`),
 
     search: (params?: {
-      role_intent?: string
+      idea_status?: string
       location?: string
-      availability_status?: string
+      commitment?: string
       skip?: number
       limit?: number
     }) => {

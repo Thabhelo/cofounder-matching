@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "Co-Founder Matching Platform"
     CORS_ORIGINS: str = "http://localhost:3000,http://localhost:3001"  # Comma-separated list of allowed origins
     CLERK_FRONTEND_API: str = ""  # Optional: Clerk instance URL (e.g., https://your-instance.clerk.accounts.dev)
+    CLERK_WEBHOOK_SECRET: str = ""  # Optional: Clerk webhook signing secret (from Dashboard → Webhooks → endpoint)
 
     class Config:
         env_file = ".env"

@@ -15,4 +15,5 @@ yarn-debug.log*
 yarn-error.log*
 .vercel
 .turbo
+coverage/
 app/debug

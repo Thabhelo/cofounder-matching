@@ -175,25 +175,25 @@ function RevisitPageContent() {
                     </div>
                   </div>
 
-                  {profile.bio && (
-                    <p className="text-sm text-zinc-700 line-clamp-3 mb-4">{profile.bio}</p>
+                  {profile.introduction && (
+                    <p className="text-sm text-zinc-700 line-clamp-3 mb-4">{profile.introduction}</p>
                   )}
 
-                  {profile.skills && profile.skills.length > 0 && (
+                  {((profile.areas_of_ownership?.length ?? 0) > 0 || (profile.topics_of_interest?.length ?? 0) > 0) && (
                     <div className="flex flex-wrap gap-2 mb-4">
-                      {profile.skills.slice(0, 3).map((skill, idx) => (
+                      {(profile.areas_of_ownership ?? []).slice(0, 2).map((area) => (
                         <span
-                          key={idx}
+                          key={area}
                           className="px-2 py-1 bg-zinc-100 text-zinc-900 text-xs rounded-full"
                         >
-                          {skill.name}
+                          {area.replace(/_/g, " ")}
                         </span>
                       ))}
-                      {profile.skills.length > 3 && (
-                        <span className="px-2 py-1 text-zinc-600 text-xs">
-                          +{profile.skills.length - 3} more
+                      {(profile.topics_of_interest ?? []).slice(0, 2).map((topic) => (
+                        <span key={topic} className="px-2 py-1 bg-zinc-100 text-zinc-900 text-xs rounded-full">
+                          {topic}
                         </span>
-                      )}
+                      ))}
                     </div>
                   )}
 

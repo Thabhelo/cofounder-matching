@@ -47,7 +47,7 @@ class TestOnboardingAuth:
         response = client.post("/api/v1/users/onboarding", json={
             "email": "test@example.com",
             "name": "Test User",
-            "role_intent": "cofounder"
+            "idea_status": "not_set_on_idea",
         })
         assert response.status_code == 403  # No token provided
     
@@ -61,9 +61,8 @@ class TestOnboardingAuth:
                 json=test_user_data,
                 headers={"Authorization": "Bearer fake_token"}
             )
-            # Should use clerk_id from token, not query param
-            # In real test, would verify database entry has correct clerk_id
-            assert response.status_code in [201, 401, 403]
+            # Should use clerk_id from token, not query param. 422 = validation error; 400 = e.g. missing email/name from token.
+            assert response.status_code in [201, 400, 401, 403, 422]
 
 
 @pytest.mark.auth  

@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from fastapi.exceptions import RequestValidationError
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -14,6 +14,7 @@ from contextlib import asynccontextmanager
 
 from app.config import settings
 from app.api.v1 import api_router
+from app.api import webhooks as webhooks_router
 from app.database import SessionLocal
 
 # Configure structured logging
@@ -111,9 +112,12 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         }
     )
 
-# Rate limit exceeded handler
+# Rate limit exceeded handler (wrapped for FastAPI/mypy exception handler signature)
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded) -> Response:
+    return _rate_limit_exceeded_handler(request, exc)
 
 # Parse CORS origins from comma-separated string
 allowed_origins = [origin.strip() for origin in settings.CORS_ORIGINS.split(",") if origin.strip()]
@@ -132,6 +136,8 @@ if settings.ENVIRONMENT == "production":
 
 # Include API routes
 app.include_router(api_router, prefix=settings.API_V1_PREFIX)
+# Clerk webhooks (no auth; Clerk signs payloads)
+app.include_router(webhooks_router.router, prefix="/webhooks", tags=["webhooks"])
 
 
 @app.get("/")

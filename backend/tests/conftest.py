@@ -1,10 +1,13 @@
+import os
+from datetime import datetime, timedelta
+from typing import Dict
+
+import jwt
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-import jwt
-from datetime import datetime, timedelta
-from typing import Dict
+from sqlalchemy.pool import NullPool
 
 # Import all models so they register with Base before table creation
 import app.models  # noqa: F401
@@ -13,17 +16,16 @@ from app.database import Base, get_db
 # Import app after models to ensure proper initialization
 from app.main import app as fastapi_app
 
-# Use PostgreSQL for tests (required for UUID support)
-import os
-if os.getenv("DATABASE_URL"):
-    # CI environment - use PostgreSQL
-    SQLALCHEMY_TEST_DATABASE_URL = os.getenv("DATABASE_URL")
-else:
-    # Local testing - use PostgreSQL container (docker-compose)
-    # Use main database but wrap in transactions (rolled back after each test)
-    SQLALCHEMY_TEST_DATABASE_URL = "postgresql://user:password@localhost:5432/cofounder_matching"
+# Use PostgreSQL for tests (required for UUID support).
+# URL precedence: TEST_DATABASE_URL > DATABASE_URL > default.
+# CI sets DATABASE_URL=postgresql://test_user:test_password@localhost:5432/test_db (see .github/workflows/ci.yml).
+# Local: leave both unset to use default below, or set TEST_DATABASE_URL (or DATABASE_URL) to your local Postgres.
+SQLALCHEMY_TEST_DATABASE_URL = (
+    os.getenv("TEST_DATABASE_URL")
+    or os.getenv("DATABASE_URL")
+    or "postgresql://user:password@localhost:5432/cofounder_matching"
+)
 
-from sqlalchemy.pool import NullPool
 engine = create_engine(
     SQLALCHEMY_TEST_DATABASE_URL,
     poolclass=NullPool,  # Don't pool connections in tests
@@ -77,15 +79,22 @@ def client(db):
 
 @pytest.fixture
 def test_user_data() -> Dict:
-    """Sample user data for testing"""
+    """Sample user data for testing (matches User model and UserOnboarding required fields)."""
     return {
         "email": "test@example.com",
         "name": "Test User",
-        "role_intent": "cofounder",
-        "bio": "Test bio for testing purposes",
-        "commitment": "full_time",
+        "linkedin_url": "https://linkedin.com/in/testuser",
         "location": "San Francisco, CA",
-        "previous_startups": 1
+        "introduction": "Test intro for testing purposes with enough characters to meet minimum.",
+        "is_technical": True,
+        "idea_status": "building_specific_idea",
+        "ready_to_start": "now",
+        "areas_of_ownership": ["engineering"],
+        "topics_of_interest": ["Other"],
+        "equity_expectation": "Equal split",
+        "looking_for_description": "Looking for a committed co-founder with complementary skills.",
+        "commitment": "full_time",
+        "previous_startups": 1,
     }
 
 

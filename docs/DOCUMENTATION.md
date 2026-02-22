@@ -366,13 +366,14 @@ CREATE TABLE reports (
 
 #### Users
 ```
-GET    /api/v1/users/me                    # Get current user profile
-PUT    /api/v1/users/me                    # Update current user profile
-GET    /api/v1/users/{user_id}             # Get public user profile
-GET    /api/v1/users/search                # Search users with filters
-POST   /api/v1/users/{user_id}/save        # Save user profile
-GET    /api/v1/users/saved                 # Get saved profiles
+POST   /api/v1/users/accept-behavior-agreement  # Accept behavior agreement (required before onboarding)
+POST   /api/v1/users/onboarding                 # Create or complete profile (full onboarding payload)
+GET    /api/v1/users/me                          # Get current user profile
+PUT    /api/v1/users/me                          # Update current user profile
+GET    /api/v1/users/{user_id}                   # Get public user profile
+GET    /api/v1/users?q=...&idea_status=...       # Search users (idea_status, commitment, location)
 ```
+**Profile and onboarding:** User profile uses `idea_status` (not_set_on_idea, have_ideas_flexible, building_specific_idea), `introduction` (formerly bio), location components, areas_of_ownership, topics_of_interest, and co-founder preference fields. `behavior_agreement_accepted_at` and `profile_status` (incomplete, pending_review, approved, rejected) support the onboarding flow. See migration and `app/models/user.py` for full field list.
 
 #### Organizations
 ```
@@ -416,7 +417,7 @@ PUT    /api/v1/matches/{match_id}/status  # Update match status (save/dismiss)
 GET    /api/v1/matches/recommendations    # Get match recommendations
 ```
 
-**Introduction and privacy:** Users can see another user's **profile** (name, bio, skills, links, etc.) before requesting or accepting an introduction. This is intentional so both sides can evaluate the match. **Email and direct contact details are not exposed** in match or discover responses; they are only available after both parties are connected (intro accepted). Public profile responses use `UserPublicResponse`, which excludes email.
+**Introduction and privacy:** Users can see another user's **profile** (name, introduction, areas, topics, links, etc.) before requesting or accepting an introduction. This is intentional so both sides can evaluate the match. **Email and direct contact details are not exposed** in match or discover responses; they are only available after both parties are connected (intro accepted). Public profile responses use `UserPublicResponse`, which excludes email.
 
 #### Messages
 ```
@@ -443,6 +444,12 @@ GET    /api/v1/admin/users                # Admin user management
 PUT    /api/v1/admin/users/{user_id}/ban  # Ban user
 PUT    /api/v1/admin/organizations/{org_id}/verify  # Verify organization
 ```
+
+#### Clerk webhooks
+```
+POST   /webhooks/clerk   # Clerk webhook receiver (no auth; payload signed by Clerk)
+```
+When a user deletes their account in Clerk, we delete the corresponding user in our database so they can sign up again with the same email. Configure in Clerk Dashboard → Webhooks: add endpoint URL `https://your-api.com/webhooks/clerk`, subscribe to **user.deleted**, and set `CLERK_WEBHOOK_SECRET` in the backend `.env` to the endpoint’s signing secret.
 
 ---
 

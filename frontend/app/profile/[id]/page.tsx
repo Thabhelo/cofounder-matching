@@ -146,31 +146,47 @@ export default function ProfileDetailPage() {
                 {profile.location && (
                   <p className="text-zinc-600 mb-4">{profile.location}</p>
                 )}
-                {profile.role_intent && (
+                {profile.idea_status && (
                   <span className="inline-block px-4 py-2 bg-zinc-100 text-zinc-900 font-medium rounded-full">
-                    {profile.role_intent === "founder" ? "Founder" : profile.role_intent === "cofounder" ? "Co-Founder" : "Early Employee"}
+                    {profile.idea_status.replace(/_/g, " ")}
                   </span>
                 )}
               </div>
             </div>
 
-            {profile.bio && (
+            {profile.introduction && (
               <div className="mb-6">
                 <h2 className="text-xl font-semibold text-zinc-900 mb-3">About</h2>
-                <p className="text-zinc-700 leading-relaxed">{profile.bio}</p>
+                <p className="text-zinc-700 leading-relaxed">{profile.introduction}</p>
               </div>
             )}
 
-            {profile.skills && profile.skills.length > 0 && (
+            {profile.areas_of_ownership && profile.areas_of_ownership.length > 0 && (
               <div className="mb-6">
-                <h2 className="text-xl font-semibold text-zinc-900 mb-3">Skills</h2>
+                <h2 className="text-xl font-semibold text-zinc-900 mb-3">Areas of ownership</h2>
                 <div className="flex flex-wrap gap-2">
-                  {profile.skills.map((skill, idx) => (
+                  {profile.areas_of_ownership.map((area) => (
                     <span
-                      key={idx}
+                      key={area}
                       className="px-4 py-2 bg-zinc-100 text-zinc-900 font-medium rounded-full"
                     >
-                      {skill.name}
+                      {area.replace(/_/g, " ")}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {profile.topics_of_interest && profile.topics_of_interest.length > 0 && (
+              <div className="mb-6">
+                <h2 className="text-xl font-semibold text-zinc-900 mb-3">Topics of interest</h2>
+                <div className="flex flex-wrap gap-2">
+                  {profile.topics_of_interest.map((topic) => (
+                    <span
+                      key={topic}
+                      className="px-4 py-2 bg-zinc-100 text-zinc-900 font-medium rounded-full"
+                    >
+                      {topic}
                     </span>
                   ))}
                 </div>

@@ -94,14 +94,14 @@ describe('API Client', () => {
       })
 
       await api.users.search({
-        role_intent: 'cofounder',
+        idea_status: 'not_set_on_idea',
         location: 'San Francisco',
         skip: 10,
         limit: 20,
       })
 
       const callArgs = (global.fetch as jest.Mock).mock.calls[0][0]
-      expect(callArgs).toContain('role_intent=cofounder')
+      expect(callArgs).toContain('idea_status=not_set_on_idea')
       expect(callArgs).toContain('location=San+Francisco')
       expect(callArgs).toContain('skip=10')
       expect(callArgs).toContain('limit=20')
@@ -114,12 +114,12 @@ describe('API Client', () => {
       })
 
       await api.users.search({
-        role_intent: 'cofounder',
+        idea_status: 'have_ideas_flexible',
         location: undefined,
       })
 
       const callArgs = (global.fetch as jest.Mock).mock.calls[0][0]
-      expect(callArgs).toContain('role_intent=cofounder')
+      expect(callArgs).toContain('idea_status=have_ideas_flexible')
       expect(callArgs).not.toContain('location')
     })
   })

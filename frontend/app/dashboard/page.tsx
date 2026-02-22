@@ -37,10 +37,12 @@ export default function DashboardPage() {
         ])
         setUser(userData)
         setCounts(countsData)
+        if (!userData.behavior_agreement_accepted_at) {
+          router.push("/onboarding/agreement")
+          return
+        }
       } catch (error) {
         console.error("Failed to load data:", error)
-        // Don't redirect to onboarding - allow access to dashboard even if profile incomplete
-        // User can update profile later via /profile page
       } finally {
         setLoading(false)
       }
@@ -62,10 +64,10 @@ export default function DashboardPage() {
 
   const formatFilters = () => {
     if (!user) return "No filters set"
-    
+
     const parts: string[] = []
-    if (user.role_intent) {
-      parts.push(`looking for a ${user.role_intent === "founder" ? "co-founder" : user.role_intent}`)
+    if (user.idea_status) {
+      parts.push(`idea status: ${user.idea_status.replace(/_/g, " ")}`)
     }
     if (user.commitment) {
       parts.push(`who is ${user.commitment.replace("_", " ")}`)
@@ -73,7 +75,7 @@ export default function DashboardPage() {
     if (user.location) {
       parts.push(`in ${user.location}`)
     }
-    
+
     return parts.length > 0 ? parts.join(", ") : "No filters set"
   }
 
@@ -210,15 +212,14 @@ export default function DashboardPage() {
                     </Link>
                   </div>
                   <p className="text-zinc-700 text-sm leading-relaxed">
-                    I want a co-founder {formatFilters()}.
+                    {formatFilters()}
                   </p>
-                  {user?.skills && user.skills.length > 0 && (
+                  {user?.areas_of_ownership && user.areas_of_ownership.length > 0 && (
                     <p className="text-zinc-700 text-sm mt-3">
-                      I want a co-founder willing to be responsible for{" "}
+                      Areas I want a co-founder to handle:{" "}
                       <span className="font-medium">
-                        {user.skills.map((s) => s.name).join(", ")}
+                        {user.areas_of_ownership.join(", ")}
                       </span>
-                      .
                     </p>
                   )}
                 </div>

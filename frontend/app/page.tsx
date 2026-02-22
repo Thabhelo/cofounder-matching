@@ -1,8 +1,10 @@
 import Link from "next/link"
-import { SignInButton, SignUpButton, SignedIn, SignedOut, UserButton, useUser } from "@clerk/nextjs"
+import { SignInButton, SignUpButton, SignedIn, SignedOut, UserButton } from "@clerk/nextjs"
+import { RedirectSignedInToDashboard } from "@/components/RedirectSignedInToDashboard"
 
 export default function Home() {
   return (
+    <RedirectSignedInToDashboard>
     <div className="min-h-screen bg-white">
       {/* Navigation */}
       <nav className="border-b border-zinc-200">
@@ -118,5 +120,6 @@ export default function Home() {
         </div>
       </footer>
     </div>
+    </RedirectSignedInToDashboard>
   )
 }

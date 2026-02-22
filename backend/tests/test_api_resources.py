@@ -155,7 +155,7 @@ class TestResourceAuthorization:
     
     def test_non_creator_cannot_update_resource(self, client, db, test_user_data, test_resource_data):
         """Test that non-creators cannot update resource"""
-        user1 = User(email="creator@example.com", name="Creator", clerk_id="clerk_creator", role_intent="founder")
+        user1 = User(email="creator@example.com", name="Creator", clerk_id="clerk_creator", idea_status="building_specific_idea")
         user2 = User(**test_user_data, clerk_id="clerk_other")
         db.add(user1)
         db.add(user2)
@@ -169,7 +169,7 @@ class TestResourceAuthorization:
     
     def test_org_member_can_update_org_resource(self, client, db, test_user_data, test_organization_data, test_resource_data):
         """Test that org members can update organization resources"""
-        user1 = User(email="creator@example.com", name="Creator", clerk_id="clerk_res_creator2", role_intent="founder")
+        user1 = User(email="creator@example.com", name="Creator", clerk_id="clerk_res_creator2", idea_status="building_specific_idea")
         user2 = User(**test_user_data, clerk_id="clerk_res_member2")
         org = Organization(**test_organization_data)
         db.add_all([user1, user2, org])

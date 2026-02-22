@@ -85,30 +85,26 @@ class TestUserSearch:
     def test_search_by_role_intent(self, client, db):
         """Test filtering users by role intent"""
         users = [
-            User(email="founder1@example.com", name="Founder 1", clerk_id="clerk_f1", role_intent="founder", is_active=True, is_banned=False, previous_startups=0),
-            User(email="cofounder1@example.com", name="CoFounder 1", clerk_id="clerk_c1", role_intent="cofounder", is_active=True, is_banned=False, previous_startups=0),
-            User(email="employee1@example.com", name="Employee 1", clerk_id="clerk_e1", role_intent="early_employee", is_active=True, is_banned=False, previous_startups=0),
+            User(email="founder1@example.com", name="Founder 1", clerk_id="clerk_f1", idea_status="building_specific_idea", is_active=True, is_banned=False, previous_startups=0),
+            User(email="cofounder1@example.com", name="CoFounder 1", clerk_id="clerk_c1", idea_status="not_set_on_idea", is_active=True, is_banned=False, previous_startups=0),
+            User(email="employee1@example.com", name="Employee 1", clerk_id="clerk_e1", idea_status="have_ideas_flexible", is_active=True, is_banned=False, previous_startups=0),
         ]
         for user in users:
             db.add(user)
         db.commit()
 
-        response = client.get("/api/v1/users?role_intent=cofounder")
+        response = client.get("/api/v1/users?idea_status=not_set_on_idea")
         assert response.status_code == 200
         data = response.json()
-        # Should return at least our test cofounder
         assert len(data) >= 1
-        # All returned users should have role_intent="cofounder"
-        assert all(user["role_intent"] == "cofounder" for user in data), f"Found non-cofounders: {[u for u in data if u['role_intent'] != 'cofounder']}"
-        # Our test user should be in the results
-        emails = [u["email"] for u in data]
-        assert any(user["email"] == "cofounder1@example.com" for user in data), f"Test user not found. Returned emails: {emails}"
+        assert all(user["idea_status"] == "not_set_on_idea" for user in data), f"Found wrong idea_status: {[u.get('idea_status') for u in data]}"
+        assert any(user["email"] == "cofounder1@example.com" for user in data), f"Test user not found. Returned emails: {[u['email'] for u in data]}"
     
     def test_search_by_location(self, client, db):
         """Test filtering users by location (case-insensitive)"""
         users = [
-            User(email="sf1@example.com", name="SF User", clerk_id="clerk_sf1", role_intent="founder", location="San Francisco, CA"),
-            User(email="ny1@example.com", name="NY User", clerk_id="clerk_ny1", role_intent="founder", location="New York, NY"),
+            User(email="sf1@example.com", name="SF User", clerk_id="clerk_sf1", idea_status="building_specific_idea", location="San Francisco, CA"),
+            User(email="ny1@example.com", name="NY User", clerk_id="clerk_ny1", idea_status="building_specific_idea", location="New York, NY"),
         ]
         for user in users:
             db.add(user)
@@ -123,7 +119,7 @@ class TestUserSearch:
     def test_pagination_works(self, client, db):
         """Test pagination with skip and limit"""
         users = [
-            User(email=f"user{i}@example.com", name=f"User {i}", clerk_id=f"clerk_u{i}", role_intent="founder")
+            User(email=f"user{i}@example.com", name=f"User {i}", clerk_id=f"clerk_u{i}", idea_status="building_specific_idea")
             for i in range(10)
         ]
         for user in users:

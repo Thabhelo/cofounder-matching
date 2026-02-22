@@ -1,0 +1,15 @@
+export const TOPICS_OF_INTEREST = [
+  "Artificial Intelligence",
+  "B2B Software",
+  "Climate / Sustainability",
+  "Consumer",
+  "Developer Tools",
+  "Education / EdTech",
+  "E-Commerce",
+  "Financial Services / FinTech",
+  "Healthcare",
+  "Industrials",
+  "Real Estate / PropTech",
+  "Robotics / Hardware",
+  "Other",
+] as const

@@ -103,10 +103,10 @@ async def send_invite_to_profile(
         # Create or update current user's match as connected
         if existing_match:
             match = existing_match
-            match.status = "connected"
-            match.intro_requested_at = datetime.utcnow()
-            match.intro_accepted_at = datetime.utcnow()
-            match.updated_at = datetime.utcnow()
+            match.status = "connected"  # type: ignore[assignment]
+            match.intro_requested_at = datetime.utcnow()  # type: ignore[assignment]
+            match.intro_accepted_at = datetime.utcnow()  # type: ignore[assignment]
+            match.updated_at = datetime.utcnow()  # type: ignore[assignment]
         else:
             match = Match(
                 user_id=current_user.id,
@@ -119,9 +119,9 @@ async def send_invite_to_profile(
             db.add(match)
 
         # Update reciprocal match to connected
-        reciprocal_match.status = "connected"
-        reciprocal_match.intro_accepted_at = datetime.utcnow()
-        reciprocal_match.updated_at = datetime.utcnow()
+        reciprocal_match.status = "connected"  # type: ignore[assignment]
+        reciprocal_match.intro_accepted_at = datetime.utcnow()  # type: ignore[assignment]
+        reciprocal_match.updated_at = datetime.utcnow()  # type: ignore[assignment]
 
         # Create intro message
         intro_message = Message(
@@ -151,9 +151,9 @@ async def send_invite_to_profile(
     # No reciprocal match - create normal intro request
     if existing_match:
         match = existing_match
-        match.status = "intro_requested"
-        match.intro_requested_at = datetime.utcnow()
-        match.updated_at = datetime.utcnow()
+        match.status = "intro_requested"  # type: ignore[assignment]
+        match.intro_requested_at = datetime.utcnow()  # type: ignore[assignment]
+        match.updated_at = datetime.utcnow()  # type: ignore[assignment]
     else:
         match = Match(
             user_id=current_user.id,
@@ -274,12 +274,8 @@ async def get_match_recommendations(
     if interacted_ids:
         query = query.filter(~User.id.in_(interacted_ids))
 
-    # Filter by complementary role_intent
-    if current_user.role_intent == "founder":
-        query = query.filter(User.role_intent == "cofounder")
-    elif current_user.role_intent == "cofounder":
-        query = query.filter(User.role_intent == "founder")
-
+    # Role-based complementary matching (founder/cofounder) was removed on this branch;
+    # return all eligible users. Matching algorithm may be re-added in a later branch.
     profiles = query.order_by(User.created_at.desc()).offset(skip).limit(limit).all()
     return profiles
 
@@ -415,9 +411,9 @@ async def request_introduction(
         )
 
     # Update match status and timestamp
-    match.status = "intro_requested"
-    match.intro_requested_at = datetime.utcnow()
-    match.updated_at = datetime.utcnow()
+    match.status = "intro_requested"  # type: ignore[assignment]
+    match.intro_requested_at = datetime.utcnow()  # type: ignore[assignment]
+    match.updated_at = datetime.utcnow()  # type: ignore[assignment]
 
     # Create intro request message
     intro_message = Message(
@@ -483,9 +479,9 @@ async def respond_to_introduction(
 
     if response.accept:
         # Accept the introduction
-        match.status = "connected"
-        match.intro_accepted_at = datetime.utcnow()
-        match.updated_at = datetime.utcnow()
+        match.status = "connected"  # type: ignore[assignment]
+        match.intro_accepted_at = datetime.utcnow()  # type: ignore[assignment]
+        match.updated_at = datetime.utcnow()  # type: ignore[assignment]
 
         # Create acceptance message if response message provided
         if response.message:
@@ -499,8 +495,8 @@ async def respond_to_introduction(
             db.add(acceptance_message)
     else:
         # Decline the introduction
-        match.status = "dismissed"
-        match.updated_at = datetime.utcnow()
+        match.status = "dismissed"  # type: ignore[assignment]
+        match.updated_at = datetime.utcnow()  # type: ignore[assignment]
 
         # Create decline message if response message provided
         if response.message:
@@ -569,8 +565,8 @@ async def update_match_status(
             detail="Cannot change status after introduction request has been sent"
         )
 
-    match.status = status_update.status
-    match.updated_at = datetime.utcnow()
+    match.status = status_update.status  # type: ignore[assignment]
+    match.updated_at = datetime.utcnow()  # type: ignore[assignment]
     db.commit()
     db.refresh(match)
 
