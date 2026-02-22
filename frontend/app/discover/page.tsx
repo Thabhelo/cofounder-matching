@@ -7,12 +7,12 @@ import Link from "next/link"
 import Image from "next/image"
 import { Sidebar } from "@/components/layout/Sidebar"
 import { api } from "@/lib/api"
-import type { UserPublic } from "@/lib/types"
+import type { ProfileDiscoverItem } from "@/lib/types"
 
 export default function DiscoverPage() {
   const { getToken } = useAuth()
   const router = useRouter()
-  const [profiles, setProfiles] = useState<UserPublic[]>([])
+  const [items, setItems] = useState<ProfileDiscoverItem[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
   const [skipping, setSkipping] = useState<string | null>(null)
@@ -33,7 +33,7 @@ export default function DiscoverPage() {
         }
 
         const data = await api.profiles.discover({ limit: 20 }, token)
-        setProfiles(data)
+        setItems(data)
       } catch (error) {
         console.error("Failed to load profiles:", error)
       } finally {
@@ -55,9 +55,8 @@ export default function DiscoverPage() {
       // Mark as saved
       setSavedProfiles((prev) => new Set(prev).add(profileId))
 
-      // Remove from list and move to next
-      setProfiles((prev) => prev.filter((p) => p.id !== profileId))
-      if (currentIndex >= profiles.length - 1) {
+      setItems((prev) => prev.filter((i) => i.profile.id !== profileId))
+      if (currentIndex >= items.length - 1) {
         setCurrentIndex(Math.max(0, currentIndex - 1))
       }
     } catch (error) {
@@ -76,9 +75,8 @@ export default function DiscoverPage() {
       setSkipping(profileId)
       await api.profiles.skip(profileId, token)
 
-      // Remove from list and move to next
-      setProfiles((prev) => prev.filter((p) => p.id !== profileId))
-      if (currentIndex >= profiles.length - 1) {
+      setItems((prev) => prev.filter((i) => i.profile.id !== profileId))
+      if (currentIndex >= items.length - 1) {
         setCurrentIndex(Math.max(0, currentIndex - 1))
       }
     } catch (error) {
@@ -101,15 +99,14 @@ export default function DiscoverPage() {
       if (!token) return
 
       setInviting(currentProfile.id)
-      const result = await api.matches.sendInvite(currentProfile.id, inviteMessage || "Hi! I'd like to connect.", token)
+      const result = await api.matches.sendInvite(currentProfile.id, inviteMessage ?? "Hi! I'd like to connect.", token)
 
       setInvitesRemaining(result.invites_remaining)
       setShowInviteModal(false)
       setInviteMessage("")
 
-      // Remove from list and move to next
-      setProfiles((prev) => prev.filter((p) => p.id !== currentProfile.id))
-      if (currentIndex >= profiles.length - 1) {
+      setItems((prev) => prev.filter((i) => i.profile.id !== currentProfile.id))
+      if (currentIndex >= items.length - 1) {
         setCurrentIndex(Math.max(0, currentIndex - 1))
       }
 
@@ -126,7 +123,8 @@ export default function DiscoverPage() {
     }
   }
 
-  const currentProfile = profiles[currentIndex]
+  const currentItem = items[currentIndex]
+  const currentProfile = currentItem?.profile
 
   if (loading) {
     return (
@@ -142,7 +140,7 @@ export default function DiscoverPage() {
     )
   }
 
-  if (profiles.length === 0) {
+  if (items.length === 0) {
     return (
       <div className="min-h-screen flex">
         <Sidebar />
@@ -172,13 +170,18 @@ export default function DiscoverPage() {
           <div className="mb-6">
             <h1 className="text-3xl font-semibold text-zinc-900 mb-2">Discover Profiles</h1>
             <p className="text-zinc-600">
-              Profile {currentIndex + 1} of {profiles.length}
+              Profile {currentIndex + 1} of {items.length}
               {invitesRemaining !== null && ` • ${invitesRemaining} invites left this week`}
             </p>
           </div>
 
-          {currentProfile && (
+          {currentItem && currentProfile && (
             <div className="bg-white border border-zinc-200 rounded-lg p-8">
+              {currentItem.matched_before && (
+                <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-4">
+                  You matched with this person before
+                </p>
+              )}
               {/* Header with Avatar and Basic Info */}
               <div className="flex items-start gap-6 mb-6">
                 {currentProfile.avatar_url ? (
@@ -343,7 +346,7 @@ export default function DiscoverPage() {
             </div>
           )}
 
-          {profiles.length > 1 && (
+          {items.length > 1 && (
             <div className="mt-6 flex justify-center gap-2">
               <button
                 onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))}
@@ -353,8 +356,8 @@ export default function DiscoverPage() {
                 Previous
               </button>
               <button
-                onClick={() => setCurrentIndex(Math.min(profiles.length - 1, currentIndex + 1))}
-                disabled={currentIndex === profiles.length - 1}
+                onClick={() => setCurrentIndex(Math.min(items.length - 1, currentIndex + 1))}
+                disabled={currentIndex === items.length - 1}
                 className="px-4 py-2 border border-zinc-300 text-zinc-700 rounded-lg hover:bg-zinc-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Next

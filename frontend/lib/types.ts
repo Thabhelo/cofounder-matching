@@ -112,6 +112,12 @@ export type UserPublic = {
   portfolio_url?: string
 }
 
+/** Discover/recommendations item: profile plus "matched before" tag when they can reappear after unmatch/dismiss. */
+export type ProfileDiscoverItem = {
+  profile: UserPublic
+  matched_before: boolean
+}
+
 export type Organization = {
   id: string
   name: string

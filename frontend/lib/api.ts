@@ -1,4 +1,4 @@
-import type { User, UserPublic, Organization, Resource, Event } from "./types"
+import type { User, UserPublic, ProfileDiscoverItem, Organization, Resource, Event } from "./types"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
@@ -253,7 +253,7 @@ export const api = {
           .filter(([, value]) => value !== undefined)
           .map(([key, value]) => [key, String(value)])
       )
-      return request<UserPublic[]>(`/api/v1/profiles/discover?${queryParams}`, { token })
+      return request<ProfileDiscoverItem[]>(`/api/v1/profiles/discover?${queryParams}`, { token })
     },
 
     getCounts: (token: string) =>
@@ -334,6 +334,12 @@ export const api = {
           token,
         }
       ),
+
+    unmatch: (matchId: string, token: string) =>
+      request<{ message: string; match_id: string }>(`/api/v1/matches/${matchId}/unmatch`, {
+        method: "POST",
+        token,
+      }),
   },
 
   messages: {

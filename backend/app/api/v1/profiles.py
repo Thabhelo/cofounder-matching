@@ -7,40 +7,40 @@ import uuid
 from app.database import get_db
 from app.models.user import User
 from app.models.match import Match
-from app.schemas.user import UserPublicResponse
+from app.schemas.user import UserPublicResponse, ProfileDiscoverResponse
 from app.api.deps import get_current_user
 from app.services.matching import score_match, MIN_MATCH_SCORE
 
 router = APIRouter()
 
 
-@router.get("/discover", response_model=List[UserPublicResponse])
+# Exclude only active matches; dismissed/unmatched can reappear in discover (matched_before).
+ACTIVE_MATCH_STATUSES = ("saved", "viewed", "intro_requested", "connected")
+PRIOR_MATCH_STATUSES = ("dismissed", "unmatched")
+
+
+@router.get("/discover", response_model=List[ProfileDiscoverResponse])
 async def discover_profiles(
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=50),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Discover profiles to browse - excludes already saved/skipped/invited profiles"""
-    # Get IDs of profiles user has already interacted with
+    """Discover profiles - excludes only active matches (saved/invited/connected). Dismissed/unmatched can reappear with matched_before."""
     interacted_matches = db.query(Match.target_user_id).filter(
         Match.user_id == current_user.id,
-        Match.status.in_(["saved", "dismissed", "viewed", "intro_requested", "connected"])
+        Match.status.in_(ACTIVE_MATCH_STATUSES)
     ).all()
     interacted_ids = [match[0] for match in interacted_matches]
 
-    # Get profiles excluding current user and already interacted profiles
     query = db.query(User).filter(
         User.is_active,
         ~User.is_banned,
         User.id != current_user.id
     )
-    
     if interacted_ids:
         query = query.filter(~User.id.in_(interacted_ids))
 
-    # Fetch a pool, score and filter, then paginate over the scored results so each
-    # page returns up to `limit` results from the ranked list (not from raw candidates).
     CANDIDATE_POOL_SIZE = 500
     candidates = query.order_by(User.created_at.desc()).limit(CANDIDATE_POOL_SIZE).all()
     scored: List[tuple[User, int]] = []
@@ -49,8 +49,27 @@ async def discover_profiles(
         if result["match_score"] >= MIN_MATCH_SCORE:
             scored.append((other, result["match_score"]))
     scored.sort(key=lambda x: x[1], reverse=True)
-    profiles = [u for u, _ in scored[skip : skip + limit]]
-    return profiles
+    page = [u for u, _ in scored[skip : skip + limit]]
+    if not page:
+        return []
+
+    prior = db.query(Match.target_user_id).filter(
+        Match.user_id == current_user.id,
+        Match.target_user_id.in_([u.id for u in page]),
+        Match.status.in_(PRIOR_MATCH_STATUSES)
+    ).all()
+    prior_ids = {m[0] for m in prior}
+    rec = db.query(Match.user_id).filter(
+        Match.target_user_id == current_user.id,
+        Match.user_id.in_([u.id for u in page]),
+        Match.status.in_(PRIOR_MATCH_STATUSES)
+    ).all()
+    prior_ids |= {m[0] for m in rec}
+
+    return [
+        ProfileDiscoverResponse(profile=UserPublicResponse.model_validate(u), matched_before=(u.id in prior_ids))
+        for u in page
+    ]
 
 
 @router.get("/count", response_model=dict)
@@ -59,10 +78,9 @@ async def get_profile_counts(
     db: Session = Depends(get_db)
 ):
     """Get counts for dashboard summary cards"""
-    # Count profiles available to discover
     interacted_matches = db.query(Match.target_user_id).filter(
         Match.user_id == current_user.id,
-        Match.status.in_(["saved", "dismissed", "viewed"])
+        Match.status.in_(ACTIVE_MATCH_STATUSES)
     ).all()
     interacted_ids = [match[0] for match in interacted_matches]
 

@@ -422,3 +422,9 @@ class UserPublicResponse(BaseModel):
         return 0 if v is None else v
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ProfileDiscoverResponse(BaseModel):
+    """Profile in discover/recommendations with optional 'matched before' tag."""
+    profile: UserPublicResponse
+    matched_before: bool = False

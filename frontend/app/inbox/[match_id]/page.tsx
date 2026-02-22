@@ -43,6 +43,7 @@ export default function ConversationPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [newMessage, setNewMessage] = useState("")
   const [sending, setSending] = useState(false)
+  const [unmatching, setUnmatching] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
@@ -105,6 +106,23 @@ export default function ConversationPage() {
       alert("Failed to send message. Please try again.")
     } finally {
       setSending(false)
+    }
+  }
+
+  const handleUnmatch = async () => {
+    if (!match || match.status !== "connected") return
+    if (!confirm("Unmatch with this person? They will reappear in your discover feed and can connect again later.")) return
+    try {
+      const token = await getToken()
+      if (!token) return
+      setUnmatching(true)
+      await api.matches.unmatch(matchId, token)
+      router.push("/inbox")
+    } catch (error: any) {
+      console.error("Failed to unmatch:", error)
+      alert(error.message || "Failed to unmatch. Please try again.")
+    } finally {
+      setUnmatching(false)
     }
   }
 
@@ -173,8 +191,18 @@ export default function ConversationPage() {
                 </span>
               </div>
             )}
-            <div>
+            <div className="flex-1 flex items-center justify-between gap-4">
               <h1 className="text-lg font-semibold text-zinc-900">{otherUser.name}</h1>
+              {match.status === "connected" && (
+                <button
+                  type="button"
+                  onClick={handleUnmatch}
+                  disabled={unmatching}
+                  className="text-sm text-zinc-500 hover:text-red-600 transition-colors disabled:opacity-50"
+                >
+                  {unmatching ? "Unmatching..." : "Unmatch"}
+                </button>
+              )}
             </div>
           </div>
         </div>
