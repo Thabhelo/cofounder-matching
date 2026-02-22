@@ -9,6 +9,7 @@ from app.constants.enums import (
     AREAS_OF_OWNERSHIP,
     IMPORTANCE_LEVELS,
     GENDERS,
+    PROFILE_STATUSES,
 )
 
 
@@ -312,6 +313,17 @@ class UserUpdate(BaseModel):
             if self.pref_age_min > self.pref_age_max:
                 raise ValueError("pref_age_min must be <= pref_age_max")
         return self
+
+
+class AdminUserUpdate(UserUpdate):
+    """Admin-only: update any user field plus profile_status and is_active."""
+    profile_status: Optional[str] = Field(None, description="incomplete, pending_review, approved, rejected")
+    is_active: Optional[bool] = None
+
+    @field_validator("profile_status")
+    @classmethod
+    def validate_profile_status(cls, v: Optional[str]) -> Optional[str]:
+        return _validate_one_of_optional(v, PROFILE_STATUSES, "profile_status")
 
 
 class UserResponse(BaseModel):

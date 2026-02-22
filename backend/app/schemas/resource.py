@@ -43,6 +43,7 @@ class ResourceUpdate(BaseModel):
     deadline: Optional[date] = None
     tags: Optional[list[str]] = Field(None, max_items=20)
     is_active: Optional[bool] = None
+    is_featured: Optional[bool] = None
 
 
 class ResourceResponse(BaseModel):

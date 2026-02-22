@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
-from typing import List, Optional
+from typing import List, Optional, cast
 from datetime import datetime, timedelta
+from uuid import UUID
 import uuid
 
 from app.database import get_db
@@ -263,26 +264,25 @@ async def get_matches(
         ).first()
 
         if target_user:
-            match_dict = {
-                "id": match.id,
-                "user_id": match.user_id,
-                "target_user_id": match.target_user_id,
-                "match_score": match.match_score,
-                "match_explanation": match.match_explanation,
-                "complementarity_score": match.complementarity_score,
-                "commitment_alignment_score": match.commitment_alignment_score,
-                "location_fit_score": match.location_fit_score,
-                "intent_score": match.intent_score,
-                "interest_overlap_score": match.interest_overlap_score,
-                "preference_alignment_score": match.preference_alignment_score,
-                "status": match.status,
-                "intro_requested_at": match.intro_requested_at,
-                "intro_accepted_at": match.intro_accepted_at,
-                "created_at": match.created_at,
-                "updated_at": match.updated_at,
-                "target_user": target_user
-            }
-            result.append(MatchWithUserResponse(**match_dict))
+            result.append(MatchWithUserResponse(
+                id=cast(UUID, match.id),
+                user_id=cast(UUID, match.user_id),
+                target_user_id=cast(UUID, match.target_user_id),
+                match_score=cast(int, match.match_score or 0),
+                match_explanation=cast(Optional[str], match.match_explanation),
+                complementarity_score=cast(Optional[int], match.complementarity_score),
+                commitment_alignment_score=cast(Optional[int], match.commitment_alignment_score),
+                location_fit_score=cast(Optional[int], match.location_fit_score),
+                intent_score=cast(Optional[int], match.intent_score),
+                interest_overlap_score=cast(Optional[int], match.interest_overlap_score),
+                preference_alignment_score=cast(Optional[int], match.preference_alignment_score),
+                status=cast(str, match.status),
+                intro_requested_at=cast(Optional[datetime], match.intro_requested_at),
+                intro_accepted_at=cast(Optional[datetime], match.intro_accepted_at),
+                created_at=cast(datetime, match.created_at),
+                updated_at=cast(datetime, match.updated_at),
+                target_user=UserPublicResponse.model_validate(target_user),
+            ))
 
     return result
 
@@ -389,27 +389,25 @@ async def get_match(
             detail="Target user not found"
         )
 
-    match_dict = {
-        "id": match.id,
-        "user_id": match.user_id,
-        "target_user_id": match.target_user_id,
-        "match_score": match.match_score,
-        "match_explanation": match.match_explanation,
-        "complementarity_score": match.complementarity_score,
-        "commitment_alignment_score": match.commitment_alignment_score,
-        "location_fit_score": match.location_fit_score,
-        "intent_score": match.intent_score,
-        "interest_overlap_score": match.interest_overlap_score,
-        "preference_alignment_score": match.preference_alignment_score,
-        "status": match.status,
-        "intro_requested_at": match.intro_requested_at,
-        "intro_accepted_at": match.intro_accepted_at,
-        "created_at": match.created_at,
-        "updated_at": match.updated_at,
-        "target_user": target_user
-    }
-
-    return MatchWithUserResponse(**match_dict)
+    return MatchWithUserResponse(
+        id=cast(UUID, match.id),
+        user_id=cast(UUID, match.user_id),
+        target_user_id=cast(UUID, match.target_user_id),
+        match_score=cast(int, match.match_score or 0),
+        match_explanation=cast(Optional[str], match.match_explanation),
+        complementarity_score=cast(Optional[int], match.complementarity_score),
+        commitment_alignment_score=cast(Optional[int], match.commitment_alignment_score),
+        location_fit_score=cast(Optional[int], match.location_fit_score),
+        intent_score=cast(Optional[int], match.intent_score),
+        interest_overlap_score=cast(Optional[int], match.interest_overlap_score),
+        preference_alignment_score=cast(Optional[int], match.preference_alignment_score),
+        status=cast(str, match.status),
+        intro_requested_at=cast(Optional[datetime], match.intro_requested_at),
+        intro_accepted_at=cast(Optional[datetime], match.intro_accepted_at),
+        created_at=cast(datetime, match.created_at),
+        updated_at=cast(datetime, match.updated_at),
+        target_user=UserPublicResponse.model_validate(target_user),
+    )
 
 
 @router.post("/{match_id}/unmatch", status_code=status.HTTP_200_OK)
