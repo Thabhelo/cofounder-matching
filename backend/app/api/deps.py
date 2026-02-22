@@ -1,6 +1,7 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from typing import Optional
 from functools import lru_cache
 import jwt
@@ -87,7 +88,10 @@ async def verify_clerk_token(token: str) -> dict:
         # Log the actual error in development for debugging
         if settings.ENVIRONMENT == "development":
             logger.error(f"Token verification failed: {type(e).__name__}: {str(e)}", exc_info=True)
-        # Don't expose internal error details in production - security issue
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Could not validate credentials: {type(e).__name__}: {str(e)}"
+            )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials"
@@ -146,8 +150,26 @@ async def get_current_user(
                 previous_startups=0  # Default value
             )
             db.add(user)
-            db.commit()
-            db.refresh(user)
+            try:
+                db.commit()
+                db.refresh(user)
+            except IntegrityError as e:
+                db.rollback()
+                err_msg = str(e.orig) if e.orig else str(e)
+                err_lower = err_msg.lower()
+                is_email_duplicate = (
+                    "users_email_key" in err_msg
+                    or ("unique" in err_lower and "email" in err_lower)
+                    or ("duplicate key" in err_lower and "email" in err_lower)
+                )
+                if is_email_duplicate:
+                    # Do not reassign clerk_id: that would allow account takeover if someone
+                    # registers in Clerk with an email that already exists in our DB.
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail="An account with this email already exists. Sign in with your existing account, or contact support if you no longer have access.",
+                    )
+                raise
 
         if user.is_banned:
             raise HTTPException(
@@ -165,8 +187,14 @@ async def get_current_user(
 
     except HTTPException:
         raise
-    except Exception:
-        # Don't expose internal error details
+    except Exception as e:
+        if settings.ENVIRONMENT == "development":
+            import logging
+            logging.getLogger(__name__).error(f"get_current_user failed: {type(e).__name__}: {str(e)}", exc_info=True)
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Could not validate credentials: {type(e).__name__}: {str(e)}"
+            )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials"
@@ -337,10 +365,12 @@ async def get_clerk_user_info_from_token(
     except HTTPException:
         raise
     except Exception as e:
-        # Log the actual error in development
         if settings.ENVIRONMENT == "development":
             logger.error(f"Error extracting user info from token: {type(e).__name__}: {str(e)}", exc_info=True)
-        # Don't expose internal error details
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Could not validate credentials: {type(e).__name__}: {str(e)}"
+            )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials"

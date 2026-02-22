@@ -125,7 +125,7 @@ async def save_profile(
     ).first()
 
     if existing_match:
-        existing_match.status = "saved"
+        existing_match.status = "saved"  # type: ignore[assignment]
         db.commit()
         return {"message": "Profile saved", "match_id": str(existing_match.id)}
     else:
@@ -168,7 +168,7 @@ async def skip_profile(
     ).first()
 
     if existing_match:
-        existing_match.status = "dismissed"
+        existing_match.status = "dismissed"  # type: ignore[assignment]
         db.commit()
         return {"message": "Profile skipped", "match_id": str(existing_match.id)}
     else:

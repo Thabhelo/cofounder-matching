@@ -63,11 +63,18 @@ test-results/
 dist/
 build/
 
-# Markdown: do not track except DOCUMENTATION.md and LICENSE
+# Markdown: do not track except README, docs, and LICENSE
 *.md
+!README.md
 !docs/DOCUMENTATION.md
 !LICENSE
 !LICENSE.md
+
+# Coverage (XML from pytest --cov-report=xml)
+coverage.xml
+
+# Cursor IDE (optional; project state)
+.cursor/
 
 # Claude-specific files
 docs/CLAUDE.md

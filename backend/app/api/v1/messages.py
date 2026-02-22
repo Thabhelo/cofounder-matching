@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, desc
-from typing import List
+from typing import List, cast
 from datetime import datetime, timedelta
+from uuid import UUID
 import uuid
 
 from app.database import get_db
@@ -15,6 +16,7 @@ from app.schemas.message import (
     ConversationResponse,
     UnreadCountResponse
 )
+from app.schemas.user import UserPublicResponse
 from app.api.deps import get_current_user
 
 router = APIRouter()
@@ -82,27 +84,26 @@ async def get_conversations(
         if last_message:
             sender = db.query(User).filter(User.id == last_message.sender_id).first()
             if sender:
-                last_message_dict = {
-                    "id": last_message.id,
-                    "match_id": last_message.match_id,
-                    "sender_id": last_message.sender_id,
-                    "recipient_id": last_message.recipient_id,
-                    "content": last_message.content,
-                    "message_type": last_message.message_type,
-                    "is_read": last_message.is_read,
-                    "read_at": last_message.read_at,
-                    "created_at": last_message.created_at,
-                    "sender": sender
-                }
-                last_message_response = MessageResponse(**last_message_dict)
+                last_message_response = MessageResponse(
+                    id=cast(UUID, last_message.id),
+                    match_id=cast(UUID, last_message.match_id),
+                    sender_id=cast(UUID, last_message.sender_id),
+                    recipient_id=cast(UUID, last_message.recipient_id),
+                    content=cast(str, last_message.content),
+                    message_type=cast(str, last_message.message_type),
+                    is_read=cast(bool, last_message.is_read),
+                    read_at=last_message.read_at,
+                    created_at=cast(datetime, last_message.created_at),
+                    sender=UserPublicResponse.model_validate(sender),
+                )
 
         # Use match updated_at or last message created_at
-        updated_at = match.updated_at
-        if last_message and last_message.created_at > updated_at:
+        updated_at = cast(datetime, match.updated_at or match.created_at)
+        if last_message and last_message.created_at and last_message.created_at > updated_at:
             updated_at = last_message.created_at
 
         conversations.append(ConversationResponse(
-            match_id=match.id,
+            match_id=cast(UUID, match.id),
             other_user=other_user,
             last_message=last_message_response,
             unread_count=unread_count,
@@ -164,19 +165,18 @@ async def get_messages(
     for message in messages:
         sender = db.query(User).filter(User.id == message.sender_id).first()
         if sender:
-            message_dict = {
-                "id": message.id,
-                "match_id": message.match_id,
-                "sender_id": message.sender_id,
-                "recipient_id": message.recipient_id,
-                "content": message.content,
-                "message_type": message.message_type,
-                "is_read": message.is_read,
-                "read_at": message.read_at,
-                "created_at": message.created_at,
-                "sender": sender
-            }
-            result.append(MessageResponse(**message_dict))
+            result.append(MessageResponse(
+                id=cast(UUID, message.id),
+                match_id=cast(UUID, message.match_id),
+                sender_id=cast(UUID, message.sender_id),
+                recipient_id=cast(UUID, message.recipient_id),
+                content=cast(str, message.content),
+                message_type=cast(str, message.message_type),
+                is_read=cast(bool, message.is_read),
+                read_at=message.read_at,
+                created_at=cast(datetime, message.created_at),
+                sender=UserPublicResponse.model_validate(sender),
+            ))
 
     return result
 
@@ -241,26 +241,24 @@ async def send_message(
     db.add(message)
 
     # Update match updated_at
-    match.updated_at = datetime.utcnow()
+    match.updated_at = datetime.utcnow()  # type: ignore[assignment]
     db.commit()
     db.refresh(message)
 
     # Get sender info
     sender = db.query(User).filter(User.id == current_user.id).first()
-    message_dict = {
-        "id": message.id,
-        "match_id": message.match_id,
-        "sender_id": message.sender_id,
-        "recipient_id": message.recipient_id,
-        "content": message.content,
-        "message_type": message.message_type,
-        "is_read": message.is_read,
-        "read_at": message.read_at,
-        "created_at": message.created_at,
-        "sender": sender
-    }
-
-    return MessageResponse(**message_dict)
+    return MessageResponse(
+        id=cast(UUID, message.id),
+        match_id=cast(UUID, message.match_id),
+        sender_id=cast(UUID, message.sender_id),
+        recipient_id=cast(UUID, message.recipient_id),
+        content=cast(str, message.content),
+        message_type=cast(str, message.message_type),
+        is_read=cast(bool, message.is_read),
+        read_at=message.read_at,
+        created_at=cast(datetime, message.created_at),
+        sender=UserPublicResponse.model_validate(sender) if sender else None,
+    )
 
 
 @router.put("/{message_id}/read", status_code=status.HTTP_200_OK)
@@ -295,8 +293,8 @@ async def mark_message_read(
 
     # Mark as read
     if not message.is_read:
-        message.is_read = True
-        message.read_at = datetime.utcnow()
+        message.is_read = True  # type: ignore[assignment]
+        message.read_at = datetime.utcnow()  # type: ignore[assignment]
         db.commit()
         db.refresh(message)
 
@@ -345,8 +343,8 @@ async def mark_all_messages_read(
 
     now = datetime.utcnow()
     for msg in unread_messages:
-        msg.is_read = True
-        msg.read_at = now
+        msg.is_read = True  # type: ignore[assignment]
+        msg.read_at = now  # type: ignore[assignment]
 
     db.commit()
 

@@ -242,7 +242,7 @@ async def rsvp_to_event(
 
     # Update attendee count
     if net_attendee_change != 0:
-        event.current_attendees = max(0, event.current_attendees + net_attendee_change)
+        event.current_attendees = max(0, event.current_attendees + net_attendee_change)  # type: ignore[assignment]
 
     db.commit()
 

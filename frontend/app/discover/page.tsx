@@ -202,9 +202,9 @@ export default function DiscoverPage() {
                     <p className="text-zinc-600 mb-2">{currentProfile.location}</p>
                   )}
                   <div className="flex flex-wrap gap-2">
-                    {currentProfile.role_intent && (
+                    {currentProfile.idea_status && (
                       <span className="inline-block px-3 py-1 bg-zinc-900 text-white text-sm font-medium rounded-full">
-                        {currentProfile.role_intent === "founder" ? "Founder" : currentProfile.role_intent === "cofounder" ? "Co-Founder" : "Early Employee"}
+                        {currentProfile.idea_status.replace(/_/g, " ")}
                       </span>
                     )}
                     {currentProfile.commitment && (
@@ -216,11 +216,11 @@ export default function DiscoverPage() {
                 </div>
               </div>
 
-              {/* Bio */}
-              {currentProfile.bio && (
+              {/* Introduction */}
+              {currentProfile.introduction && (
                 <div className="mb-6 pb-6 border-b border-zinc-200">
                   <h3 className="text-lg font-semibold text-zinc-900 mb-2">About</h3>
-                  <p className="text-zinc-700 leading-relaxed whitespace-pre-wrap">{currentProfile.bio}</p>
+                  <p className="text-zinc-700 leading-relaxed whitespace-pre-wrap">{currentProfile.introduction}</p>
                 </div>
               )}
 
@@ -239,28 +239,29 @@ export default function DiscoverPage() {
                         <span className="font-medium">Previous startups:</span> {currentProfile.previous_startups}
                       </p>
                     )}
-                    {currentProfile.availability_status && (
-                      <p className="text-zinc-700">
-                        <span className="font-medium">Availability:</span>{" "}
-                        {currentProfile.availability_status === "actively_looking" ? "Available now" :
-                         currentProfile.availability_status === "open" ? "Currently busy" : "Not looking"}
-                      </p>
-                    )}
                   </div>
                 </div>
               </div>
 
-              {/* Skills */}
-              {currentProfile.skills && currentProfile.skills.length > 0 && (
+              {/* Areas & topics */}
+              {((currentProfile.areas_of_ownership?.length ?? 0) > 0 || (currentProfile.topics_of_interest?.length ?? 0) > 0) && (
                 <div className="mb-6 pb-6 border-b border-zinc-200">
-                  <h3 className="text-lg font-semibold text-zinc-900 mb-3">Skills</h3>
+                  <h3 className="text-lg font-semibold text-zinc-900 mb-3">Areas & interests</h3>
                   <div className="flex flex-wrap gap-2">
-                    {currentProfile.skills.map((skill, idx) => (
+                    {(currentProfile.areas_of_ownership ?? []).map((area) => (
                       <span
-                        key={idx}
+                        key={area}
+                        className="px-3 py-1 bg-zinc-100 text-zinc-900 text-sm font-medium rounded-full"
+                      >
+                        {area.replace(/_/g, " ")}
+                      </span>
+                    ))}
+                    {(currentProfile.topics_of_interest ?? []).map((topic) => (
+                      <span
+                        key={topic}
                         className="px-3 py-1 bg-green-50 text-green-800 text-sm font-medium rounded-full border border-green-200"
                       >
-                        {skill.name}
+                        {topic}
                       </span>
                     ))}
                   </div>

@@ -103,9 +103,9 @@ class TestEventRSVP:
         db.flush()
         
         # Create users
-        user1 = User(email="user1@example.com", name="User 1", clerk_id="clerk_u1", role_intent="founder")
-        user2 = User(email="user2@example.com", name="User 2", clerk_id="clerk_u2", role_intent="founder")
-        user3 = User(email="user3@example.com", name="User 3", clerk_id="clerk_u3", role_intent="founder")
+        user1 = User(email="user1@example.com", name="User 1", clerk_id="clerk_u1", idea_status="building_specific_idea")
+        user2 = User(email="user2@example.com", name="User 2", clerk_id="clerk_u2", idea_status="building_specific_idea")
+        user3 = User(email="user3@example.com", name="User 3", clerk_id="clerk_u3", idea_status="building_specific_idea")
         db.add_all([user1, user2, user3])
         db.flush()
         
@@ -193,8 +193,8 @@ class TestEventRSVP:
         db.add(event)
         db.flush()
         
-        user1 = User(email="race1@example.com", name="User 1", clerk_id="clerk_race1", role_intent="founder")
-        user2 = User(email="race2@example.com", name="User 2", clerk_id="clerk_race2", role_intent="founder")
+        user1 = User(email="race1@example.com", name="User 1", clerk_id="clerk_race1", idea_status="building_specific_idea")
+        user2 = User(email="race2@example.com", name="User 2", clerk_id="clerk_race2", idea_status="building_specific_idea")
         db.add_all([user1, user2])
         db.flush()
         
