@@ -9,6 +9,7 @@ from app.models.user import User
 from app.models.match import Match
 from app.schemas.user import UserPublicResponse
 from app.api.deps import get_current_user
+from app.services.matching import score_match, MIN_MATCH_SCORE
 
 router = APIRouter()
 
@@ -38,13 +39,17 @@ async def discover_profiles(
     if interacted_ids:
         query = query.filter(~User.id.in_(interacted_ids))
 
-    # Filter by complementary role_intent (founder looks for cofounder, etc.)
-    if current_user.role_intent == "founder":
-        query = query.filter(User.role_intent == "cofounder")
-    elif current_user.role_intent == "cofounder":
-        query = query.filter(User.role_intent == "founder")
-
-    profiles = query.order_by(User.created_at.desc()).offset(skip).limit(limit).all()
+    # Fetch a pool, score and filter, then paginate over the scored results so each
+    # page returns up to `limit` results from the ranked list (not from raw candidates).
+    CANDIDATE_POOL_SIZE = 500
+    candidates = query.order_by(User.created_at.desc()).limit(CANDIDATE_POOL_SIZE).all()
+    scored: List[tuple[User, int]] = []
+    for other in candidates:
+        result = score_match(current_user, other)
+        if result["match_score"] >= MIN_MATCH_SCORE:
+            scored.append((other, result["match_score"]))
+    scored.sort(key=lambda x: x[1], reverse=True)
+    profiles = [u for u, _ in scored[skip : skip + limit]]
     return profiles
 
 
@@ -69,11 +74,6 @@ async def get_profile_counts(
     
     if interacted_ids:
         discover_query = discover_query.filter(~User.id.in_(interacted_ids))
-
-    if current_user.role_intent == "founder":
-        discover_query = discover_query.filter(User.role_intent == "cofounder")
-    elif current_user.role_intent == "cofounder":
-        discover_query = discover_query.filter(User.role_intent == "founder")
 
     discover_count = discover_query.count()
 
@@ -126,20 +126,36 @@ async def save_profile(
 
     if existing_match:
         existing_match.status = "saved"  # type: ignore[assignment]
+        if existing_match.match_score == 0:
+            result = score_match(current_user, target_user)
+            existing_match.match_score = result["match_score"]
+            existing_match.match_explanation = result["match_explanation"]
+            existing_match.complementarity_score = result["complementarity_score"]
+            existing_match.commitment_alignment_score = result["commitment_alignment_score"]
+            existing_match.location_fit_score = result["location_fit_score"]
+            existing_match.intent_score = result["intent_score"]
+            existing_match.interest_overlap_score = result["interest_overlap_score"]
+            existing_match.preference_alignment_score = result["preference_alignment_score"]
         db.commit()
         return {"message": "Profile saved", "match_id": str(existing_match.id)}
-    else:
-        # Create new match with status 'saved' (no score yet since algorithm not implemented)
-        new_match = Match(
-            user_id=current_user.id,
-            target_user_id=target_user_id,
-            match_score=0,  # Will be calculated when matching algorithm is implemented
-            status="saved"
-        )
-        db.add(new_match)
-        db.commit()
-        db.refresh(new_match)
-        return {"message": "Profile saved", "match_id": str(new_match.id)}
+    result = score_match(current_user, target_user)
+    new_match = Match(
+        user_id=current_user.id,
+        target_user_id=target_user_id,
+        match_score=result["match_score"],
+        match_explanation=result["match_explanation"],
+        complementarity_score=result["complementarity_score"],
+        commitment_alignment_score=result["commitment_alignment_score"],
+        location_fit_score=result["location_fit_score"],
+        intent_score=result["intent_score"],
+        interest_overlap_score=result["interest_overlap_score"],
+        preference_alignment_score=result["preference_alignment_score"],
+        status="saved",
+    )
+    db.add(new_match)
+    db.commit()
+    db.refresh(new_match)
+    return {"message": "Profile saved", "match_id": str(new_match.id)}
 
 
 @router.post("/{profile_id}/skip", status_code=status.HTTP_201_CREATED)
@@ -169,20 +185,36 @@ async def skip_profile(
 
     if existing_match:
         existing_match.status = "dismissed"  # type: ignore[assignment]
+        if existing_match.match_score == 0:
+            result = score_match(current_user, target_user)
+            existing_match.match_score = result["match_score"]
+            existing_match.match_explanation = result["match_explanation"]
+            existing_match.complementarity_score = result["complementarity_score"]
+            existing_match.commitment_alignment_score = result["commitment_alignment_score"]
+            existing_match.location_fit_score = result["location_fit_score"]
+            existing_match.intent_score = result["intent_score"]
+            existing_match.interest_overlap_score = result["interest_overlap_score"]
+            existing_match.preference_alignment_score = result["preference_alignment_score"]
         db.commit()
         return {"message": "Profile skipped", "match_id": str(existing_match.id)}
-    else:
-        # Create new match with status 'dismissed'
-        new_match = Match(
-            user_id=current_user.id,
-            target_user_id=target_user_id,
-            match_score=0,
-            status="dismissed"
-        )
-        db.add(new_match)
-        db.commit()
-        db.refresh(new_match)
-        return {"message": "Profile skipped", "match_id": str(new_match.id)}
+    result = score_match(current_user, target_user)
+    new_match = Match(
+        user_id=current_user.id,
+        target_user_id=target_user_id,
+        match_score=result["match_score"],
+        match_explanation=result["match_explanation"],
+        complementarity_score=result["complementarity_score"],
+        commitment_alignment_score=result["commitment_alignment_score"],
+        location_fit_score=result["location_fit_score"],
+        intent_score=result["intent_score"],
+        interest_overlap_score=result["interest_overlap_score"],
+        preference_alignment_score=result["preference_alignment_score"],
+        status="dismissed",
+    )
+    db.add(new_match)
+    db.commit()
+    db.refresh(new_match)
+    return {"message": "Profile skipped", "match_id": str(new_match.id)}
 
 
 @router.delete("/{profile_id}/save", status_code=status.HTTP_200_OK)

@@ -5,6 +5,8 @@ import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
 
+export const dynamic = "force-dynamic"
+
 export const metadata: Metadata = {
   title: "Co-Founder Matching Platform",
   description: "Find your perfect co-founder and access entrepreneurial resources",
