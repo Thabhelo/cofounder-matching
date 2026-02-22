@@ -18,54 +18,89 @@
 ```sql
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    clerk_id VARCHAR(255) UNIQUE NOT NULL,  -- Auth provider ID
+    clerk_id VARCHAR(255) UNIQUE NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     name VARCHAR(255) NOT NULL,
-    bio TEXT,
     avatar_url VARCHAR(500),
     
-    -- Role and Intent
-    role_intent VARCHAR(50) NOT NULL,  -- 'founder', 'cofounder', 'early_employee'
-    commitment VARCHAR(50),            -- 'full_time', 'part_time', 'exploratory'
-    
-    -- Location
+    -- Basics
+    introduction TEXT,                -- Formerly bio
     location VARCHAR(255),
-    location_preference VARCHAR(255),  -- JSON array of acceptable locations
-    travel_tolerance VARCHAR(50),      -- 'none', 'occasional', 'frequent'
+    location_city VARCHAR(100),
+    location_state VARCHAR(100),
+    location_country VARCHAR(100),
+    location_latitude FLOAT,
+    location_longitude FLOAT,
     
-    -- Skills and Experience
-    skills JSONB,                     -- Array of skill objects {name, level, years}
-    experience_years INTEGER,
-    previous_startups INTEGER DEFAULT 0,
+    -- Personal
+    gender VARCHAR(20),
+    birthdate DATE,
     
-    -- Proof of Work
-    proof_of_work JSONB,              -- Array of {type, url, description}
+    -- Professional / links
+    linkedin_url VARCHAR(500),
+    twitter_url VARCHAR(500),
+    instagram_url VARCHAR(500),
+    calendly_url VARCHAR(500),
+    video_intro_url VARCHAR(500),
     github_url VARCHAR(500),
     portfolio_url VARCHAR(500),
-    linkedin_url VARCHAR(500),
     
-    -- Trust and Verification
-    trust_score INTEGER DEFAULT 0,    -- 0-100
-    is_verified BOOLEAN DEFAULT FALSE,
-    verification_method VARCHAR(50), -- 'domain', 'manual', null
+    -- Story & background
+    life_story TEXT,
+    hobbies TEXT,
+    impressive_accomplishment TEXT,
+    education_history TEXT,
+    employment_history TEXT,
+    experience_years INTEGER,
+    previous_startups INTEGER,
     
-    -- Availability
-    availability_status VARCHAR(50),  -- 'actively_looking', 'open', 'not_looking'
-    availability_date DATE,
+    -- You / startup & readiness
+    idea_status VARCHAR(50),          -- 'not_set_on_idea', 'have_ideas_flexible', 'building_specific_idea'
+    is_technical BOOLEAN,
+    startup_name VARCHAR(255),
+    startup_description TEXT,
+    startup_progress VARCHAR(50),
+    startup_funding VARCHAR(50),
+    ready_to_start VARCHAR(50),
+    commitment VARCHAR(50),            -- 'full_time', 'part_time'
+    areas_of_ownership JSONB,
+    topics_of_interest JSONB,
+    domain_expertise JSONB,
+    equity_expectation TEXT,
+    work_location_preference VARCHAR(50),
     
-    -- Metadata
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW(),
-    last_active_at TIMESTAMP DEFAULT NOW(),
+    -- Co-founder preferences
+    looking_for_description TEXT,
+    pref_idea_status VARCHAR(50),
+    pref_idea_importance VARCHAR(20),
+    pref_technical BOOLEAN,
+    pref_technical_importance VARCHAR(20),
+    pref_match_timing BOOLEAN,
+    pref_timing_importance VARCHAR(20),
+    pref_location_type VARCHAR(50),
+    pref_location_distance_miles INTEGER,
+    pref_location_importance VARCHAR(20),
+    pref_age_min INTEGER,
+    pref_age_max INTEGER,
+    pref_age_importance VARCHAR(20),
+    pref_cofounder_areas JSONB,
+    pref_areas_importance VARCHAR(20),
+    pref_shared_interests BOOLEAN,
+    pref_interests_importance VARCHAR(20),
+    alert_on_new_matches BOOLEAN DEFAULT FALSE,
+    
+    -- System
+    behavior_agreement_accepted_at TIMESTAMP WITH TIME ZONE,
+    profile_status VARCHAR(50) DEFAULT 'incomplete',  -- 'incomplete', 'pending_review', 'approved', 'rejected'
     is_active BOOLEAN DEFAULT TRUE,
-    is_banned BOOLEAN DEFAULT FALSE
+    is_banned BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE INDEX idx_users_role_intent ON users(role_intent);
+CREATE INDEX idx_users_idea_status ON users(idea_status);
 CREATE INDEX idx_users_location ON users(location);
-CREATE INDEX idx_users_availability_status ON users(availability_status);
-CREATE INDEX idx_users_trust_score ON users(trust_score DESC);
-CREATE INDEX idx_users_skills ON users USING GIN(skills);
+CREATE INDEX idx_users_profile_status ON users(profile_status);
 ```
 
 #### organizations
@@ -463,11 +498,11 @@ When a user deletes their account in Clerk, we delete the corresponding user in 
    - CTA to sign up
 
 2. **Onboarding Flow** (`/onboarding`)
-   - Multi-step questionnaire
-   - Role intent selection
-   - Skills and experience
-   - Preferences and constraints
-   - Proof of work (optional)
+   - **Agreement** – Behavior agreement (required; backend records `behavior_agreement_accepted_at`)
+   - **Basics** – Name, email, LinkedIn, location, introduction, gender, birthdate, accomplishment, education/employment, experience, links (Calendly, video intro, GitHub, portfolio)
+   - **You & your startup** – Idea status, technical flag, ready-to-start, commitment, work location, startup details, areas of ownership, topics of interest, domain expertise, equity expectation, life story, hobbies
+   - **Preferences** – What you’re looking for, idea/technical/timing/location/age/cofounder-area preferences, importance levels, alert on new matches
+   - **Preview** – Review and submit full profile; draft is persisted in session storage via `useOnboardingDraft` hook across steps
 
 3. **Dashboard** (`/dashboard`)
    - Overview of matches, saved resources, upcoming events
@@ -510,7 +545,13 @@ components/
 │   └── ...
 ├── forms/
 │   ├── ProfileForm.tsx
-│   ├── OnboardingForm.tsx
+│   ├── OnboardingForm.tsx (or per-step pages under app/onboarding/)
+│   ├── LocationPicker.tsx
+│   ├── DatePicker.tsx
+│   ├── RichTextArea.tsx
+│   ├── MultiSelect.tsx
+│   ├── TagInput.tsx
+│   ├── ImportanceSelector.tsx
 │   ├── ResourceForm.tsx
 │   └── EventForm.tsx
 ├── cards/
@@ -615,7 +656,9 @@ npx shadcn-ui@latest init
 DATABASE_URL=postgresql://user:password@localhost:5432/cmk
 CLERK_SECRET_KEY=sk_...
 CLERK_PUBLISHABLE_KEY=pk_...
+CLERK_WEBHOOK_SECRET=whsec_...   # Optional; for /webhooks/clerk (user.deleted)
 ENVIRONMENT=development
+CORS_ORIGINS=http://localhost:3000,...
 
 # Frontend .env.local
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_...
@@ -664,6 +707,28 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 ## Development Changelog
 
 This section logs major changes shipped to the project. Only significant changes are recorded here (new features, major refactors, architecture changes).
+
+### 2026-02-13 - Comprehensive Profile Update & Onboarding Refactor (refactor/user-profile-improvements)
+- **User profile schema overhaul**
+  - `bio` renamed to `introduction`; `role_intent` replaced by `idea_status` (`not_set_on_idea`, `have_ideas_flexible`, `building_specific_idea`)
+  - New location fields: `location_city`, `location_state`, `location_country`, `location_latitude`, `location_longitude`
+  - New personal: `gender`, `birthdate`; professional links: `twitter_url`, `instagram_url`, `calendly_url`, `video_intro_url`
+  - New story/background: `life_story`, `hobbies`, `impressive_accomplishment`, `education_history`, `employment_history`
+  - New startup/readiness: `is_technical`, `startup_name`, `startup_description`, `startup_progress`, `startup_funding`, `ready_to_start`, `areas_of_ownership`, `topics_of_interest`, `domain_expertise`, `equity_expectation`, `work_location_preference`
+  - New co-founder preferences: `looking_for_description`, `pref_*` (idea, technical, timing, location, age, areas, interests, importance levels), `alert_on_new_matches`
+  - System: `behavior_agreement_accepted_at`, `profile_status` (`incomplete`, `pending_review`, `approved`, `rejected`)
+  - Migration: `f1a2b3c4d5e6_comprehensive_profile_update` migrates existing data and drops `bio`/`role_intent`
+- **Behavior agreement & onboarding flow**
+  - POST `/api/v1/users/accept-behavior-agreement` records acceptance (required before completing onboarding)
+  - Onboarding endpoint accepts existing user and updates profile; returns 200 when updating, 201 when creating
+  - Frontend: agreement step then basics → you → preferences → preview; draft persisted in session via `hooks/useOnboardingDraft.ts`
+- **Clerk webhook**
+  - POST `/webhooks/clerk` for `user.deleted`; deletes or deactivates user in DB so same email can re-sign up; requires `CLERK_WEBHOOK_SECRET`
+- **Other**
+  - User search uses `idea_status` and `introduction` (no `role_intent`/`bio`); `availability_status` and `trust_score` sort removed
+  - Match recommendations: role-based founder/cofounder filter removed on this branch (all eligible users returned; algorithm may be re-added later)
+  - Schema validators in `app/schemas/user.py` refactored to shared helpers (`_validate_one_of_required`, `_validate_one_of_optional`, `_validate_list_items`)
+  - Email duplicate handling: 409 with clear message on signup/onboarding when email already exists
 
 ### 2026-02-05 - Introduction & Connection System, Search & Filtering, Messaging System
 - **Introduction & Connection System**: Complete workflow for requesting and accepting introductions
