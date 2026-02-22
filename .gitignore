@@ -76,6 +76,10 @@ coverage.xml
 # Cursor IDE (optional; project state)
 .cursor/
 
+# Linter/formatter caches
+.ruff_cache/
+.mypy_cache/
+
 # Claude-specific files
 docs/CLAUDE.md
 .claude/

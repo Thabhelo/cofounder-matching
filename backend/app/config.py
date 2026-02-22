@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     CORS_ORIGINS: str = "http://localhost:3000,http://localhost:3001"  # Comma-separated list of allowed origins
     CLERK_FRONTEND_API: str = ""  # Optional: Clerk instance URL (e.g., https://your-instance.clerk.accounts.dev)
     CLERK_WEBHOOK_SECRET: str = ""  # Optional: Clerk webhook signing secret (from Dashboard → Webhooks → endpoint)
+    ADMIN_CLERK_IDS: str = ""  # Comma-separated Clerk user IDs allowed to access admin/moderation endpoints
 
     class Config:
         env_file = ".env"

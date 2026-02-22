@@ -9,6 +9,14 @@ import { Sidebar } from "@/components/layout/Sidebar"
 import { api } from "@/lib/api"
 import type { UserPublic } from "@/lib/types"
 
+const REPORT_TYPES = [
+  { value: "spam", label: "Spam" },
+  { value: "abuse", label: "Abuse or harassment" },
+  { value: "inappropriate", label: "Inappropriate content" },
+  { value: "fake", label: "Fake or misleading profile" },
+  { value: "other", label: "Other" },
+] as const
+
 export default function ProfileDetailPage() {
   const { getToken } = useAuth()
   const router = useRouter()
@@ -19,6 +27,11 @@ export default function ProfileDetailPage() {
   const [saving, setSaving] = useState(false)
   const [skipping, setSkipping] = useState(false)
   const [isSaved, setIsSaved] = useState(false)
+  const [reportOpen, setReportOpen] = useState(false)
+  const [reportType, setReportType] = useState("abuse")
+  const [reportDesc, setReportDesc] = useState("")
+  const [reportSubmitting, setReportSubmitting] = useState(false)
+  const [reportDone, setReportDone] = useState(false)
 
   useEffect(() => {
     async function loadProfile() {
@@ -73,6 +86,27 @@ export default function ProfileDetailPage() {
       console.error("Failed to skip profile:", error)
     } finally {
       setSkipping(false)
+    }
+  }
+
+  const handleReportSubmit = async () => {
+    if (!profile || reportDesc.trim().length < 10) return
+    try {
+      const token = await getToken()
+      if (!token) return
+      setReportSubmitting(true)
+      await api.reports.create(profile.id, reportType, reportDesc.trim(), token)
+      setReportDone(true)
+      setTimeout(() => {
+        setReportOpen(false)
+        setReportDone(false)
+        setReportDesc("")
+      }, 1500)
+    } catch (error) {
+      console.error("Report failed:", error)
+      alert(error instanceof Error ? error.message : "Failed to submit report.")
+    } finally {
+      setReportSubmitting(false)
     }
   }
 
@@ -232,6 +266,63 @@ export default function ProfileDetailPage() {
                 {saving ? "Saving..." : isSaved ? "Saved" : "Save for Later"}
               </button>
             </div>
+            <div className="pt-4 text-center">
+              <button
+                type="button"
+                onClick={() => setReportOpen(true)}
+                className="text-sm text-zinc-500 hover:text-zinc-700 underline"
+              >
+                Report this profile
+              </button>
+            </div>
+            {reportOpen && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" role="dialog" aria-modal="true">
+                <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+                  <h3 className="text-lg font-semibold text-zinc-900 mb-4">Report profile</h3>
+                  {reportDone ? (
+                    <p className="text-zinc-700">Thank you. Your report has been submitted and will be reviewed.</p>
+                  ) : (
+                    <>
+                      <label className="block text-sm font-medium text-zinc-700 mb-2">Reason</label>
+                      <select
+                        value={reportType}
+                        onChange={(e) => setReportType(e.target.value)}
+                        className="w-full border border-zinc-300 rounded-lg px-3 py-2 text-zinc-900 mb-4"
+                      >
+                        {REPORT_TYPES.map((t) => (
+                          <option key={t.value} value={t.value}>{t.label}</option>
+                        ))}
+                      </select>
+                      <label className="block text-sm font-medium text-zinc-700 mb-2">Details (min 10 characters)</label>
+                      <textarea
+                        value={reportDesc}
+                        onChange={(e) => setReportDesc(e.target.value)}
+                        placeholder="Describe what happened..."
+                        rows={4}
+                        className="w-full border border-zinc-300 rounded-lg px-3 py-2 text-zinc-900 placeholder-zinc-400 mb-4"
+                      />
+                      <div className="flex gap-3 justify-end">
+                        <button
+                          type="button"
+                          onClick={() => { setReportOpen(false); setReportDesc("") }}
+                          className="px-4 py-2 text-zinc-700 hover:bg-zinc-100 rounded-lg"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleReportSubmit}
+                          disabled={reportSubmitting || reportDesc.trim().length < 10}
+                          className="px-4 py-2 bg-zinc-900 text-white rounded-lg hover:bg-zinc-800 disabled:opacity-50"
+                        >
+                          {reportSubmitting ? "Submitting..." : "Submit report"}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

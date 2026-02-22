@@ -1,0 +1,534 @@
+"use client"
+
+import { useEffect, useState } from "react"
+import { useAuth } from "@clerk/nextjs"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
+import { Sidebar } from "@/components/layout/Sidebar"
+import { api } from "@/lib/api"
+import type { ReportListItem, User } from "@/lib/types"
+import type { Organization } from "@/lib/types"
+
+type AdminTab = "overview" | "reports" | "users" | "organizations"
+
+type Stats = {
+  users_total: number
+  users_banned: number
+  users_pending_review: number
+  reports_pending: number
+  reports_total: number
+  organizations_total: number
+}
+
+export default function AdminPage() {
+  const { getToken } = useAuth()
+  const router = useRouter()
+  const [tab, setTab] = useState<AdminTab>("overview")
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
+  const [accessDeniedHint, setAccessDeniedHint] = useState<string | null>(null)
+  const [stats, setStats] = useState<Stats | null>(null)
+  const [reports, setReports] = useState<ReportListItem[]>([])
+  const [users, setUsers] = useState<User[]>([])
+  const [organizations, setOrganizations] = useState<Organization[]>([])
+  const [reportStatusFilter, setReportStatusFilter] = useState("pending")
+  const [userFilter, setUserFilter] = useState<"all" | "banned" | "pending_review">("all")
+  const [loading, setLoading] = useState(true)
+  const [actioning, setActioning] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    async function check() {
+      try {
+        const token = await getToken()
+        if (!token) {
+          router.push("/")
+          return
+        }
+        const res = await api.admin.check(token)
+        if (!cancelled) {
+          setIsAdmin(res.is_admin)
+          if (!res.is_admin && res.hint) setAccessDeniedHint(res.hint)
+        }
+      } catch {
+        if (!cancelled) setIsAdmin(false)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    check()
+    return () => {
+      cancelled = true
+    }
+  }, [getToken, router])
+
+  useEffect(() => {
+    if (!isAdmin) return
+    getToken().then((token) => {
+      if (!token) return
+      api.admin.getStats(token).then(setStats).catch(() => {})
+    })
+  }, [isAdmin, getToken])
+
+  useEffect(() => {
+    if (!isAdmin || tab !== "reports") return
+    getToken().then((token) => {
+      if (!token) return
+      api.admin.getReports(token, { status_filter: reportStatusFilter, limit: 100 }).then(setReports).catch(() => {})
+    })
+  }, [isAdmin, tab, reportStatusFilter, getToken])
+
+  useEffect(() => {
+    if (!isAdmin || tab !== "users") return
+    getToken().then((token) => {
+      if (!token) return
+      const params: { limit: number; is_banned?: boolean; profile_status?: string } = { limit: 100 }
+      if (userFilter === "banned") params.is_banned = true
+      if (userFilter === "pending_review") params.profile_status = "pending_review"
+      api.admin.getUsers(token, params).then(setUsers).catch(() => {})
+    })
+  }, [isAdmin, tab, userFilter, getToken])
+
+  useEffect(() => {
+    if (!isAdmin || tab !== "organizations") return
+    getToken().then((token) => {
+      if (!token) return
+      api.admin.getOrganizations(token, { limit: 100 }).then(setOrganizations).catch(() => {})
+    })
+  }, [isAdmin, tab, getToken])
+
+  const handleReviewReport = async (reportId: string, status: string) => {
+    const token = await getToken()
+    if (!token) return
+    try {
+      setActioning(reportId)
+      await api.admin.reviewReport(reportId, status, null, token)
+      setReports((prev) => prev.filter((r) => r.id !== reportId))
+    } catch (e) {
+      console.error(e)
+      alert("Failed to update report")
+    } finally {
+      setActioning(null)
+    }
+  }
+
+  const handleBan = async (userId: string) => {
+    if (!confirm("Ban this user? They will not be able to sign in.")) return
+    const token = await getToken()
+    if (!token) return
+    try {
+      setActioning(userId)
+      await api.admin.banUser(userId, token)
+      setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, is_banned: true } : u)))
+    } catch (e) {
+      console.error(e)
+      alert("Failed to ban user")
+    } finally {
+      setActioning(null)
+    }
+  }
+
+  const handleUnban = async (userId: string) => {
+    const token = await getToken()
+    if (!token) return
+    try {
+      setActioning(userId)
+      await api.admin.unbanUser(userId, token)
+      setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, is_banned: false } : u)))
+    } catch (e) {
+      console.error(e)
+      alert("Failed to unban user")
+    } finally {
+      setActioning(null)
+    }
+  }
+
+  const handleApprove = async (userId: string) => {
+    const token = await getToken()
+    if (!token) return
+    try {
+      setActioning(userId)
+      await api.admin.approveUser(userId, token)
+      setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, profile_status: "approved" } : u)))
+    } catch (e) {
+      console.error(e)
+      alert("Failed to approve user")
+    } finally {
+      setActioning(null)
+    }
+  }
+
+  const handleReject = async (userId: string) => {
+    const token = await getToken()
+    if (!token) return
+    try {
+      setActioning(userId)
+      await api.admin.rejectUser(userId, token)
+      setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, profile_status: "rejected" } : u)))
+    } catch (e) {
+      console.error(e)
+      alert("Failed to reject user")
+    } finally {
+      setActioning(null)
+    }
+  }
+
+  const handleVerifyOrg = async (orgId: string) => {
+    const token = await getToken()
+    if (!token) return
+    try {
+      setActioning(orgId)
+      await api.admin.verifyOrganization(orgId, token)
+      setOrganizations((prev) => prev.map((o) => (o.id === orgId ? { ...o, is_verified: true } : o)))
+    } catch (e) {
+      console.error(e)
+      alert("Failed to verify organization")
+    } finally {
+      setActioning(null)
+    }
+  }
+
+  const formatDate = (s: string | null) => (s ? new Date(s).toLocaleString() : "-")
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-900" />
+      </div>
+    )
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen flex">
+        <Sidebar />
+        <main className="flex-1 p-8 flex items-center justify-center">
+          <div className="text-center max-w-md">
+            <h1 className="text-2xl font-semibold text-zinc-900 mb-2">Access denied</h1>
+            <p className="text-zinc-600 mb-6">
+              You do not have permission to view the admin area. If you believe this is an error, contact your
+              administrator.
+            </p>
+            {accessDeniedHint && (
+              <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mb-6 text-left">
+                {accessDeniedHint}
+              </p>
+            )}
+            <Link
+              href="/dashboard"
+              className="inline-block px-6 py-2 bg-zinc-900 text-white font-medium rounded-lg hover:bg-zinc-800"
+            >
+              Back to Dashboard
+            </Link>
+          </div>
+        </main>
+      </div>
+    )
+  }
+
+  const tabs: { id: AdminTab; label: string }[] = [
+    { id: "overview", label: "Overview" },
+    { id: "reports", label: "Reports" },
+    { id: "users", label: "Users" },
+    { id: "organizations", label: "Organizations" },
+  ]
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex">
+      <Sidebar />
+      <main className="flex-1 p-8 overflow-auto">
+        <div className="max-w-6xl mx-auto">
+          <h1 className="text-3xl font-semibold text-zinc-900 mb-2">Admin</h1>
+          <p className="text-zinc-600 mb-6">Manage users, reports, and organizations.</p>
+
+          <nav className="flex gap-1 border-b border-zinc-200 mb-8">
+            {tabs.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setTab(t.id)}
+                className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors ${
+                  tab === t.id
+                    ? "bg-white border border-zinc-200 border-b-0 text-zinc-900 -mb-px"
+                    : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100"
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </nav>
+
+          {tab === "overview" && stats && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <div className="bg-white border border-zinc-200 rounded-lg p-4">
+                  <p className="text-sm text-zinc-500">Total users</p>
+                  <p className="text-2xl font-semibold text-zinc-900">{stats.users_total}</p>
+                </div>
+                <div className="bg-white border border-zinc-200 rounded-lg p-4">
+                  <p className="text-sm text-zinc-500">Pending review</p>
+                  <p className="text-2xl font-semibold text-zinc-900">{stats.users_pending_review}</p>
+                  <button
+                    type="button"
+                    onClick={() => setTab("users")}
+                    className="text-xs text-zinc-600 hover:underline mt-1"
+                  >
+                    View
+                  </button>
+                </div>
+                <div className="bg-white border border-zinc-200 rounded-lg p-4">
+                  <p className="text-sm text-zinc-500">Banned</p>
+                  <p className="text-2xl font-semibold text-zinc-900">{stats.users_banned}</p>
+                </div>
+                <div className="bg-white border border-zinc-200 rounded-lg p-4">
+                  <p className="text-sm text-zinc-500">Pending reports</p>
+                  <p className="text-2xl font-semibold text-zinc-900">{stats.reports_pending}</p>
+                  <button
+                    type="button"
+                    onClick={() => setTab("reports")}
+                    className="text-xs text-zinc-600 hover:underline mt-1"
+                  >
+                    Review
+                  </button>
+                </div>
+                <div className="bg-white border border-zinc-200 rounded-lg p-4">
+                  <p className="text-sm text-zinc-500">Total reports</p>
+                  <p className="text-2xl font-semibold text-zinc-900">{stats.reports_total}</p>
+                </div>
+                <div className="bg-white border border-zinc-200 rounded-lg p-4">
+                  <p className="text-sm text-zinc-500">Organizations</p>
+                  <p className="text-2xl font-semibold text-zinc-900">{stats.organizations_total}</p>
+                  <button
+                    type="button"
+                    onClick={() => setTab("organizations")}
+                    className="text-xs text-zinc-600 hover:underline mt-1"
+                  >
+                    Manage
+                  </button>
+                </div>
+              </div>
+              <div className="bg-white border border-zinc-200 rounded-lg p-6">
+                <h2 className="text-lg font-medium text-zinc-900 mb-4">Quick actions</h2>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setTab("reports")}
+                    className="px-4 py-2 bg-zinc-900 text-white text-sm font-medium rounded-lg hover:bg-zinc-800"
+                  >
+                    Review reports
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setTab("users"); setUserFilter("pending_review") }}
+                    className="px-4 py-2 border border-zinc-300 text-zinc-700 text-sm font-medium rounded-lg hover:bg-zinc-50"
+                  >
+                    Approve profiles
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTab("users")}
+                    className="px-4 py-2 border border-zinc-300 text-zinc-700 text-sm font-medium rounded-lg hover:bg-zinc-50"
+                  >
+                    Manage users
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTab("organizations")}
+                    className="px-4 py-2 border border-zinc-300 text-zinc-700 text-sm font-medium rounded-lg hover:bg-zinc-50"
+                  >
+                    Verify organizations
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {tab === "reports" && (
+            <>
+              <div className="mb-4 flex gap-2 items-center">
+                <label className="text-sm font-medium text-zinc-700">Status</label>
+                <select
+                  value={reportStatusFilter}
+                  onChange={(e) => setReportStatusFilter(e.target.value)}
+                  className="border border-zinc-300 rounded px-3 py-1.5 text-zinc-900"
+                >
+                  <option value="pending">Pending</option>
+                  <option value="reviewed">Reviewed</option>
+                  <option value="resolved">Resolved</option>
+                  <option value="dismissed">Dismissed</option>
+                </select>
+              </div>
+              <div className="bg-white border border-zinc-200 rounded-lg overflow-hidden">
+                {reports.length === 0 ? (
+                  <p className="p-6 text-zinc-600">No reports in this status.</p>
+                ) : (
+                  <div className="divide-y divide-zinc-200">
+                    {reports.map((r) => (
+                      <div key={r.id} className="p-4 flex justify-between items-start gap-4">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm text-zinc-500">
+                            Reported: {r.reported_user_name ?? "Unknown"} ({r.reported_user_email ?? "-"})
+                          </p>
+                          <p className="text-sm text-zinc-500">
+                            Reporter: {r.reporter_name ?? "Anonymous"} ({r.reporter_email ?? "-"})
+                          </p>
+                          <p className="mt-1 font-medium text-zinc-900">{r.report_type}</p>
+                          <p className="text-zinc-700 mt-1">{r.description}</p>
+                          <p className="text-xs text-zinc-400 mt-2">{formatDate(r.created_at)}</p>
+                        </div>
+                        {r.status === "pending" && (
+                          <div className="flex gap-2 flex-shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleReviewReport(r.id, "resolved")}
+                              disabled={actioning === r.id}
+                              className="px-3 py-1.5 text-sm bg-zinc-900 text-white rounded hover:bg-zinc-800 disabled:opacity-50"
+                            >
+                              Resolve
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleReviewReport(r.id, "dismissed")}
+                              disabled={actioning === r.id}
+                              className="px-3 py-1.5 text-sm border border-zinc-300 text-zinc-700 rounded hover:bg-zinc-50 disabled:opacity-50"
+                            >
+                              Dismiss
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {tab === "users" && (
+            <>
+              <div className="mb-4 flex gap-2 items-center">
+                <label className="text-sm font-medium text-zinc-700">Filter</label>
+                <select
+                  value={userFilter}
+                  onChange={(e) => setUserFilter(e.target.value as "all" | "banned" | "pending_review")}
+                  className="border border-zinc-300 rounded px-3 py-1.5 text-zinc-900"
+                >
+                  <option value="all">All users</option>
+                  <option value="pending_review">Pending review</option>
+                  <option value="banned">Banned</option>
+                </select>
+              </div>
+              <div className="bg-white border border-zinc-200 rounded-lg overflow-hidden">
+                {users.length === 0 ? (
+                  <p className="p-6 text-zinc-600">No users match the filter.</p>
+                ) : (
+                  <table className="w-full text-left">
+                    <thead className="bg-zinc-50 border-b border-zinc-200">
+                      <tr>
+                        <th className="px-4 py-3 text-sm font-medium text-zinc-900">Name</th>
+                        <th className="px-4 py-3 text-sm font-medium text-zinc-900">Email</th>
+                        <th className="px-4 py-3 text-sm font-medium text-zinc-900">Profile status</th>
+                        <th className="px-4 py-3 text-sm font-medium text-zinc-900">Banned</th>
+                        <th className="px-4 py-3 text-sm font-medium text-zinc-900">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-200">
+                      {users.map((u) => (
+                        <tr key={u.id}>
+                          <td className="px-4 py-3 text-zinc-900">{u.name}</td>
+                          <td className="px-4 py-3 text-zinc-600">{u.email}</td>
+                          <td className="px-4 py-3 text-zinc-700">{u.profile_status ?? "incomplete"}</td>
+                          <td className="px-4 py-3">{u.is_banned ? "Yes" : "No"}</td>
+                          <td className="px-4 py-3 flex gap-2 flex-wrap">
+                            {u.is_banned ? (
+                              <button
+                                type="button"
+                                onClick={() => handleUnban(u.id)}
+                                disabled={actioning === u.id}
+                                className="text-sm text-zinc-600 hover:underline disabled:opacity-50"
+                              >
+                                Unban
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleBan(u.id)}
+                                disabled={actioning === u.id}
+                                className="text-sm text-red-600 hover:underline disabled:opacity-50"
+                              >
+                                Ban
+                              </button>
+                            )}
+                            {u.profile_status === "pending_review" && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleApprove(u.id)}
+                                  disabled={actioning === u.id}
+                                  className="text-sm text-green-600 hover:underline disabled:opacity-50"
+                                >
+                                  Approve
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleReject(u.id)}
+                                  disabled={actioning === u.id}
+                                  className="text-sm text-zinc-600 hover:underline disabled:opacity-50"
+                                >
+                                  Reject
+                                </button>
+                              </>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </>
+          )}
+
+          {tab === "organizations" && (
+            <div className="bg-white border border-zinc-200 rounded-lg overflow-hidden">
+              {organizations.length === 0 ? (
+                <p className="p-6 text-zinc-600">No organizations.</p>
+              ) : (
+                <table className="w-full text-left">
+                  <thead className="bg-zinc-50 border-b border-zinc-200">
+                    <tr>
+                      <th className="px-4 py-3 text-sm font-medium text-zinc-900">Name</th>
+                      <th className="px-4 py-3 text-sm font-medium text-zinc-900">Slug</th>
+                      <th className="px-4 py-3 text-sm font-medium text-zinc-900">Verified</th>
+                      <th className="px-4 py-3 text-sm font-medium text-zinc-900">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-200">
+                    {organizations.map((o) => (
+                      <tr key={o.id}>
+                        <td className="px-4 py-3 text-zinc-900">{o.name}</td>
+                        <td className="px-4 py-3 text-zinc-600">{o.slug}</td>
+                        <td className="px-4 py-3">{o.is_verified ? "Yes" : "No"}</td>
+                        <td className="px-4 py-3">
+                          {!o.is_verified && (
+                            <button
+                              type="button"
+                              onClick={() => handleVerifyOrg(o.id)}
+                              disabled={actioning === o.id}
+                              className="text-sm text-green-600 hover:underline disabled:opacity-50"
+                            >
+                              Verify
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
+        </div>
+      </main>
+    </div>
+  )
+}

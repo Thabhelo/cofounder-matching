@@ -12,6 +12,8 @@ STARTUP_FUNDING = ["bootstrapped", "pre_seed", "seed", "none"]
 PREF_IDEA_STATUSES = ["not_set_on_idea", "has_their_own_ideas", "no_preference"]
 PREF_LOCATION_TYPES = ["within_distance", "same_country", "same_region", "no_preference"]
 PROFILE_STATUSES = ["incomplete", "pending_review", "approved", "rejected"]
+REPORT_TYPES = ["spam", "abuse", "inappropriate", "fake", "other"]
+REPORT_STATUSES = ["pending", "reviewed", "resolved", "dismissed"]
 
 TOPICS_OF_INTEREST = [
     "Artificial Intelligence",

@@ -375,3 +375,24 @@ async def get_clerk_user_info_from_token(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials"
         )
+
+
+def get_admin_clerk_ids() -> set[str]:
+    """Parse ADMIN_CLERK_IDS from settings into a set of clerk IDs."""
+    raw = (settings.ADMIN_CLERK_IDS or "").strip()
+    if not raw:
+        return set()
+    return {x.strip() for x in raw.split(",") if x.strip()}
+
+
+async def get_current_admin_user(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """Require current user to be an admin (clerk_id in ADMIN_CLERK_IDS)."""
+    admin_ids = get_admin_clerk_ids()
+    if not admin_ids or current_user.clerk_id not in admin_ids:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required",
+        )
+    return current_user

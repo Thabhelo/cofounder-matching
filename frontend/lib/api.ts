@@ -1,4 +1,4 @@
-import type { User, UserPublic, ProfileDiscoverItem, Organization, Resource, Event } from "./types"
+import type { User, UserPublic, ProfileDiscoverItem, Organization, Resource, Event, ReportListItem } from "./types"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
@@ -370,6 +370,94 @@ export const api = {
 
     markRead: (messageId: string, token: string) =>
       request<any>(`/api/v1/messages/${messageId}/read`, {
+        method: "PUT",
+        token,
+      }),
+  },
+
+  reports: {
+    create: (reportedUserId: string, reportType: string, description: string, token: string) =>
+      request<ReportListItem>("/api/v1/reports", {
+        method: "POST",
+        body: JSON.stringify({ reported_user_id: reportedUserId, report_type: reportType, description }),
+        token,
+      }),
+  },
+
+  admin: {
+    check: (token: string) =>
+      request<{ is_admin: boolean; hint?: string }>("/api/v1/admin/check", { token }),
+
+    getStats: (token: string) =>
+      request<{
+        users_total: number
+        users_banned: number
+        users_pending_review: number
+        reports_pending: number
+        reports_total: number
+        organizations_total: number
+      }>("/api/v1/admin/stats", { token }),
+
+    getReports: (token: string, params?: { status_filter?: string; skip?: number; limit?: number }) => {
+      const queryParams = new URLSearchParams(
+        Object.entries(params || {})
+          .filter(([, value]) => value !== undefined)
+          .map(([key, value]) => [key, String(value)])
+      )
+      return request<ReportListItem[]>(`/api/v1/admin/reports?${queryParams}`, { token })
+    },
+
+    reviewReport: (reportId: string, status: string, resolutionNotes: string | null, token: string) =>
+      request<ReportListItem>(`/api/v1/admin/reports/${reportId}`, {
+        method: "PUT",
+        body: JSON.stringify({ status, resolution_notes: resolutionNotes }),
+        token,
+      }),
+
+    getUsers: (token: string, params?: { profile_status?: string; is_banned?: boolean; skip?: number; limit?: number }) => {
+      const queryParams = new URLSearchParams(
+        Object.entries(params || {})
+          .filter(([, value]) => value !== undefined)
+          .map(([key, value]) => [key, String(value)])
+      )
+      return request<User[]>(`/api/v1/admin/users?${queryParams}`, { token })
+    },
+
+    banUser: (userId: string, token: string) =>
+      request<{ message: string; user_id: string }>(`/api/v1/admin/users/${userId}/ban`, {
+        method: "PUT",
+        token,
+      }),
+
+    unbanUser: (userId: string, token: string) =>
+      request<{ message: string; user_id: string }>(`/api/v1/admin/users/${userId}/unban`, {
+        method: "PUT",
+        token,
+      }),
+
+    approveUser: (userId: string, token: string) =>
+      request<{ message: string; user_id: string }>(`/api/v1/admin/users/${userId}/approve`, {
+        method: "PUT",
+        token,
+      }),
+
+    rejectUser: (userId: string, token: string) =>
+      request<{ message: string; user_id: string }>(`/api/v1/admin/users/${userId}/reject`, {
+        method: "PUT",
+        token,
+      }),
+
+    getOrganizations: (token: string, params?: { verified?: boolean; skip?: number; limit?: number }) => {
+      const queryParams = new URLSearchParams(
+        Object.entries(params || {})
+          .filter(([, value]) => value !== undefined)
+          .map(([key, value]) => [key, String(value)])
+      )
+      return request<Organization[]>(`/api/v1/admin/organizations?${queryParams}`, { token })
+    },
+
+    verifyOrganization: (orgId: string, token: string) =>
+      request<{ message: string; org_id: string }>(`/api/v1/admin/organizations/${orgId}/verify`, {
         method: "PUT",
         token,
       }),
