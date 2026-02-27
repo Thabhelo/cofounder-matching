@@ -1,170 +1,65 @@
 name: Deploy
 
 on:
-  workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Deployment environment'
-        required: true
-        type: choice
-        options:
-          - staging
-          - production
   push:
     branches:
       - main
-    tags:
-      - 'v*'
-
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME_BACKEND: ${{ github.repository }}/backend
-  IMAGE_NAME_FRONTEND: ${{ github.repository }}/frontend
+  workflow_dispatch:
 
 jobs:
-  deploy-staging:
-    name: Deploy to Staging
+  smoke-test:
+    name: Smoke test Render deploy
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.event.inputs.environment == 'staging'
-    environment:
-      name: staging
-      url: https://staging.cofounder-matching.com
-    permissions:
-      contents: read
-      packages: read
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Deploy to staging
+      - name: Check RENDER_API_URL is configured
         run: |
-          echo "Deploying to staging environment..."
-          echo "Backend image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:${{ github.sha }}"
-          echo "Frontend image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ github.sha }}"
-
-          # Add your deployment commands here
-          # Examples:
-          # - SSH into staging server and pull new images
-          # - Use kubectl for Kubernetes deployments
-          # - Use docker-compose for simple deployments
-          # - Use Terraform/Ansible for infrastructure as code
-
-      - name: Run smoke tests
-        run: |
-          echo "Running smoke tests against staging..."
-          # Add health check and basic API tests here
-          # curl -f https://staging-api.cofounder-matching.com/health || exit 1
-
-      - name: Notify deployment success
-        if: success()
-        run: |
-          echo "## Staging Deployment Successful" >> $GITHUB_STEP_SUMMARY
-          echo "Environment: staging" >> $GITHUB_STEP_SUMMARY
-          echo "Commit: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-          echo "Deployed at: $(date -u)" >> $GITHUB_STEP_SUMMARY
-
-  deploy-production:
-    name: Deploy to Production
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.environment == 'production'
-    environment:
-      name: production
-      url: https://cofounder-matching.com
-    permissions:
-      contents: read
-      packages: read
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract version from tag
-        id: version
-        run: |
-          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            VERSION=${GITHUB_REF#refs/tags/v}
-          else
-            VERSION=${{ github.sha }}
+          if [ -z "${{ vars.RENDER_API_URL }}" ]; then
+            echo "RENDER_API_URL repository variable is not set."
+            echo "Go to: GitHub repo -> Settings -> Variables -> Actions -> New repository variable"
+            echo "Name: RENDER_API_URL, Value: https://cofounder-api.onrender.com"
+            exit 1
           fi
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Deploy to production
+      - name: Wait for Render deploy (poll until healthy or timeout)
         run: |
-          echo "Deploying version ${{ steps.version.outputs.version }} to production..."
-          echo "Backend image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:${{ steps.version.outputs.version }}"
-          echo "Frontend image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:${{ steps.version.outputs.version }}"
+          API="${{ vars.RENDER_API_URL }}"
+          TIMEOUT=600   # 10 minutes max
+          INTERVAL=15   # check every 15s
+          ELAPSED=0
 
-          # Add your production deployment commands here
-          # Ensure zero-downtime deployment with:
-          # - Blue-green deployment
-          # - Rolling updates
-          # - Canary releases
+          echo "Polling $API/health until deploy is live (timeout ${TIMEOUT}s)..."
+          while [ $ELAPSED -lt $TIMEOUT ]; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$API/health" || echo "000")
+            if [ "$STATUS" = "200" ]; then
+              echo "Backend healthy after ${ELAPSED}s (HTTP 200)"
+              exit 0
+            fi
+            echo "  ${ELAPSED}s: HTTP $STATUS - waiting..."
+            sleep $INTERVAL
+            ELAPSED=$((ELAPSED + INTERVAL))
+          done
 
-      - name: Run production smoke tests
+          echo "Timed out after ${TIMEOUT}s - backend never became healthy"
+          exit 1
+
+      - name: Verify public API endpoint
         run: |
-          echo "Running smoke tests against production..."
-          # Add comprehensive health checks here
-          # curl -f https://api.cofounder-matching.com/health || exit 1
+          API="${{ vars.RENDER_API_URL }}"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$API/api/v1/organizations")
+          echo "GET /api/v1/organizations -> HTTP $STATUS"
+          [ "$STATUS" = "200" ] || exit 1
 
-      - name: Create deployment tag
-        if: success()
+      - name: Verify auth-protected endpoint returns 401 (not 500)
         run: |
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-          git tag -a "deployed-prod-$(date +%Y%m%d-%H%M%S)" -m "Production deployment"
-          git push origin --tags || true
+          API="${{ vars.RENDER_API_URL }}"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$API/api/v1/users/me")
+          echo "GET /api/v1/users/me (no token) -> HTTP $STATUS"
+          [ "$STATUS" = "401" ] || { echo "Expected 401, got $STATUS"; exit 1; }
 
-      - name: Notify deployment success
-        if: success()
+      - name: Summary
+        if: always()
         run: |
-          echo "## Production Deployment Successful" >> $GITHUB_STEP_SUMMARY
-          echo "Environment: production" >> $GITHUB_STEP_SUMMARY
-          echo "Version: ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-          echo "Deployed at: $(date -u)" >> $GITHUB_STEP_SUMMARY
-
-  rollback-staging:
-    name: Rollback Staging Deployment
-    runs-on: ubuntu-latest
-    if: failure()
-    needs: [deploy-staging]
-
-    steps:
-      - name: Rollback notification
-        run: |
-          echo "## Staging Deployment Failed - Rollback Required" >> $GITHUB_STEP_SUMMARY
-          echo "Manual intervention may be required." >> $GITHUB_STEP_SUMMARY
-          echo "Review logs and initiate rollback if necessary." >> $GITHUB_STEP_SUMMARY
-
-  rollback-production:
-    name: Rollback Production Deployment
-    runs-on: ubuntu-latest
-    if: failure()
-    needs: [deploy-production]
-
-    steps:
-      - name: Rollback notification
-        run: |
-          echo "## Production Deployment Failed - Rollback Required" >> $GITHUB_STEP_SUMMARY
-          echo "Manual intervention may be required." >> $GITHUB_STEP_SUMMARY
-          echo "Review logs and initiate rollback if necessary." >> $GITHUB_STEP_SUMMARY
+          echo "## Smoke test result: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Commit: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- API: ${{ vars.RENDER_API_URL }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Time: $(date -u)" >> $GITHUB_STEP_SUMMARY

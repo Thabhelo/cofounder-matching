@@ -67,6 +67,7 @@ build/
 *.md
 !README.md
 !docs/DOCUMENTATION.md
+!docs/DEPLOYMENT.md
 !LICENSE
 !LICENSE.md
 
