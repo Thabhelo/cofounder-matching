@@ -19,7 +19,7 @@ Render Blueprints (`render.yaml`) let you spin up all services in one click.
 1. In the Render dashboard, click **New** -> **Blueprint**
 2. Select this repository (`cofounder-matching`)
 3. Render reads `render.yaml` from the repo root and shows you what it will create:
-   - `cofounder-db` - Postgres 16, Starter plan, Oregon region
+   - `cofounder-db` - Postgres 16, basic-256mb plan, Oregon region
    - `cofounder-api` - Python web service, Starter plan, Oregon region
 4. Click **Apply** - Render provisions the DB first, then the API
 
@@ -36,7 +36,7 @@ After the Blueprint is applied, go to the `cofounder-api` service -> **Environme
 | `CLERK_SECRET_KEY` | Clerk Dashboard -> API Keys -> Secret key |
 | `CLERK_PUBLISHABLE_KEY` | Clerk Dashboard -> API Keys -> Publishable key |
 | `CLERK_FRONTEND_API` | Clerk Dashboard -> API Keys -> Frontend API URL (e.g. `https://your-instance.clerk.accounts.dev`) |
-| `CORS_ORIGINS` | `https://cofounder-matching.vercel.app` |
+| `CORS_ORIGINS` | `https://cofounder-matching-git-main-thabhelos-projects.vercel.app` |
 | `ADMIN_CLERK_IDS` | Comma-separated Clerk user IDs for admins. Find your ID: Clerk Dashboard -> Users -> click your user -> copy User ID (`user_...`) |
 | `CLERK_WEBHOOK_SECRET` | Clerk Dashboard -> Webhooks -> your endpoint -> Signing secret |
 
@@ -75,7 +75,7 @@ curl https://cofounder-api.onrender.com/health
 Once you have the Vercel URL, update `CORS_ORIGINS` in the Render environment to include it:
 
 ```
-https://cofounder-matching.vercel.app
+https://cofounder-matching-git-main-thabhelos-projects.vercel.app
 ```
 
 If you add a custom domain later, add that too (comma-separated).
@@ -129,8 +129,8 @@ Both services are in `oregon` (US West). Keep them in the same region - this is 
 | Service | Plan | Cost |
 |---|---|---|
 | Render Web Service (backend) | Starter | $7/mo |
-| Render Postgres (database) | Starter | $7/mo |
+| Render Postgres (database) | basic-256mb | $7/mo |
 | Vercel (frontend) | Hobby | $0 |
 | **Total** | | **~$14/mo** |
 
-Render Starter includes: 512MB RAM, shared CPU, 1GB Postgres storage, daily backups, SSL.
+Render Starter (API) includes: 512MB RAM, shared CPU. basic-256mb (Postgres) includes: 256MB RAM, 1GB storage, daily backups, SSL.
