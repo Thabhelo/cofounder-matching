@@ -1,4 +1,4 @@
-import type { User, UserPublic, ProfileDiscoverItem, Organization, Resource, Event, ReportListItem } from "./types"
+import type { User, UserPublic, ProfileDiscoverItem, Organization, Resource, Event, ReportListItem, AuditLogEntry } from "./types"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
@@ -396,9 +396,27 @@ export const api = {
         reports_pending: number
         reports_total: number
         organizations_total: number
+        matches_total: number
+        messages_total: number
+        users_last_7_days: number
+        users_last_30_days: number
+        matches_last_7_days: number
       }>("/api/v1/admin/stats", { token }),
 
-    getReports: (token: string, params?: { status_filter?: string; skip?: number; limit?: number }) => {
+    getAnalytics: (token: string, days?: number) =>
+      request<{
+        signups_by_day: { day: string; count: number }[]
+        matches_by_day: { day: string; count: number }[]
+        intro_requested_count: number
+        intro_accepted_count: number
+        intro_acceptance_rate: number
+        messages_count: number
+        resource_saves_count: number
+        event_rsvps_count: number
+        organizations_with_activity_count: number
+      }>("/api/v1/admin/analytics" + (days != null ? `?days=${days}` : ""), { token }),
+
+    getReports: (token: string, params?: { status_filter?: string; sort_by?: string; sort_order?: string; skip?: number; limit?: number }) => {
       const queryParams = new URLSearchParams(
         Object.entries(params || {})
           .filter(([, value]) => value !== undefined)
@@ -414,7 +432,7 @@ export const api = {
         token,
       }),
 
-    getUsers: (token: string, params?: { profile_status?: string; is_banned?: boolean; skip?: number; limit?: number }) => {
+    getUsers: (token: string, params?: { q?: string; profile_status?: string; is_banned?: boolean; skip?: number; limit?: number }) => {
       const queryParams = new URLSearchParams(
         Object.entries(params || {})
           .filter(([, value]) => value !== undefined)
@@ -422,6 +440,22 @@ export const api = {
       )
       return request<User[]>(`/api/v1/admin/users?${queryParams}`, { token })
     },
+
+    getUser: (userId: string, token: string) =>
+      request<User>(`/api/v1/admin/users/${userId}`, { token }),
+
+    updateUser: (userId: string, data: Partial<User> & { profile_status?: string; is_active?: boolean }, token: string) =>
+      request<User>(`/api/v1/admin/users/${userId}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+        token,
+      }),
+
+    deleteUser: (userId: string, token: string) =>
+      request<{ message: string; user_id: string }>(`/api/v1/admin/users/${userId}`, {
+        method: "DELETE",
+        token,
+      }),
 
     banUser: (userId: string, token: string) =>
       request<{ message: string; user_id: string }>(`/api/v1/admin/users/${userId}/ban`, {
@@ -461,6 +495,72 @@ export const api = {
         method: "PUT",
         token,
       }),
+
+    updateOrganization: (orgId: string, data: Partial<Organization>, token: string) =>
+      request<Organization>(`/api/v1/admin/organizations/${orgId}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+        token,
+      }),
+
+    deleteOrganization: (orgId: string, token: string) =>
+      request<{ message: string; org_id: string }>(`/api/v1/admin/organizations/${orgId}`, {
+        method: "DELETE",
+        token,
+      }),
+
+    getResources: (token: string, params?: { featured_only?: boolean; is_active?: boolean; skip?: number; limit?: number }) => {
+      const queryParams = new URLSearchParams(
+        Object.entries(params || {})
+          .filter(([, value]) => value !== undefined)
+          .map(([key, value]) => [key, String(value)])
+      )
+      return request<Resource[]>(`/api/v1/admin/resources?${queryParams}`, { token })
+    },
+
+    updateResource: (resourceId: string, data: Partial<Resource> & { is_featured?: boolean; is_active?: boolean }, token: string) =>
+      request<Resource>(`/api/v1/admin/resources/${resourceId}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+        token,
+      }),
+
+    deactivateResource: (resourceId: string, token: string) =>
+      request<{ message: string; resource_id: string }>(`/api/v1/admin/resources/${resourceId}`, {
+        method: "DELETE",
+        token,
+      }),
+
+    getEvents: (token: string, params?: { featured_only?: boolean; is_active?: boolean; skip?: number; limit?: number }) => {
+      const queryParams = new URLSearchParams(
+        Object.entries(params || {})
+          .filter(([, value]) => value !== undefined)
+          .map(([key, value]) => [key, String(value)])
+      )
+      return request<Event[]>(`/api/v1/admin/events?${queryParams}`, { token })
+    },
+
+    updateEvent: (eventId: string, data: Partial<Event> & { is_featured?: boolean; is_active?: boolean }, token: string) =>
+      request<Event>(`/api/v1/admin/events/${eventId}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+        token,
+      }),
+
+    deactivateEvent: (eventId: string, token: string) =>
+      request<{ message: string; event_id: string }>(`/api/v1/admin/events/${eventId}`, {
+        method: "DELETE",
+        token,
+      }),
+
+    getAuditLog: (token: string, params?: { action?: string; target_type?: string; skip?: number; limit?: number }) => {
+      const queryParams = new URLSearchParams(
+        Object.entries(params || {})
+          .filter(([, value]) => value !== undefined)
+          .map(([key, value]) => [key, String(value)])
+      )
+      return request<AuditLogEntry[]>(`/api/v1/admin/audit-log?${queryParams}`, { token })
+    },
   },
 }
 

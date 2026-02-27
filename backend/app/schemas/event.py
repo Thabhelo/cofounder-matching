@@ -55,6 +55,7 @@ class EventUpdate(BaseModel):
     max_attendees: Optional[int] = Field(None, ge=1, le=100000)
     tags: Optional[list[str]] = Field(None, max_items=20)
     is_active: Optional[bool] = None
+    is_featured: Optional[bool] = None
 
 
 class EventRSVP(BaseModel):

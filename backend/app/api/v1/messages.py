@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, desc
-from typing import List, cast
+from typing import List, Optional, cast
 from datetime import datetime, timedelta
 from uuid import UUID
 import uuid
@@ -92,15 +92,15 @@ async def get_conversations(
                     content=cast(str, last_message.content),
                     message_type=cast(str, last_message.message_type),
                     is_read=cast(bool, last_message.is_read),
-                    read_at=last_message.read_at,
+                    read_at=cast(Optional[datetime], last_message.read_at),
                     created_at=cast(datetime, last_message.created_at),
                     sender=UserPublicResponse.model_validate(sender),
                 )
 
         # Use match updated_at or last message created_at
         updated_at = cast(datetime, match.updated_at or match.created_at)
-        if last_message and last_message.created_at and last_message.created_at > updated_at:
-            updated_at = last_message.created_at
+        if last_message and last_message.created_at and cast(datetime, last_message.created_at) > updated_at:
+            updated_at = cast(datetime, last_message.created_at)
 
         conversations.append(ConversationResponse(
             match_id=cast(UUID, match.id),
@@ -173,7 +173,7 @@ async def get_messages(
                 content=cast(str, message.content),
                 message_type=cast(str, message.message_type),
                 is_read=cast(bool, message.is_read),
-                read_at=message.read_at,
+                read_at=cast(Optional[datetime], message.read_at),
                 created_at=cast(datetime, message.created_at),
                 sender=UserPublicResponse.model_validate(sender),
             ))
@@ -255,7 +255,7 @@ async def send_message(
         content=cast(str, message.content),
         message_type=cast(str, message.message_type),
         is_read=cast(bool, message.is_read),
-        read_at=message.read_at,
+        read_at=cast(Optional[datetime], message.read_at),
         created_at=cast(datetime, message.created_at),
         sender=UserPublicResponse.model_validate(sender) if sender else None,
     )

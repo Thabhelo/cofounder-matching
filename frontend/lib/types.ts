@@ -203,3 +203,13 @@ export type ReportListItem = {
   reported_user_name: string | null
   reported_user_email: string | null
 }
+
+export type AuditLogEntry = {
+  id: string
+  admin_id: string | null
+  action: string
+  target_type: string | null
+  target_id: string | null
+  details: Record<string, unknown> | null
+  created_at: string | null
+}
