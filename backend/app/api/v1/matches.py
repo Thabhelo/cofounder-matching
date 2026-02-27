@@ -15,11 +15,12 @@ from app.schemas.match import (
     IntroResponse,
     MatchStatusUpdate,
     MatchResponse,
-    MatchWithUserResponse
+    MatchWithUserResponse,
 )
 from app.schemas.user import UserPublicResponse, ProfileDiscoverResponse
 from app.api.deps import get_current_user
 from app.services.matching import score_match, MIN_MATCH_SCORE
+from app.services.email import send_intro_request_notification, send_new_match_notification
 
 # Active statuses: exclude from discover/recommendations. Dismissed/unmatched can reappear (matched_before).
 ACTIVE_MATCH_STATUSES = ("saved", "viewed", "intro_requested", "connected")
@@ -167,6 +168,9 @@ async def send_invite_to_profile(
         db.commit()
         db.refresh(match)
 
+        if target_user.alert_on_new_matches:
+            await send_new_match_notification(target_user, current_user)
+
         return {
             "message": "You're now connected! Check your inbox to start chatting.",
             "match_id": str(match.id),
@@ -219,6 +223,9 @@ async def send_invite_to_profile(
     db.add(intro_message)
     db.commit()
     db.refresh(match)
+
+    if target_user.alert_on_new_matches:
+        await send_intro_request_notification(target_user, current_user)
 
     return {
         "message": "Invitation sent successfully",

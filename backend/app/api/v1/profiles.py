@@ -10,6 +10,7 @@ from app.models.match import Match
 from app.schemas.user import UserPublicResponse, ProfileDiscoverResponse
 from app.api.deps import get_current_user
 from app.services.matching import score_match, MIN_MATCH_SCORE
+from app.services.email import send_new_match_notification
 
 router = APIRouter()
 
@@ -155,7 +156,10 @@ async def save_profile(
             existing_match.interest_overlap_score = result["interest_overlap_score"]
             existing_match.preference_alignment_score = result["preference_alignment_score"]
         db.commit()
+        if target_user.alert_on_new_matches:
+            await send_new_match_notification(target_user, current_user)
         return {"message": "Profile saved", "match_id": str(existing_match.id)}
+
     result = score_match(current_user, target_user)
     new_match = Match(
         user_id=current_user.id,
@@ -173,6 +177,8 @@ async def save_profile(
     db.add(new_match)
     db.commit()
     db.refresh(new_match)
+    if target_user.alert_on_new_matches:
+        await send_new_match_notification(target_user, current_user)
     return {"message": "Profile saved", "match_id": str(new_match.id)}
 
 

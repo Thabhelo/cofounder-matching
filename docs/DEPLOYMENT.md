@@ -39,6 +39,8 @@ After the Blueprint is applied, go to the `cofounder-api` service -> **Environme
 | `CORS_ORIGINS` | `https://cofounder-matching-git-main-thabhelos-projects.vercel.app` |
 | `ADMIN_CLERK_IDS` | Comma-separated Clerk user IDs for admins. Find your ID: Clerk Dashboard -> Users -> click your user -> copy User ID (`user_...`) |
 | `CLERK_WEBHOOK_SECRET` | Clerk Dashboard -> Webhooks -> your endpoint -> Signing secret |
+| `RESEND_API_KEY` | Resend Dashboard -> API Keys -> Secret key (see section **10. Email notifications (Resend)**) |
+| `EMAIL_FROM` | The verified sender address you configure in Resend, e.g. `Cofounder Matching <updates@yourdomain.com>` |
 
 After saving, Render redeploys automatically.
 
@@ -115,6 +117,78 @@ Migrations run automatically on each deploy via the start command (`alembic upgr
 To connect to the database directly:
 1. Render dashboard -> `cofounder-db` -> **Info** -> copy the **External Database URL**
 2. `psql <external-url>`
+
+---
+
+## 10. Email notifications (Resend)
+
+The backend sends transactional emails for:
+
+- New match / intro request notifications (for users who opt in with `alert_on_new_matches`)
+- Profile approval / rejection notifications (when an admin updates `profile_status`)
+
+These emails are sent via [Resend](https://resend.com). To enable them in production, follow these steps.
+
+### 10.1 Create and configure the Resend account (manager/owner)
+
+1. Go to `https://resend.com` and sign up with the company email (or log in if an account already exists).
+2. In the Resend dashboard, go to **Domains** and click **Add Domain**.
+3. Choose a domain or subdomain you control for product emails, for example:
+   - `updates.example.com`, or
+   - `cofounder.example.com`
+4. Enter the domain in the **Name** field and click **Add Domain**.
+5. Resend will show a list of DNS records (TXT, MX, and CNAME). Copy these.
+6. In your DNS provider (e.g. Cloudflare, Namecheap, Route 53):
+   - Add each record exactly as shown (type, host/name, and value).
+   - Save the DNS changes.
+7. Back in Resend, on the domain page, click **Verify**. DNS propagation can take a few minutes. Wait until Resend shows the domain as **Verified** for sending.
+
+Once the domain is verified, you can send from any address at that domain, for example `updates@updates.example.com` or `founders@cofounder.example.com`.
+
+### 10.2 Create a sender address in Resend
+
+1. On the verified domain page in Resend, choose a sender address for the app, for example:
+   - `updates@updates.example.com`
+2. Decide on the display name you want users to see, for example:
+   - `Cofounder Matching`
+3. The final **From** value the backend will use should look like:
+
+   `Cofounder Matching <updates@updates.example.com>`
+
+Keep both the raw email address and the full display string handy for the next step.
+
+### 10.3 Create a Resend API key
+
+1. In the Resend dashboard, go to **API Keys**.
+2. Click **Create API Key**.
+3. Give it a descriptive name, for example `cofounder-api-production`.
+4. Copy the **secret** key value somewhere secure. This value is only shown once.
+
+Share the following with the developer who operates the Render service (do not commit these to Git):
+
+- `RESEND_API_KEY` – the secret key you just created.
+- `EMAIL_FROM` – the full From string, e.g. `Cofounder Matching <updates@updates.example.com>`.
+
+### 10.4 Wire Resend into the backend (Render + local)
+
+1. **Render (production):**
+   - Open Render dashboard -> `cofounder-api` -> **Environment**.
+   - Set:
+     - `RESEND_API_KEY` to the secret API key from Resend.
+     - `EMAIL_FROM` to the chosen From address, e.g. `Cofounder Matching <updates@updates.example.com>`.
+   - Click **Save** so Render restarts the service with the new variables.
+
+2. **Local development (optional but recommended):**
+   - In `backend/.env`, add the same values:
+
+     ```bash
+     RESEND_API_KEY=your_resend_secret_key_here
+     EMAIL_FROM="Cofounder Matching <updates@updates.example.com>"
+     ```
+
+   - Restart the local backend (`./STOP_SERVERS.sh` then `./START_SERVERS.sh`).
+
+If `RESEND_API_KEY` or `EMAIL_FROM` are not set, the backend will skip sending emails (no-op) but the application will still function. Once these variables are configured, email notifications will be sent automatically for the flows described above.
 
 ---
 

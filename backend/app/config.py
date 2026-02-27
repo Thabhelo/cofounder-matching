@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     CLERK_FRONTEND_API: str = ""  # Optional: Clerk instance URL (e.g., https://your-instance.clerk.accounts.dev)
     CLERK_WEBHOOK_SECRET: str = ""  # Optional: Clerk webhook signing secret (from Dashboard → Webhooks → endpoint)
     ADMIN_CLERK_IDS: str = ""  # Comma-separated Clerk user IDs allowed to access admin/moderation endpoints
+    RESEND_API_KEY: str = ""  # Optional: Resend API key for transactional emails
+    EMAIL_FROM: str = ""  # Optional: From address for notification emails
 
     class Config:
         env_file = ".env"

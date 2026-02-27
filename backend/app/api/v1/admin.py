@@ -23,6 +23,7 @@ from app.schemas.resource import ResourceResponse, ResourceUpdate
 from app.schemas.event import EventResponse, EventUpdate
 from app.api.deps import get_current_user, get_current_admin_user, get_admin_clerk_ids
 from app.config import settings
+from app.services.email import send_profile_status_notification
 
 router = APIRouter()
 
@@ -392,7 +393,7 @@ def unban_user(
 
 
 @router.put("/users/{user_id}/approve")
-def approve_user(
+async def approve_user(
     user_id: UUID,
     admin: User = Depends(get_current_admin_user),
     db: Session = Depends(get_db),
@@ -405,11 +406,12 @@ def approve_user(
     _log_admin_action(db, admin.id, "user_approve", "user", user_id)
     db.commit()
     db.refresh(user)
+    await send_profile_status_notification(user)
     return {"message": "User approved", "user_id": str(user_id)}
 
 
 @router.put("/users/{user_id}/reject")
-def reject_user(
+async def reject_user(
     user_id: UUID,
     admin: User = Depends(get_current_admin_user),
     db: Session = Depends(get_db),
@@ -422,6 +424,7 @@ def reject_user(
     _log_admin_action(db, admin.id, "user_reject", "user", user_id)
     db.commit()
     db.refresh(user)
+    await send_profile_status_notification(user)
     return {"message": "User rejected", "user_id": str(user_id)}
 
 
