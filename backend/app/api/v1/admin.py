@@ -177,10 +177,16 @@ def list_audit_log(
     if target_type:
         q = q.filter(AdminAuditLog.target_type == target_type)
     rows = q.offset(skip).limit(limit).all()
+    admin_ids = [r.admin_id for r in rows if r.admin_id]
+    admin_names: dict = {}
+    if admin_ids:
+        users = db.query(User.id, User.name, User.email).filter(User.id.in_(admin_ids)).all()
+        admin_names = {str(u.id): u.name or u.email for u in users}
     return [
         {
             "id": str(r.id),
             "admin_id": str(r.admin_id) if r.admin_id else None,
+            "admin_name": admin_names.get(str(r.admin_id), "Unknown") if r.admin_id else None,
             "action": r.action,
             "target_type": r.target_type,
             "target_id": str(r.target_id) if r.target_id else None,
@@ -194,6 +200,7 @@ def list_audit_log(
 @router.get("/reports", response_model=list[ReportListItem])
 def list_reports(
     status_filter: str | None = Query(None, description="Filter by status: pending, reviewed, resolved, dismissed"),
+    report_type: str | None = Query(None, description="Filter by type: spam, harassment, inappropriate, fake, other"),
     sort_by: str = Query("created_at", description="created_at, report_type, status"),
     sort_order: str = Query("desc", description="asc or desc"),
     skip: int = Query(0, ge=0),
@@ -201,10 +208,12 @@ def list_reports(
     admin: User = Depends(get_current_admin_user),
     db: Session = Depends(get_db),
 ):
-    """List reports with optional status filter. Sorted by date (default), type, or status."""
+    """List reports with optional status and type filters. Sorted by date (default), type, or status."""
     q = db.query(Report)
     if status_filter and status_filter in ("pending", "reviewed", "resolved", "dismissed"):
         q = q.filter(Report.status == status_filter)
+    if report_type:
+        q = q.filter(Report.report_type == report_type)
     if sort_by not in ("created_at", "report_type", "status"):
         sort_by = "created_at"
     order_col = getattr(Report, sort_by)

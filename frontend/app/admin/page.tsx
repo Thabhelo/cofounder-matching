@@ -35,6 +35,7 @@ export default function AdminPage() {
   const [users, setUsers] = useState<User[]>([])
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [reportStatusFilter, setReportStatusFilter] = useState("pending")
+  const [reportTypeFilter, setReportTypeFilter] = useState("")
   const [reportSort, setReportSort] = useState({ sort_by: "created_at", sort_order: "desc" })
   const [userFilter, setUserFilter] = useState<"all" | "banned" | "pending_review">("all")
   const [userSearch, setUserSearch] = useState("")
@@ -54,6 +55,7 @@ export default function AdminPage() {
   const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [actioning, setActioning] = useState<string | null>(null)
+  const [resolutionNotes, setResolutionNotes] = useState<Record<string, string>>({})
 
   useEffect(() => {
     let cancelled = false
@@ -93,9 +95,11 @@ export default function AdminPage() {
     if (!isAdmin || tab !== "reports") return
     getToken().then((token) => {
       if (!token) return
-      api.admin.getReports(token, { status_filter: reportStatusFilter, sort_by: reportSort.sort_by, sort_order: reportSort.sort_order, limit: 100 }).then(setReports).catch(() => {})
+      const params: Record<string, string | number> = { status_filter: reportStatusFilter, sort_by: reportSort.sort_by, sort_order: reportSort.sort_order, limit: 100 }
+      if (reportTypeFilter) params.report_type = reportTypeFilter
+      api.admin.getReports(token, params).then(setReports).catch(() => {})
     })
-  }, [isAdmin, tab, reportStatusFilter, reportSort, getToken])
+  }, [isAdmin, tab, reportStatusFilter, reportTypeFilter, reportSort, getToken])
 
   useEffect(() => {
     if (!isAdmin || tab !== "users") return
@@ -154,7 +158,9 @@ export default function AdminPage() {
     if (!token) return
     try {
       setActioning(reportId)
-      await api.admin.reviewReport(reportId, status, null, token)
+      const notes = resolutionNotes[reportId] || null
+      await api.admin.reviewReport(reportId, status, notes, token)
+      setResolutionNotes((prev) => { const n = { ...prev }; delete n[reportId]; return n })
       setReports((prev) => prev.filter((r) => r.id !== reportId))
     } catch (e) {
       console.error(e)
@@ -423,6 +429,9 @@ export default function AdminPage() {
             ))}
           </nav>
 
+          {tab === "overview" && !stats && (
+            <p className="text-zinc-500 text-sm">Failed to load stats. Check that the backend is running and try refreshing.</p>
+          )}
           {tab === "overview" && stats && (
             <div className="space-y-6">
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -515,6 +524,21 @@ export default function AdminPage() {
                   </select>
                 </div>
                 <div className="flex gap-2 items-center">
+                  <label className="text-sm font-medium text-zinc-700">Type</label>
+                  <select
+                    value={reportTypeFilter}
+                    onChange={(e) => setReportTypeFilter(e.target.value)}
+                    className="border border-zinc-300 rounded px-3 py-1.5 text-zinc-900"
+                  >
+                    <option value="">All types</option>
+                    <option value="spam">Spam</option>
+                    <option value="harassment">Harassment</option>
+                    <option value="inappropriate">Inappropriate</option>
+                    <option value="fake">Fake profile</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div className="flex gap-2 items-center">
                   <label className="text-sm font-medium text-zinc-700">Sort</label>
                   <select
                     value={reportSort.sort_by}
@@ -554,23 +578,32 @@ export default function AdminPage() {
                           <p className="text-xs text-zinc-400 mt-2">{formatDate(r.created_at)}</p>
                         </div>
                         {r.status === "pending" && (
-                          <div className="flex gap-2 flex-shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => handleReviewReport(r.id, "resolved")}
-                              disabled={actioning === r.id}
-                              className="px-3 py-1.5 text-sm bg-zinc-900 text-white rounded hover:bg-zinc-800 disabled:opacity-50"
-                            >
-                              Resolve
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleReviewReport(r.id, "dismissed")}
-                              disabled={actioning === r.id}
-                              className="px-3 py-1.5 text-sm border border-zinc-300 text-zinc-700 rounded hover:bg-zinc-50 disabled:opacity-50"
-                            >
-                              Dismiss
-                            </button>
+                          <div className="flex flex-col gap-2 flex-shrink-0 min-w-[200px]">
+                            <textarea
+                              rows={2}
+                              placeholder="Resolution notes (optional)"
+                              value={resolutionNotes[r.id] ?? ""}
+                              onChange={(e) => setResolutionNotes((prev) => ({ ...prev, [r.id]: e.target.value }))}
+                              className="border border-zinc-300 rounded px-2 py-1 text-sm text-zinc-900 resize-none"
+                            />
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleReviewReport(r.id, "resolved")}
+                                disabled={actioning === r.id}
+                                className="px-3 py-1.5 text-sm bg-zinc-900 text-white rounded hover:bg-zinc-800 disabled:opacity-50"
+                              >
+                                Resolve
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleReviewReport(r.id, "dismissed")}
+                                disabled={actioning === r.id}
+                                className="px-3 py-1.5 text-sm border border-zinc-300 text-zinc-700 rounded hover:bg-zinc-50 disabled:opacity-50"
+                              >
+                                Dismiss
+                              </button>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -903,6 +936,7 @@ export default function AdminPage() {
                   <thead className="bg-zinc-50 border-b border-zinc-200">
                     <tr>
                       <th className="px-4 py-3 font-medium text-zinc-900">Time</th>
+                      <th className="px-4 py-3 font-medium text-zinc-900">Admin</th>
                       <th className="px-4 py-3 font-medium text-zinc-900">Action</th>
                       <th className="px-4 py-3 font-medium text-zinc-900">Target</th>
                       <th className="px-4 py-3 font-medium text-zinc-900">Details</th>
@@ -912,6 +946,7 @@ export default function AdminPage() {
                     {auditLog.map((entry) => (
                       <tr key={entry.id}>
                         <td className="px-4 py-2 text-zinc-600">{entry.created_at ?? "-"}</td>
+                        <td className="px-4 py-2 text-zinc-900">{entry.admin_name ?? entry.admin_id ?? "-"}</td>
                         <td className="px-4 py-2 text-zinc-900">{entry.action}</td>
                         <td className="px-4 py-2 text-zinc-600">{entry.target_type ?? "-"} {entry.target_id ?? ""}</td>
                         <td className="px-4 py-2 text-zinc-500">{entry.details ? JSON.stringify(entry.details) : "-"}</td>
