@@ -708,6 +708,19 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 
 This section logs major changes shipped to the project. Only significant changes are recorded here (new features, major refactors, architecture changes).
 
+### 2026-02-27 - Admin QA Fixes, Deployment & Auth (PRs #59, #60)
+- Render deployment live: backend at `https://cofounder-api.onrender.com`, frontend at `https://cofounder-matching-git-main-thabhelos-projects.vercel.app`
+- `render.yaml` Blueprint provisions `cofounder-api` (Starter) and `cofounder-db` (basic-256mb Postgres 16, Oregon)
+- GitHub Actions smoke test (`deploy.yml`) polls `/health` and verifies public + auth-protected endpoints on every push to main
+- Clerk webhook configured for `user.deleted` at `/webhooks/clerk`; `CLERK_WEBHOOK_SECRET` set in Render env
+- Email/password sign-in fixed: enabled Password strategy in Clerk Dashboard and disabled Client Trust; existing OAuth-only accounts can add a password via forgot-password flow; account linking handles new users automatically
+- Admin audit log now resolves admin names from User table instead of showing raw Clerk IDs
+- Report type filter added to admin reports tab (spam, harassment, inappropriate, fake, other)
+- Per-report resolution notes textarea added; notes submitted with review action
+- Overview tab shows error state when stats API fails
+- `AuditLogEntry` type updated with `admin_name` field
+- `DEPLOYMENT.md` updated with correct Render Postgres plan (`basic-256mb`) and actual Vercel URL
+
 ### 2026-02-27 - [db2f29b] Admin Audit Log & News Table Removal (PR #58)
 - Added `AdminAuditLog` model (`backend/app/models/admin_audit.py`) to track all admin actions with `admin_id`, `action`, `target_type`, `target_id`, `details`, `timestamp`
 - Migration `a1b2c3d4e5f6_admin_audit_log` creates `admin_audit_logs` table; migration `b2c3d4e5f6a7_drop_news_table` drops `news` table (feature cancelled)
