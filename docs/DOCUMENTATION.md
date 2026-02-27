@@ -708,6 +708,43 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 
 This section logs major changes shipped to the project. Only significant changes are recorded here (new features, major refactors, architecture changes).
 
+### 2026-02-27 - [db2f29b] Admin Audit Log & News Table Removal (PR #58)
+- Added `AdminAuditLog` model (`backend/app/models/admin_audit.py`) to track all admin actions with `admin_id`, `action`, `target_type`, `target_id`, `details`, `timestamp`
+- Migration `a1b2c3d4e5f6_admin_audit_log` creates `admin_audit_logs` table; migration `b2c3d4e5f6a7_drop_news_table` drops `news` table (feature cancelled)
+- `GET /api/v1/admin/audit-log` - paginated audit log with `admin_id`, `action`, `target_type` filters
+- `GET /api/v1/admin/analytics` - daily signups/matches time-series for growth charts
+- Admin dashboard: added Analytics tab (charts) and Audit Log tab; Resources and Events tabs for admin review/edit/delete
+- All admin write actions (`ban`, `unban`, `approve`, `reject`, `verify`, `update`, `delete`) now write an audit log entry via `_log_admin_action`
+- Removed `News` model and all news-related code; `app/models/__init__.py` updated
+
+### 2026-02-22 - [dfac7f3] Admin Moderation System (PR #57)
+- `ADMIN_CLERK_IDS` config var; `get_current_admin_user` and `get_admin_clerk_ids` dependencies in `api/deps.py`
+- `POST /api/v1/reports` - submit abuse report (`reported_user_id`, `type`, `description`)
+- `GET /api/v1/admin/check` - returns `is_admin` bool (used by frontend to show/hide Admin nav link)
+- `GET /api/v1/admin/stats` - platform counts: users, bans, pending reviews, reports, orgs, matches, messages, 7-day signups
+- `GET /api/v1/admin/reports`, `PUT /api/v1/admin/reports/{id}` - reports queue with resolve/dismiss actions
+- `GET /api/v1/admin/users`, `PUT /api/v1/admin/users/{id}`, `DELETE /api/v1/admin/users/{id}` - user management
+- `PUT /api/v1/admin/users/{id}/ban`, `/unban`, `/approve`, `/reject` - moderation actions
+- `GET /api/v1/admin/organizations`, `PUT /api/v1/admin/organizations/{id}/verify`, `PUT`/`DELETE` - org management
+- Frontend: report modal on profile page; Admin sidebar link visible only to admins; admin dashboard with Overview, Reports, Users, Organizations tabs; access-denied view with dev hint when not configured
+
+### 2026-02-22 - [242c47e] Profile Discovery Enhancements & Unmatch (PR #56)
+- `matched_before` flag added to profile schema so discovery can surface previously unmatched profiles
+- Discovery logic updated: active matches hidden from discover feed; unmatched profiles reappear
+- `POST /api/v1/matches/{match_id}/unmatch` - resets match status so profile re-enters discovery
+- Frontend discover page and inbox thread page updated for new data shapes and unmatch button
+
+### 2026-02-22 - [1545fa1] Rules-Based Matching Algorithm (PR #55)
+- New `backend/app/services/matching.py` scores user pairs across: complementarity, commitment, location fit, intent, interest overlap, preference alignment
+- Match creation (`profiles.py`) and update logic (`matches.py`) now call the scoring service and store component scores
+- Profile discovery (`GET /api/v1/matches/recommendations`) orders results by descending match score
+- Unit tests added: `backend/tests/test_matching.py` (scoring accuracy and edge cases)
+
+### 2026-02-13 - [9924f13] Playwright E2E Tests & Match Schema Fixes (PRs #51, #52)
+- Playwright configured (`playwright.config.ts`); E2E test suite covering auth, onboarding, discover, messaging flows (`frontend/e2e/`)
+- Match schema: `interest_overlap_score` and `preference_alignment_score` added; deprecated `stage_alignment_score` and `working_style_score` removed
+- `.gitignore` updated; intro request validation and privacy improvements in `matches.py`
+
 ### 2026-02-13 - Comprehensive Profile Update & Onboarding Refactor (refactor/user-profile-improvements)
 - **User profile schema overhaul**
   - `bio` renamed to `introduction`; `role_intent` replaced by `idea_status` (`not_set_on_idea`, `have_ideas_flexible`, `building_specific_idea`)
