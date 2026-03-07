@@ -37,7 +37,8 @@ export default function DashboardPage() {
         ])
         setUser(userData)
         setCounts(countsData)
-        if (!userData.behavior_agreement_accepted_at) {
+        const profileComplete = userData.profile_status && userData.profile_status !== "incomplete"
+        if (!userData.behavior_agreement_accepted_at && !profileComplete) {
           router.push("/onboarding/agreement")
           return
         }
