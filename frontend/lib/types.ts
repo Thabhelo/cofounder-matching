@@ -214,3 +214,38 @@ export type AuditLogEntry = {
   details: Record<string, unknown> | null
   created_at: string | null
 }
+
+export type NotificationSettings = {
+  email_new_match: boolean
+  email_new_message: boolean
+  email_intro_request: boolean
+  email_profile_approved: boolean
+  email_weekly_digest: boolean
+  email_marketing: boolean
+  frequency: "immediate" | "daily" | "weekly"
+}
+
+export type PrivacySettings = {
+  profile_visibility: "public" | "connections_only"
+  show_email_to_connections: boolean
+  show_location: boolean
+  show_proof_of_work: boolean
+  search_visible: boolean
+}
+
+export type CommunicationSettings = {
+  who_can_send_intros: "everyone" | "verified_only"
+  auto_accept_intros: boolean
+}
+
+export type UserSettings = {
+  notifications: NotificationSettings
+  privacy: PrivacySettings
+  communication: CommunicationSettings
+}
+
+export type UserSettingsUpdate = {
+  notifications?: Partial<NotificationSettings>
+  privacy?: Partial<PrivacySettings>
+  communication?: Partial<CommunicationSettings>
+}

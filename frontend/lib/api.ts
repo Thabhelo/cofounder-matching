@@ -1,4 +1,4 @@
-import type { User, UserPublic, ProfileDiscoverItem, Organization, Resource, Event, ReportListItem, AuditLogEntry } from "./types"
+import type { User, UserPublic, ProfileDiscoverItem, Organization, Resource, Event, ReportListItem, AuditLogEntry, UserSettings, UserSettingsUpdate } from "./types"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
@@ -99,6 +99,28 @@ export const api = {
 
     getById: (userId: string) =>
       request<UserPublic>(`/api/v1/users/${userId}`),
+
+    getSettings: (token: string) =>
+      request<{ settings: UserSettings }>("/api/v1/users/me/settings", { token }),
+
+    updateSettings: (data: Partial<UserSettingsUpdate>, token: string) =>
+      request<{ settings: UserSettings }>("/api/v1/users/me/settings", {
+        method: "PUT",
+        body: JSON.stringify(data),
+        token,
+      }),
+
+    exportData: (token: string) =>
+      request<Record<string, unknown>>("/api/v1/users/me/export", {
+        method: "POST",
+        token,
+      }),
+
+    deleteAccount: (token: string) =>
+      request<null>("/api/v1/users/me", {
+        method: "DELETE",
+        token,
+      }),
 
     search: (params?: {
       idea_status?: string

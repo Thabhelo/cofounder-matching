@@ -6,7 +6,15 @@ from typing import List
 
 from app.database import get_db
 from app.models.user import User
-from app.schemas.user import UserOnboarding, UserUpdate, UserResponse, UserPublicResponse
+from app.schemas.user import (
+    UserOnboarding,
+    UserUpdate,
+    UserResponse,
+    UserPublicResponse,
+    UserSettings,
+    UserSettingsUpdate,
+    UserSettingsResponse,
+)
 from app.api.deps import get_current_user, get_clerk_user_info_from_token
 from app.api.deps import verify_clerk_token
 from app.services.email import send_welcome_email
@@ -214,6 +222,156 @@ async def update_current_user_profile(
     return current_user
 
 
+def _get_settings(user: User) -> UserSettings:
+    """Return the user's settings, merging stored values over defaults."""
+    defaults = UserSettings()
+    raw = user.settings or {}
+    notif_data = {**defaults.notifications.model_dump(), **raw.get("notifications", {})}
+    priv_data = {**defaults.privacy.model_dump(), **raw.get("privacy", {})}
+    comm_data = {**defaults.communication.model_dump(), **raw.get("communication", {})}
+    return UserSettings(
+        notifications=notif_data,
+        privacy=priv_data,
+        communication=comm_data,
+    )
+
+
+@router.get("/me/settings", response_model=UserSettingsResponse)
+async def get_user_settings(
+    current_user: User = Depends(get_current_user),
+):
+    """Get current user's notification, privacy, and communication settings."""
+    return {"settings": _get_settings(current_user)}
+
+
+@router.put("/me/settings", response_model=UserSettingsResponse)
+async def update_user_settings(
+    settings_update: UserSettingsUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Update current user's settings (partial update per section)."""
+    merged = _get_settings(current_user).model_dump()
+
+    if settings_update.notifications is not None:
+        merged["notifications"].update(settings_update.notifications.model_dump())
+    if settings_update.privacy is not None:
+        merged["privacy"].update(settings_update.privacy.model_dump())
+    if settings_update.communication is not None:
+        merged["communication"].update(settings_update.communication.model_dump())
+
+    from sqlalchemy.orm.attributes import flag_modified
+    current_user.settings = merged
+    flag_modified(current_user, "settings")
+    db.commit()
+    db.refresh(current_user)
+    return {"settings": UserSettings(**current_user.settings)}
+
+
+@router.post("/me/export", status_code=status.HTTP_200_OK)
+async def export_user_data(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Export all personal data for the current user (GDPR Article 20)."""
+    from app.models.match import Match
+    from app.models.message import Message
+
+    matches = db.query(Match).filter(
+        (Match.user1_id == current_user.id) | (Match.user2_id == current_user.id)
+    ).all()
+
+    messages = db.query(Message).filter(
+        Message.sender_id == current_user.id
+    ).all()
+
+    return {
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "profile": {
+            "id": str(current_user.id),
+            "email": current_user.email,
+            "name": current_user.name,
+            "avatar_url": current_user.avatar_url,
+            "introduction": current_user.introduction,
+            "location": current_user.location,
+            "location_city": current_user.location_city,
+            "location_country": current_user.location_country,
+            "linkedin_url": current_user.linkedin_url,
+            "github_url": current_user.github_url,
+            "portfolio_url": current_user.portfolio_url,
+            "idea_status": current_user.idea_status,
+            "commitment": current_user.commitment,
+            "experience_years": current_user.experience_years,
+            "areas_of_ownership": current_user.areas_of_ownership,
+            "topics_of_interest": current_user.topics_of_interest,
+            "profile_status": current_user.profile_status,
+            "created_at": current_user.created_at.isoformat() if current_user.created_at else None,
+        },
+        "settings": current_user.settings,
+        "matches": [
+            {
+                "id": str(m.id),
+                "other_user_id": str(m.user2_id if m.user1_id == current_user.id else m.user1_id),
+                "status": m.status,
+                "created_at": m.created_at.isoformat() if m.created_at else None,
+            }
+            for m in matches
+        ],
+        "messages_sent": [
+            {
+                "id": str(msg.id),
+                "match_id": str(msg.match_id),
+                "content": msg.content,
+                "sent_at": msg.created_at.isoformat() if msg.created_at else None,
+            }
+            for msg in messages
+        ],
+    }
+
+
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_account(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Delete (anonymize) the current user's account (GDPR Article 17).
+
+    Anonymizes PII fields rather than hard-deleting rows so that foreign key
+    references in matches and messages remain intact.
+    """
+    import uuid as _uuid
+    anon_id = str(_uuid.uuid4())[:8]
+
+    current_user.email = f"deleted_{anon_id}@deleted.invalid"
+    current_user.name = "Deleted User"
+    current_user.avatar_url = None
+    current_user.introduction = None
+    current_user.location = None
+    current_user.location_city = None
+    current_user.location_state = None
+    current_user.location_country = None
+    current_user.location_latitude = None
+    current_user.location_longitude = None
+    current_user.gender = None
+    current_user.birthdate = None
+    current_user.linkedin_url = None
+    current_user.twitter_url = None
+    current_user.instagram_url = None
+    current_user.calendly_url = None
+    current_user.video_intro_url = None
+    current_user.github_url = None
+    current_user.portfolio_url = None
+    current_user.life_story = None
+    current_user.hobbies = None
+    current_user.impressive_accomplishment = None
+    current_user.education_history = None
+    current_user.employment_history = None
+    current_user.settings = None
+    current_user.is_active = False
+
+    db.commit()
+
+
 @router.get("/{user_id}", response_model=UserPublicResponse)
 async def get_user_profile(
     user_id: str,
@@ -241,6 +399,20 @@ async def get_user_profile(
             detail="User not found"
         )
 
+    return _apply_privacy(user)
+
+
+def _apply_privacy(user: User) -> User:
+    """Null-out fields that the user has hidden via privacy settings."""
+    privacy = (user.settings or {}).get("privacy", {})
+    if not privacy.get("show_location", True):
+        user.location = None
+        user.location_city = None
+        user.location_country = None
+    if not privacy.get("show_proof_of_work", True):
+        user.github_url = None
+        user.linkedin_url = None
+        user.portfolio_url = None
     return user
 
 
@@ -285,4 +457,6 @@ async def search_users(
         query = query.order_by(User.created_at.desc())
 
     users = query.offset(skip).limit(limit).all()
-    return users
+    # Exclude users who have opted out of search visibility
+    users = [u for u in users if (u.settings or {}).get("privacy", {}).get("search_visible", True)]
+    return [_apply_privacy(u) for u in users]

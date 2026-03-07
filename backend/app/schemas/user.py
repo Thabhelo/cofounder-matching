@@ -440,3 +440,68 @@ class ProfileDiscoverResponse(BaseModel):
     """Profile in discover/recommendations with optional 'matched before' tag."""
     profile: UserPublicResponse
     matched_before: bool = False
+
+
+# ---------------------------------------------------------------------------
+# Settings schemas
+# ---------------------------------------------------------------------------
+
+NOTIFICATION_FREQUENCIES = ["immediate", "daily", "weekly"]
+INTRO_AUDIENCE = ["everyone", "verified_only"]
+PROFILE_VISIBILITY_OPTIONS = ["public", "connections_only"]
+
+
+class NotificationSettings(BaseModel):
+    email_new_match: bool = True
+    email_new_message: bool = True
+    email_intro_request: bool = True
+    email_profile_approved: bool = True
+    email_weekly_digest: bool = False
+    email_marketing: bool = False
+    frequency: str = "immediate"
+
+    @field_validator("frequency")
+    @classmethod
+    def validate_frequency(cls, v: str) -> str:
+        return _validate_one_of_required(v, NOTIFICATION_FREQUENCIES, "frequency")
+
+
+class PrivacySettings(BaseModel):
+    profile_visibility: str = "public"
+    show_email_to_connections: bool = False
+    show_location: bool = True
+    show_proof_of_work: bool = True
+    search_visible: bool = True
+
+    @field_validator("profile_visibility")
+    @classmethod
+    def validate_visibility(cls, v: str) -> str:
+        return _validate_one_of_required(v, PROFILE_VISIBILITY_OPTIONS, "profile_visibility")
+
+
+class CommunicationSettings(BaseModel):
+    who_can_send_intros: str = "everyone"
+    auto_accept_intros: bool = False
+
+    @field_validator("who_can_send_intros")
+    @classmethod
+    def validate_intro_audience(cls, v: str) -> str:
+        return _validate_one_of_required(v, INTRO_AUDIENCE, "who_can_send_intros")
+
+
+class UserSettings(BaseModel):
+    notifications: NotificationSettings = NotificationSettings()
+    privacy: PrivacySettings = PrivacySettings()
+    communication: CommunicationSettings = CommunicationSettings()
+
+
+class UserSettingsUpdate(BaseModel):
+    notifications: Optional[NotificationSettings] = None
+    privacy: Optional[PrivacySettings] = None
+    communication: Optional[CommunicationSettings] = None
+
+
+class UserSettingsResponse(BaseModel):
+    settings: UserSettings
+
+    model_config = ConfigDict(from_attributes=True)
