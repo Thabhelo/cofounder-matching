@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     ADMIN_CLERK_IDS: str = ""  # Comma-separated Clerk user IDs allowed to access admin/moderation endpoints
     RESEND_API_KEY: str = ""  # Optional: Resend API key for transactional emails
     EMAIL_FROM: str = ""  # Optional: From address for notification emails
+    FRONTEND_URL: str = "http://localhost:3000"
 
     class Config:
         env_file = ".env"

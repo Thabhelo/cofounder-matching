@@ -469,6 +469,12 @@ export const api = {
         token,
       }),
 
+    reactivateUser: (userId: string, token: string) =>
+      request<{ message: string; user_id: string }>(`/api/v1/admin/users/${userId}/reactivate`, {
+        method: "PUT",
+        token,
+      }),
+
     approveUser: (userId: string, token: string) =>
       request<{ message: string; user_id: string }>(`/api/v1/admin/users/${userId}/approve`, {
         method: "PUT",
@@ -561,6 +567,41 @@ export const api = {
       )
       return request<AuditLogEntry[]>(`/api/v1/admin/audit-log?${queryParams}`, { token })
     },
+
+    getNotificationsConfig: (token: string) =>
+      request<{
+        email_service_configured: boolean
+        resend_key_set: boolean
+        email_from_set: boolean
+        frontend_url: string
+        feature_flags: Record<string, boolean>
+        flag_labels: Record<string, string>
+      }>("/api/v1/admin/notifications/config", { token }),
+
+    updateNotificationsConfig: (
+      flags: Record<string, boolean>,
+      token: string,
+    ) =>
+      request<{ updated: Record<string, boolean>; feature_flags: Record<string, boolean> }>(
+        "/api/v1/admin/notifications/config",
+        {
+          method: "PATCH",
+          body: JSON.stringify({ feature_flags: flags }),
+          token,
+        },
+      ),
+
+    triggerProfileReminders: (token: string) =>
+      request<{ users_notified: number; status: string }>(
+        "/api/v1/admin/notifications/trigger/profile-reminders",
+        { method: "POST", token },
+      ),
+
+    triggerEventReminders: (token: string) =>
+      request<{ rsvps_notified: number; status: string }>(
+        "/api/v1/admin/notifications/trigger/event-reminders",
+        { method: "POST", token },
+      ),
   },
 }
 

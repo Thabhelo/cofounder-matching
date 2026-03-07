@@ -20,7 +20,7 @@ from app.schemas.match import (
 from app.schemas.user import UserPublicResponse, ProfileDiscoverResponse
 from app.api.deps import get_current_user
 from app.services.matching import score_match, MIN_MATCH_SCORE
-from app.services.email import send_intro_request_notification, send_new_match_notification
+from app.services.email import send_intro_request_notification, send_new_match_notification, send_intro_accepted_notification
 
 # Active statuses: exclude from discover/recommendations. Dismissed/unmatched can reappear (matched_before).
 ACTIVE_MATCH_STATUSES = ("saved", "viewed", "intro_requested", "connected")
@@ -633,6 +633,11 @@ async def respond_to_introduction(
 
     db.commit()
     db.refresh(match)
+
+    if response.accept:
+        requester = db.query(User).filter(User.id == match.user_id).first()
+        if requester:
+            await send_intro_accepted_notification(requester, current_user)
 
     return {
         "message": "Introduction request responded to successfully",
