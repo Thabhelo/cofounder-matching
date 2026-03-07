@@ -88,6 +88,45 @@ export default function DashboardPage() {
           <div className="max-w-6xl mx-auto">
             <h1 className="text-3xl font-semibold text-zinc-900 mb-8">Dashboard</h1>
 
+            {user?.profile_status === "pending_review" && (
+              <div className="mb-8 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                <p className="font-medium">Your profile is pending review.</p>
+                <p className="mt-1">
+                  We&apos;ll let you know once it&apos;s approved. In the meantime you can still review your profile and preferences on the{" "}
+                  <Link href="/profile" className="underline">
+                    Profile
+                  </Link>{" "}
+                  page.
+                </p>
+              </div>
+            )}
+
+            {user?.profile_status === "approved" && (
+              <div className="mb-8 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+                <p className="font-medium">Your profile has been approved.</p>
+                <p className="mt-1">
+                  You&apos;re now visible to other founders in the matching pool. Head to{" "}
+                  <Link href="/discover" className="underline">
+                    Discover
+                  </Link>{" "}
+                  to start meeting potential co-founders.
+                </p>
+              </div>
+            )}
+
+            {user?.profile_status === "rejected" && (
+              <div className="mb-8 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+                <p className="font-medium">Your profile was not approved yet.</p>
+                <p className="mt-1">
+                  Please review and update your profile on the{" "}
+                  <Link href="/profile" className="underline">
+                    Profile
+                  </Link>{" "}
+                  page, then resubmit so we can take another look.
+                </p>
+              </div>
+            )}
+
             {/* Summary Cards */}
             <div className="grid md:grid-cols-3 gap-6 mb-8">
               <div className="bg-white border border-zinc-200 rounded-lg p-6">

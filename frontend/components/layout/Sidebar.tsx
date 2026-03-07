@@ -79,16 +79,24 @@ export function Sidebar() {
   const pathname = usePathname()
   const { getToken } = useAuth()
   const [isAdmin, setIsAdmin] = useState(false)
+  const [pendingReview, setPendingReview] = useState(0)
 
   useEffect(() => {
     let cancelled = false
     getToken()
       .then((token) => {
         if (!token || cancelled) return
-        return api.admin.check(token)
+        return api.admin.check(token).then((res) => {
+          if (!cancelled && res?.is_admin) {
+            setIsAdmin(true)
+            return api.admin.getStats(token)
+          }
+        })
       })
-      .then((res) => {
-        if (!cancelled && res?.is_admin) setIsAdmin(true)
+      .then((stats) => {
+        if (!cancelled && stats?.users_pending_review) {
+          setPendingReview(stats.users_pending_review)
+        }
       })
       .catch(() => {})
     return () => {
@@ -126,6 +134,11 @@ export function Sidebar() {
                 {item.icon}
               </span>
               <span className="font-medium">{item.label}</span>
+              {item.adminOnly && pendingReview > 0 && (
+                <span className="ml-auto min-w-[20px] h-5 px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-semibold">
+                  {pendingReview > 99 ? "99+" : pendingReview}
+                </span>
+              )}
               {item.hasSubmenu && (
                 <svg className="w-4 h-4 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />

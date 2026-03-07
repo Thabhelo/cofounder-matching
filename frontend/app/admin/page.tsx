@@ -8,7 +8,7 @@ import { Sidebar } from "@/components/layout/Sidebar"
 import { api } from "@/lib/api"
 import type { ReportListItem, User, Organization, Resource, Event, AuditLogEntry } from "@/lib/types"
 
-type AdminTab = "overview" | "reports" | "users" | "organizations" | "analytics" | "resources" | "events" | "audit"
+type AdminTab = "overview" | "reports" | "users" | "organizations" | "analytics" | "resources" | "events" | "audit" | "notifications"
 
 type Stats = {
   users_total: number
@@ -53,6 +53,16 @@ export default function AdminPage() {
     organizations_with_activity_count: number
   } | null>(null)
   const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([])
+  const [notifConfig, setNotifConfig] = useState<{
+    email_service_configured: boolean
+    resend_key_set: boolean
+    email_from_set: boolean
+    frontend_url: string
+    feature_flags: Record<string, boolean>
+    flag_labels: Record<string, string>
+  } | null>(null)
+  const [notifLoading, setNotifLoading] = useState(false)
+  const [triggerResult, setTriggerResult] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [actioning, setActioning] = useState<string | null>(null)
   const [resolutionNotes, setResolutionNotes] = useState<Record<string, string>>({})
@@ -153,6 +163,14 @@ export default function AdminPage() {
     })
   }, [isAdmin, tab, getToken])
 
+  useEffect(() => {
+    if (!isAdmin || tab !== "notifications") return
+    getToken().then((token) => {
+      if (!token) return
+      api.admin.getNotificationsConfig(token).then(setNotifConfig).catch(() => {})
+    })
+  }, [isAdmin, tab, getToken])
+
   const handleReviewReport = async (reportId: string, status: string) => {
     const token = await getToken()
     if (!token) return
@@ -242,6 +260,21 @@ export default function AdminPage() {
     } catch (e) {
       console.error(e)
       alert("Failed to deactivate user")
+    } finally {
+      setActioning(null)
+    }
+  }
+
+  const handleReactivateUser = async (userId: string) => {
+    if (!confirm("Reactivate this user? They will regain access to the platform.")) return
+    const token = await getToken()
+    if (!token) return
+    setActioning(userId)
+    try {
+      await api.admin.reactivateUser(userId, token)
+      setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, is_active: true } : u)))
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Failed to reactivate user")
     } finally {
       setActioning(null)
     }
@@ -355,6 +388,50 @@ export default function AdminPage() {
     }
   }
 
+  const handleToggleFlag = async (flagName: string, currentValue: boolean) => {
+    const token = await getToken()
+    if (!token) return
+    setNotifLoading(true)
+    try {
+      const result = await api.admin.updateNotificationsConfig({ [flagName]: !currentValue }, token)
+      setNotifConfig((prev) => prev ? { ...prev, feature_flags: result.feature_flags } : prev)
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Failed to update flag")
+    } finally {
+      setNotifLoading(false)
+    }
+  }
+
+  const handleTriggerProfileReminders = async () => {
+    const token = await getToken()
+    if (!token) return
+    setNotifLoading(true)
+    setTriggerResult((prev) => ({ ...prev, profile: "Running..." }))
+    try {
+      const result = await api.admin.triggerProfileReminders(token)
+      setTriggerResult((prev) => ({ ...prev, profile: `Done - ${result.users_notified} user(s) notified` }))
+    } catch (e) {
+      setTriggerResult((prev) => ({ ...prev, profile: e instanceof Error ? e.message : "Error" }))
+    } finally {
+      setNotifLoading(false)
+    }
+  }
+
+  const handleTriggerEventReminders = async () => {
+    const token = await getToken()
+    if (!token) return
+    setNotifLoading(true)
+    setTriggerResult((prev) => ({ ...prev, event: "Running..." }))
+    try {
+      const result = await api.admin.triggerEventReminders(token)
+      setTriggerResult((prev) => ({ ...prev, event: `Done - ${result.rsvps_notified} RSVP(s) notified` }))
+    } catch (e) {
+      setTriggerResult((prev) => ({ ...prev, event: e instanceof Error ? e.message : "Error" }))
+    } finally {
+      setNotifLoading(false)
+    }
+  }
+
   const formatDate = (s: string | null) => (s ? new Date(s).toLocaleString() : "-")
 
   if (loading) {
@@ -402,6 +479,7 @@ export default function AdminPage() {
     { id: "events", label: "Events" },
     { id: "analytics", label: "Analytics" },
     { id: "audit", label: "Audit log" },
+    { id: "notifications", label: "Notifications" },
   ]
 
   return (
@@ -651,6 +729,7 @@ export default function AdminPage() {
                         <th className="px-4 py-3 text-sm font-medium text-zinc-900">Email</th>
                         <th className="px-4 py-3 text-sm font-medium text-zinc-900">Profile status</th>
                         <th className="px-4 py-3 text-sm font-medium text-zinc-900">Banned</th>
+                        <th className="px-4 py-3 text-sm font-medium text-zinc-900">Active</th>
                         <th className="px-4 py-3 text-sm font-medium text-zinc-900">Actions</th>
                       </tr>
                     </thead>
@@ -661,6 +740,7 @@ export default function AdminPage() {
                           <td className="px-4 py-3 text-zinc-600">{u.email}</td>
                           <td className="px-4 py-3 text-zinc-700">{u.profile_status ?? "incomplete"}</td>
                           <td className="px-4 py-3">{u.is_banned ? "Yes" : "No"}</td>
+                          <td className="px-4 py-3">{u.is_active ? "Yes" : "No"}</td>
                           <td className="px-4 py-3 flex gap-2 flex-wrap">
                             {u.is_banned ? (
                               <button
@@ -701,7 +781,17 @@ export default function AdminPage() {
                                 </button>
                               </>
                             )}
-                            {!u.is_banned && (
+                            {!u.is_active && (
+                              <button
+                                type="button"
+                                onClick={() => handleReactivateUser(u.id)}
+                                disabled={actioning === u.id}
+                                className="text-sm text-green-600 hover:underline disabled:opacity-50"
+                              >
+                                Reactivate
+                              </button>
+                            )}
+                            {u.is_active && !u.is_banned && (
                               <button
                                 type="button"
                                 onClick={() => handleDeleteUser(u.id)}
@@ -954,6 +1044,117 @@ export default function AdminPage() {
                     ))}
                   </tbody>
                 </table>
+              )}
+            </div>
+          )}
+          {tab === "notifications" && (
+            <div className="space-y-6">
+              {!notifConfig ? (
+                <p className="text-zinc-500 text-sm">Loading notification configuration...</p>
+              ) : (
+                <>
+                  <div className="bg-white border border-zinc-200 rounded-lg p-6">
+                    <h2 className="text-lg font-medium text-zinc-900 mb-4">Email service status</h2>
+                    <dl className="space-y-2 text-sm">
+                      <div className="flex gap-3">
+                        <dt className="text-zinc-500 w-48 shrink-0">Service configured</dt>
+                        <dd className={notifConfig.email_service_configured ? "text-green-700 font-medium" : "text-red-700 font-medium"}>
+                          {notifConfig.email_service_configured ? "Yes" : "No - set RESEND_API_KEY and EMAIL_FROM in .env"}
+                        </dd>
+                      </div>
+                      <div className="flex gap-3">
+                        <dt className="text-zinc-500 w-48 shrink-0">RESEND_API_KEY</dt>
+                        <dd className={notifConfig.resend_key_set ? "text-green-700" : "text-red-700"}>
+                          {notifConfig.resend_key_set ? "Set" : "Not set"}
+                        </dd>
+                      </div>
+                      <div className="flex gap-3">
+                        <dt className="text-zinc-500 w-48 shrink-0">EMAIL_FROM</dt>
+                        <dd className={notifConfig.email_from_set ? "text-green-700" : "text-red-700"}>
+                          {notifConfig.email_from_set ? "Set" : "Not set"}
+                        </dd>
+                      </div>
+                      <div className="flex gap-3">
+                        <dt className="text-zinc-500 w-48 shrink-0">Frontend URL</dt>
+                        <dd className="text-zinc-700 font-mono">{notifConfig.frontend_url}</dd>
+                      </div>
+                    </dl>
+                  </div>
+
+                  <div className="bg-white border border-zinc-200 rounded-lg p-6">
+                    <h2 className="text-lg font-medium text-zinc-900 mb-1">Feature flags</h2>
+                    <p className="text-sm text-zinc-500 mb-4">These flags are in-memory and reset on server restart.</p>
+                    <table className="w-full text-sm">
+                      <thead className="bg-zinc-50 border-b border-zinc-200">
+                        <tr>
+                          <th className="px-4 py-2 text-left font-medium text-zinc-700">Flag</th>
+                          <th className="px-4 py-2 text-left font-medium text-zinc-700">Description</th>
+                          <th className="px-4 py-2 text-left font-medium text-zinc-700">State</th>
+                          <th className="px-4 py-2 text-left font-medium text-zinc-700">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-100">
+                        {Object.entries(notifConfig.feature_flags).map(([name, enabled]) => (
+                          <tr key={name}>
+                            <td className="px-4 py-2 font-mono text-zinc-800">{name}</td>
+                            <td className="px-4 py-2 text-zinc-600">{notifConfig.flag_labels[name] ?? "-"}</td>
+                            <td className="px-4 py-2">
+                              <span className={enabled ? "text-green-700 font-medium" : "text-zinc-400"}>
+                                {enabled ? "Enabled" : "Disabled"}
+                              </span>
+                            </td>
+                            <td className="px-4 py-2">
+                              <button
+                                type="button"
+                                onClick={() => handleToggleFlag(name, enabled)}
+                                disabled={notifLoading}
+                                className={`text-sm hover:underline disabled:opacity-50 ${enabled ? "text-amber-600" : "text-green-600"}`}
+                              >
+                                {enabled ? "Disable" : "Enable"}
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="bg-white border border-zinc-200 rounded-lg p-6">
+                    <h2 className="text-lg font-medium text-zinc-900 mb-1">Scheduled jobs</h2>
+                    <p className="text-sm text-zinc-500 mb-4">
+                      Jobs run automatically (profile reminders: Monday 9am, event reminders: daily 8am).
+                      Use the buttons below to trigger them immediately.
+                    </p>
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-4">
+                        <button
+                          type="button"
+                          onClick={handleTriggerProfileReminders}
+                          disabled={notifLoading}
+                          className="px-4 py-2 bg-zinc-900 text-white text-sm font-medium rounded-lg hover:bg-zinc-800 disabled:opacity-50"
+                        >
+                          Run profile reminder job now
+                        </button>
+                        {triggerResult.profile && (
+                          <span className="text-sm text-zinc-600">{triggerResult.profile}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <button
+                          type="button"
+                          onClick={handleTriggerEventReminders}
+                          disabled={notifLoading}
+                          className="px-4 py-2 bg-zinc-900 text-white text-sm font-medium rounded-lg hover:bg-zinc-800 disabled:opacity-50"
+                        >
+                          Run event reminder job now
+                        </button>
+                        {triggerResult.event && (
+                          <span className="text-sm text-zinc-600">{triggerResult.event}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </>
               )}
             </div>
           )}

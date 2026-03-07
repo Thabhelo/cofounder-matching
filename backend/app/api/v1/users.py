@@ -9,6 +9,7 @@ from app.models.user import User
 from app.schemas.user import UserOnboarding, UserUpdate, UserResponse, UserPublicResponse
 from app.api.deps import get_current_user, get_clerk_user_info_from_token
 from app.api.deps import verify_clerk_token
+from app.services.email import send_welcome_email
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 router = APIRouter()
@@ -88,6 +89,7 @@ async def onboarding_user(
             db.commit()
             db.refresh(existing_user)
             response.status_code = status.HTTP_200_OK
+            await send_welcome_email(existing_user)
             return existing_user
         user = User(**user_dict)
         user.profile_status = "approved"
@@ -95,6 +97,7 @@ async def onboarding_user(
         db.commit()
         db.refresh(user)
         response.status_code = status.HTTP_201_CREATED
+        await send_welcome_email(user)
         return user
     except IntegrityError as e:
         db.rollback()

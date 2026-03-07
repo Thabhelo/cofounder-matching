@@ -41,8 +41,20 @@ async def lifespan(app: FastAPI):
     except ValueError as e:
         logger.error(f"Configuration error: {str(e)}")
         raise RuntimeError(f"Invalid configuration: {str(e)}") from e
-    
+
+    from apscheduler.schedulers.asyncio import AsyncIOScheduler
+    from apscheduler.triggers.cron import CronTrigger
+    from app.tasks.scheduler import run_incomplete_profile_reminders, run_event_reminders
+
+    scheduler = AsyncIOScheduler()
+    scheduler.add_job(run_incomplete_profile_reminders, CronTrigger(day_of_week="mon", hour=9))
+    scheduler.add_job(run_event_reminders, CronTrigger(hour=8))
+    scheduler.start()
+    logger.info("APScheduler started")
+
     yield
+
+    scheduler.shutdown()
     logger.info(f"Shutting down {settings.PROJECT_NAME}")
 
 

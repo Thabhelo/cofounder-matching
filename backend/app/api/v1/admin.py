@@ -23,6 +23,8 @@ from app.schemas.resource import ResourceResponse, ResourceUpdate
 from app.schemas.event import EventResponse, EventUpdate
 from app.api.deps import get_current_user, get_current_admin_user, get_admin_clerk_ids
 from app.config import settings
+from app.services.email import send_profile_status_notification
+from app.services.feature_flags import get_all_flags, set_flag, FLAG_LABELS
 
 router = APIRouter()
 
@@ -391,8 +393,24 @@ def unban_user(
     return {"message": "User unbanned", "user_id": str(user_id)}
 
 
+@router.put("/users/{user_id}/reactivate")
+def reactivate_user(
+    user_id: UUID,
+    admin: User = Depends(get_current_admin_user),
+    db: Session = Depends(get_db),
+):
+    """Reactivate a previously deactivated user (set is_active=True)."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    user.is_active = True
+    _log_admin_action(db, admin.id, "user_reactivate", "user", user_id)
+    db.commit()
+    return {"message": "User reactivated", "user_id": str(user_id)}
+
+
 @router.put("/users/{user_id}/approve")
-def approve_user(
+async def approve_user(
     user_id: UUID,
     admin: User = Depends(get_current_admin_user),
     db: Session = Depends(get_db),
@@ -405,11 +423,12 @@ def approve_user(
     _log_admin_action(db, admin.id, "user_approve", "user", user_id)
     db.commit()
     db.refresh(user)
+    await send_profile_status_notification(user)
     return {"message": "User approved", "user_id": str(user_id)}
 
 
 @router.put("/users/{user_id}/reject")
-def reject_user(
+async def reject_user(
     user_id: UUID,
     admin: User = Depends(get_current_admin_user),
     db: Session = Depends(get_db),
@@ -422,6 +441,7 @@ def reject_user(
     _log_admin_action(db, admin.id, "user_reject", "user", user_id)
     db.commit()
     db.refresh(user)
+    await send_profile_status_notification(user)
     return {"message": "User rejected", "user_id": str(user_id)}
 
 
@@ -602,3 +622,74 @@ def deactivate_event_admin(
     _log_admin_action(db, admin.id, "event_deactivate", "event", event_id)
     db.commit()
     return {"message": "Event deactivated", "event_id": str(event_id)}
+
+
+# ---------------------------------------------------------------------------
+# Notifications / Email configuration
+# ---------------------------------------------------------------------------
+
+@router.get("/notifications/config")
+def get_notifications_config(
+    admin: User = Depends(get_current_admin_user),
+):
+    """Return current email service status and feature flag states."""
+    resend_key_set = bool(settings.RESEND_API_KEY)
+    email_from_set = bool(settings.EMAIL_FROM)
+    flags = get_all_flags()
+    return {
+        "email_service_configured": resend_key_set and email_from_set,
+        "resend_key_set": resend_key_set,
+        "email_from_set": email_from_set,
+        "frontend_url": settings.FRONTEND_URL,
+        "feature_flags": flags,
+        "flag_labels": FLAG_LABELS,
+    }
+
+
+@router.patch("/notifications/config")
+def update_notifications_config(
+    body: dict,
+    admin: User = Depends(get_current_admin_user),
+    db: Session = Depends(get_db),
+):
+    """Toggle feature flags at runtime. Pass {\"feature_flags\": {\"welcome_email\": false, ...}}."""
+    flags = body.get("feature_flags", {})
+    updated = {}
+    for name, value in flags.items():
+        if not isinstance(value, bool):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Flag value for '{name}' must be a boolean",
+            )
+        set_flag(name, value)
+        updated[name] = value
+    if updated:
+        _log_admin_action(db, admin.id, "notifications_config_update", details={"flags": updated})
+        db.commit()
+    return {"updated": updated, "feature_flags": get_all_flags()}
+
+
+@router.post("/notifications/trigger/profile-reminders")
+async def trigger_profile_reminders(
+    admin: User = Depends(get_current_admin_user),
+    db: Session = Depends(get_db),
+):
+    """Manually run the incomplete profile reminder job right now."""
+    from app.tasks.scheduler import run_incomplete_profile_reminders
+    count = await run_incomplete_profile_reminders()
+    _log_admin_action(db, admin.id, "notifications_trigger_profile_reminders", details={"sent": count})
+    db.commit()
+    return {"users_notified": count, "status": "ok"}
+
+
+@router.post("/notifications/trigger/event-reminders")
+async def trigger_event_reminders(
+    admin: User = Depends(get_current_admin_user),
+    db: Session = Depends(get_db),
+):
+    """Manually run the event reminder job right now."""
+    from app.tasks.scheduler import run_event_reminders
+    count = await run_event_reminders()
+    _log_admin_action(db, admin.id, "notifications_trigger_event_reminders", details={"sent": count})
+    db.commit()
+    return {"rsvps_notified": count, "status": "ok"}
