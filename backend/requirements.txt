@@ -6,7 +6,7 @@ alembic==1.13.1
 pydantic>=2.5.3,<3
 pydantic-settings>=2.1.0,<3
 email-validator==2.3.0
-python-dotenv==1.0.0
+python-dotenv==1.2.2
 httpx==0.26.0
 apscheduler==3.10.4
 pyjwt==2.8.0
