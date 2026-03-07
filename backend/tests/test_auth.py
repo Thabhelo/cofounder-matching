@@ -49,7 +49,7 @@ class TestOnboardingAuth:
             "name": "Test User",
             "idea_status": "not_set_on_idea",
         })
-        assert response.status_code == 403  # No token provided
+        assert response.status_code == 401  # No token provided
     
     def test_onboarding_extracts_clerk_id_from_token(self, client, test_user_data):
         """Test that clerk_id is extracted from JWT, not query params"""

@@ -68,6 +68,12 @@ jobs:
           pip install ruff
           ruff check . --output-format=github
 
+      - name: Run Bandit SAST
+        working-directory: ./backend
+        run: |
+          pip install bandit
+          bandit -r app/ -ll -x app/tests/
+
       - name: Run tests with pytest
         working-directory: ./backend
         env:
@@ -165,3 +171,27 @@ jobs:
         if: always() && steps.check-sarif.outputs.exists == 'true'
         with:
           sarif_file: 'trivy-results.sarif'
+
+      - name: Set up Python for pip-audit
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run pip-audit (Python dependency scan)
+        working-directory: ./backend
+        run: |
+          pip install pip-audit
+          pip-audit -r requirements.txt
+
+      - name: Set up Node.js for npm audit
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run npm audit (JS dependency scan)
+        working-directory: ./frontend
+        # HIGH vulns in next@14.x (GHSA-9g9p-9gw9-jx7f, GHSA-h25m-26qc-wcjf) require
+        # next@15.6+ which is not yet stable (only canary); tracked for separate upgrade PR.
+        # HIGH vulns in eslint-config-next and jest-environment-jsdom are dev/build tooling
+        # only and are not present in the production runtime.
+        run: npm audit --audit-level=critical
