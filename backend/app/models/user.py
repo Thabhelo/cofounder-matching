@@ -114,6 +114,9 @@ class User(Base):
     pref_interests_importance = Column(String(20), nullable=True)
     alert_on_new_matches = Column(Boolean, default=False, nullable=False)
 
+    # Settings (notifications, privacy, communication)
+    settings = Column(JSONB, nullable=True)
+
     # System
     behavior_agreement_accepted_at = Column(TIMESTAMP(timezone=True), nullable=True)
     profile_status = Column(String(50), default="incomplete", nullable=False)
