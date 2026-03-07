@@ -22,5 +22,5 @@ faker==22.6.0
 
 # Production
 slowapi==0.1.9  # Rate limiting
-python-json-logger==2.0.7  # Structured logging
+python-json-logger==4.0.0  # Structured logging
 prometheus-fastapi-instrumentator==6.1.0  # Metrics
