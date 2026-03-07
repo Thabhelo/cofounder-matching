@@ -18,7 +18,7 @@ python-multipart==0.0.22
 pytest==7.4.4
 pytest-asyncio==0.23.3
 pytest-cov==4.1.0
-faker==22.6.0
+faker==40.8.0
 
 # Production
 slowapi==0.1.9  # Rate limiting
