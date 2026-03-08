@@ -92,6 +92,7 @@ export type User = {
   updated_at: string
   is_active: boolean
   is_banned?: boolean
+  is_admin?: boolean
 }
 
 export type UserPublic = {

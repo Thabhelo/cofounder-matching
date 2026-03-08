@@ -278,7 +278,7 @@ async def export_user_data(
     from app.models.message import Message
 
     matches = db.query(Match).filter(
-        (Match.user1_id == current_user.id) | (Match.user2_id == current_user.id)
+        (Match.user_id == current_user.id) | (Match.target_user_id == current_user.id)
     ).all()
 
     messages = db.query(Message).filter(
@@ -311,7 +311,7 @@ async def export_user_data(
         "matches": [
             {
                 "id": str(m.id),
-                "other_user_id": str(m.user2_id if m.user1_id == current_user.id else m.user1_id),
+                "other_user_id": str(m.target_user_id if m.user_id == current_user.id else m.user_id),
                 "status": m.status,
                 "created_at": m.created_at.isoformat() if m.created_at else None,
             }

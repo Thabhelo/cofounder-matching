@@ -393,6 +393,7 @@ class UserResponse(BaseModel):
     updated_at: datetime
     is_active: bool = True
     is_banned: bool = False
+    is_admin: bool = False
 
     @field_validator("previous_startups", mode="before")
     @classmethod

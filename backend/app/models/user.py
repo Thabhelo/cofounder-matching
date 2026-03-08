@@ -122,6 +122,7 @@ class User(Base):
     profile_status = Column(String(50), default="incomplete", nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
     is_banned = Column(Boolean, default=False, nullable=False)
+    is_admin = Column(Boolean, default=False, nullable=False)
 
     created_at = Column(TIMESTAMP, default=func.now())
     updated_at = Column(TIMESTAMP, default=func.now(), onupdate=func.now())
