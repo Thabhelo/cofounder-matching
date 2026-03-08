@@ -114,8 +114,9 @@ export default function ProfileDetailPage() {
     return (
       <AppShell>
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
+          <div className="text-center" role="status">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-900 mx-auto"></div>
+            <span className="sr-only">Loading...</span>
             <p className="mt-4 text-gray-600">Loading profile...</p>
           </div>
         </div>
@@ -149,7 +150,7 @@ export default function ProfileDetailPage() {
             href="/discover"
             className="inline-flex items-center gap-2 text-zinc-600 hover:text-zinc-900 mb-6"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg aria-hidden="true" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
             Back to Discover
@@ -252,11 +253,11 @@ export default function ProfileDetailPage() {
                 className="flex-1 px-6 py-3 bg-zinc-900 text-white font-medium rounded-lg hover:bg-zinc-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {isSaved ? (
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <svg aria-hidden="true" className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                   </svg>
                 ) : (
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 20 20">
+                  <svg aria-hidden="true" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 20 20">
                     <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                   </svg>
                 )}
@@ -273,15 +274,16 @@ export default function ProfileDetailPage() {
               </button>
             </div>
             {reportOpen && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" role="dialog" aria-modal="true">
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" role="dialog" aria-modal="true" aria-labelledby="report-modal-title">
                 <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-                  <h3 className="text-lg font-semibold text-zinc-900 mb-4">Report profile</h3>
+                  <h3 id="report-modal-title" className="text-lg font-semibold text-zinc-900 mb-4">Report profile</h3>
                   {reportDone ? (
                     <p className="text-zinc-700">Thank you. Your report has been submitted and will be reviewed.</p>
                   ) : (
                     <>
-                      <label className="block text-sm font-medium text-zinc-700 mb-2">Reason</label>
+                      <label htmlFor="report-reason" className="block text-sm font-medium text-zinc-700 mb-2">Reason</label>
                       <select
+                        id="report-reason"
                         value={reportType}
                         onChange={(e) => setReportType(e.target.value)}
                         className="w-full border border-zinc-300 rounded-lg px-3 py-2 text-zinc-900 mb-4"
@@ -290,8 +292,9 @@ export default function ProfileDetailPage() {
                           <option key={t.value} value={t.value}>{t.label}</option>
                         ))}
                       </select>
-                      <label className="block text-sm font-medium text-zinc-700 mb-2">Details (min 10 characters)</label>
+                      <label htmlFor="report-details" className="block text-sm font-medium text-zinc-700 mb-2">Details (min 10 characters)</label>
                       <textarea
+                        id="report-details"
                         value={reportDesc}
                         onChange={(e) => setReportDesc(e.target.value)}
                         placeholder="Describe what happened..."

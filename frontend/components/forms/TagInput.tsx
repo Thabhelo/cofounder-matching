@@ -24,6 +24,8 @@ export function TagInput({
   className = "",
 }: TagInputProps) {
   const id = useId()
+  const slugId = label ? label.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") : id
+  const listboxId = `${slugId}-listbox`
   const [open, setOpen] = useState(false)
   const optList = options as string[]
 
@@ -68,17 +70,25 @@ export function TagInput({
         <button
           type="button"
           id={id}
+          aria-expanded={open}
+          aria-haspopup="listbox"
+          aria-controls={listboxId}
           onClick={() => setOpen(!open)}
           className="w-full px-4 py-2 border border-gray-300 rounded-lg text-left bg-white focus:ring-2 focus:ring-zinc-900"
         >
           {placeholder}
         </button>
         {open && (
-          <ul className="absolute z-10 mt-1 w-full max-h-48 overflow-auto border border-gray-200 rounded-lg bg-white shadow-lg">
+          <ul
+            id={listboxId}
+            role="listbox"
+            aria-label={label}
+            className="absolute z-10 mt-1 w-full max-h-48 overflow-auto border border-gray-200 rounded-lg bg-white shadow-lg"
+          >
             {optList
               .filter((o) => !value.includes(o))
               .map((o) => (
-                <li key={o}>
+                <li key={o} role="option" aria-selected={value.includes(o)}>
                   <button
                     type="button"
                     className="w-full px-4 py-2 text-left hover:bg-gray-100"

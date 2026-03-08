@@ -130,8 +130,9 @@ export default function ConversationPage() {
     return (
       <AppShell>
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
+          <div className="text-center" role="status" aria-label="Loading">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-900 mx-auto"></div>
+            <span className="sr-only">Loading...</span>
             <p className="mt-4 text-gray-600">Loading...</p>
           </div>
         </div>
@@ -169,7 +170,7 @@ export default function ConversationPage() {
               href="/inbox"
               className="text-zinc-600 hover:text-zinc-900"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg aria-hidden="true" className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </Link>
@@ -205,7 +206,7 @@ export default function ConversationPage() {
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto bg-gray-50 p-4">
+        <div role="log" aria-label="Conversation messages" aria-live="polite" className="flex-1 overflow-y-auto bg-gray-50 p-4">
           <div className="max-w-4xl mx-auto space-y-4">
             {messages.length === 0 ? (
               <div className="text-center py-12">
@@ -252,6 +253,7 @@ export default function ConversationPage() {
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 placeholder="Type a message..."
+                aria-label="Type a message"
                 className="flex-1 px-4 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-zinc-900 focus:border-zinc-900 transition-colors"
                 disabled={sending}
               />
