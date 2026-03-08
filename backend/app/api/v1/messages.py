@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, desc
+from sqlalchemy import and_, or_, func
 from typing import List, Optional, cast
 from datetime import datetime, timedelta
 from uuid import UUID
@@ -39,50 +39,81 @@ async def get_conversations(
     ).all()
 
     # Deduplicate - only show one conversation per pair of users
-    seen_pairs = set()
-    conversations = []
-
+    seen_pairs: set = set()
+    unique_matches = []
+    match_to_other_id = {}
     for match in matches:
-        # Determine the other user
-        if match.user_id == current_user.id:
-            other_user_id = match.target_user_id
-        else:
-            other_user_id = match.user_id
-
-        # Create a pair identifier (sorted to avoid duplicates)
+        other_user_id = match.target_user_id if match.user_id == current_user.id else match.user_id
         pair = tuple(sorted([str(current_user.id), str(other_user_id)]))
-
-        # Skip if we've already seen this pair
         if pair in seen_pairs:
             continue
-
         seen_pairs.add(pair)
+        unique_matches.append(match)
+        match_to_other_id[match.id] = other_user_id
 
-        other_user = db.query(User).filter(
-            User.id == other_user_id,
+    match_ids = [m.id for m in unique_matches]
+
+    # Batch load other users (single query)
+    other_user_ids = list(match_to_other_id.values())
+    users_map = {
+        u.id: u for u in db.query(User).filter(
+            User.id.in_(other_user_ids),
             User.is_active,
-            ~User.is_banned
-        ).first()
+            ~User.is_banned,
+        ).all()
+    }
 
+    # Batch load last message per match using a subquery
+    if match_ids:
+        last_msg_subq = (
+            db.query(Message.match_id, func.max(Message.created_at).label("max_ts"))
+            .filter(Message.match_id.in_(match_ids))
+            .group_by(Message.match_id)
+            .subquery()
+        )
+        last_messages_list = (
+            db.query(Message)
+            .join(last_msg_subq, and_(
+                Message.match_id == last_msg_subq.c.match_id,
+                Message.created_at == last_msg_subq.c.max_ts,
+            ))
+            .all()
+        )
+        last_messages_map = {msg.match_id: msg for msg in last_messages_list}
+
+        # Batch load unread counts (single GROUP BY query)
+        unread_rows = (
+            db.query(Message.match_id, func.count().label("cnt"))
+            .filter(
+                Message.match_id.in_(match_ids),
+                Message.recipient_id == current_user.id,
+                ~Message.is_read,
+            )
+            .group_by(Message.match_id)
+            .all()
+        )
+        unread_map = {row.match_id: row.cnt for row in unread_rows}
+
+        # Batch load last-message senders
+        sender_ids = list({msg.sender_id for msg in last_messages_list})
+        senders_map = {u.id: u for u in db.query(User).filter(User.id.in_(sender_ids)).all()}
+    else:
+        last_messages_map = {}
+        unread_map = {}
+        senders_map = {}
+
+    conversations = []
+    for match in unique_matches:
+        other_user = users_map.get(match_to_other_id[match.id])
         if not other_user:
             continue
 
-        # Get last message in thread
-        last_message = db.query(Message).filter(
-            Message.match_id == match.id
-        ).order_by(desc(Message.created_at)).first()
+        last_message = last_messages_map.get(match.id)
+        unread_count = unread_map.get(match.id, 0)
 
-        # Count unread messages (messages sent to current user that are unread)
-        unread_count = db.query(Message).filter(
-            Message.match_id == match.id,
-            Message.recipient_id == current_user.id,
-            ~Message.is_read
-        ).count()
-
-        # Get last message response if exists
         last_message_response = None
         if last_message:
-            sender = db.query(User).filter(User.id == last_message.sender_id).first()
+            sender = senders_map.get(last_message.sender_id)
             if sender:
                 last_message_response = MessageResponse(
                     id=cast(UUID, last_message.id),
@@ -97,7 +128,6 @@ async def get_conversations(
                     sender=UserPublicResponse.model_validate(sender),
                 )
 
-        # Use match updated_at or last message created_at
         updated_at = cast(datetime, match.updated_at or match.created_at)
         if last_message and last_message.created_at and cast(datetime, last_message.created_at) > updated_at:
             updated_at = cast(datetime, last_message.created_at)
@@ -107,7 +137,7 @@ async def get_conversations(
             other_user=other_user,
             last_message=last_message_response,
             unread_count=unread_count,
-            updated_at=updated_at
+            updated_at=updated_at,
         ))
 
     # Sort by updated_at (most recent first)
@@ -160,10 +190,13 @@ async def get_messages(
         Message.match_id == match_uuid
     ).order_by(Message.created_at.asc()).offset(skip).limit(limit).all()
 
-    # Get sender info for each message
+    # Batch-load all senders in a single query
+    sender_ids = list({msg.sender_id for msg in messages})
+    senders_map = {u.id: u for u in db.query(User).filter(User.id.in_(sender_ids)).all()}
+
     result = []
     for message in messages:
-        sender = db.query(User).filter(User.id == message.sender_id).first()
+        sender = senders_map.get(message.sender_id)
         if sender:
             result.append(MessageResponse(
                 id=cast(UUID, message.id),
@@ -368,21 +401,25 @@ async def get_unread_count(
         )
     ).all()
 
+    match_ids = [m.id for m in matches]
+    unread_rows = (
+        db.query(Message.match_id, func.count().label("cnt"))
+        .filter(
+            Message.match_id.in_(match_ids),
+            Message.recipient_id == current_user.id,
+            ~Message.is_read,
+        )
+        .group_by(Message.match_id)
+        .all()
+    )
+
     total_unread = 0
     conversations = {}
-
-    for match in matches:
-        unread_count = db.query(Message).filter(
-            Message.match_id == match.id,
-            Message.recipient_id == current_user.id,
-            ~Message.is_read
-        ).count()
-
-        if unread_count > 0:
-            total_unread += unread_count
-            conversations[str(match.id)] = unread_count
+    for row in unread_rows:
+        total_unread += row.cnt
+        conversations[str(row.match_id)] = row.cnt
 
     return UnreadCountResponse(
         total_unread=total_unread,
-        conversations=conversations
+        conversations=conversations,
     )

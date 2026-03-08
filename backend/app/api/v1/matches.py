@@ -256,19 +256,24 @@ async def get_matches(
 
     matches = query.order_by(Match.created_at.desc()).offset(skip).limit(limit).all()
 
+    # Batch-load all target users in a single query
+    target_id_map = {
+        match.id: (match.target_user_id if match.user_id == current_user.id else match.user_id)
+        for match in matches
+    }
+    target_ids = list(target_id_map.values())
+    users_map = {
+        u.id: u for u in db.query(User).filter(
+            User.id.in_(target_ids),
+            User.is_active,
+            ~User.is_banned,
+        ).all()
+    }
+
     result = []
     for match in matches:
-        # Determine which user is the target (the other user in the match)
-        if match.user_id == current_user.id:
-            target_user_id = match.target_user_id
-        else:
-            target_user_id = match.user_id
-
-        target_user = db.query(User).filter(
-            User.id == target_user_id,
-            User.is_active,
-            ~User.is_banned
-        ).first()
+        target_user_id = target_id_map[match.id]
+        target_user = users_map.get(target_user_id)
 
         if target_user:
             result.append(MatchWithUserResponse(

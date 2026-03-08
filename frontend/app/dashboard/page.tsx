@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { useAuth, useUser } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Sidebar } from "@/components/layout/Sidebar"
+import { AppShell } from "@/components/layout/AppShell"
 import { api } from "@/lib/api"
 import type { User } from "@/lib/types"
 
@@ -82,12 +82,9 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      <Sidebar />
-      
-      <div className="flex-1 flex">
-        <main className="flex-1 p-8">
-          <div className="max-w-6xl mx-auto">
+    <AppShell>
+      <main className="flex-1 p-4 md:p-8">
+        <div className="max-w-6xl mx-auto">
             <h1 className="text-3xl font-semibold text-zinc-900 mb-8">Dashboard</h1>
 
             {user?.profile_status === "pending_review" && (
@@ -291,9 +288,8 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
-          </div>
-        </main>
-      </div>
-    </div>
+        </div>
+      </main>
+    </AppShell>
   )
 }

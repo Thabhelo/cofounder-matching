@@ -107,3 +107,8 @@
                 0 8px 24px -6px rgba(0, 0, 0, 0.08);
   }
 }
+
+/* PWA / safe area support */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
