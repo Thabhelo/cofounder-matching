@@ -5,7 +5,7 @@ import { useAuth } from "@clerk/nextjs"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
-import { Sidebar } from "@/components/layout/Sidebar"
+import { AppShell } from "@/components/layout/AppShell"
 import { api } from "@/lib/api"
 import type { UserPublic } from "@/lib/types"
 
@@ -86,22 +86,20 @@ function RevisitPageContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex">
-        <Sidebar />
+      <AppShell>
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-900 mx-auto"></div>
             <p className="mt-4 text-gray-600">Loading profiles...</p>
           </div>
         </div>
-      </div>
+      </AppShell>
     )
   }
 
   return (
-    <div className="min-h-screen flex">
-      <Sidebar />
-      <div className="flex-1 p-8">
+    <AppShell>
+      <div className="flex-1 p-4 md:p-8">
         <div className="max-w-6xl mx-auto">
           <h1 className="text-3xl font-semibold text-zinc-900 mb-6">Revisit Profiles</h1>
 
@@ -231,22 +229,21 @@ function RevisitPageContent() {
           )}
         </div>
       </div>
-    </div>
+    </AppShell>
   )
 }
 
 export default function RevisitPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex">
-        <Sidebar />
+      <AppShell>
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-900 mx-auto"></div>
             <p className="mt-4 text-gray-600">Loading...</p>
           </div>
         </div>
-      </div>
+      </AppShell>
     }>
       <RevisitPageContent />
     </Suspense>

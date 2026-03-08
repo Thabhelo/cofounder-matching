@@ -5,7 +5,7 @@ import { useAuth } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
-import { Sidebar } from "@/components/layout/Sidebar"
+import { AppShell } from "@/components/layout/AppShell"
 import { api } from "@/lib/api"
 import type { ProfileDiscoverItem } from "@/lib/types"
 
@@ -128,22 +128,20 @@ export default function DiscoverPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex">
-        <Sidebar />
+      <AppShell>
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-900 mx-auto"></div>
             <p className="mt-4 text-gray-600">Loading profiles...</p>
           </div>
         </div>
-      </div>
+      </AppShell>
     )
   }
 
   if (items.length === 0) {
     return (
-      <div className="min-h-screen flex">
-        <Sidebar />
+      <AppShell>
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center max-w-md">
             <h2 className="text-2xl font-semibold text-zinc-900 mb-4">No more profiles to discover</h2>
@@ -158,14 +156,13 @@ export default function DiscoverPage() {
             </button>
           </div>
         </div>
-      </div>
+      </AppShell>
     )
   }
 
   return (
-    <div className="min-h-screen flex">
-      <Sidebar />
-      <div className="flex-1 p-8">
+    <AppShell>
+      <div className="flex-1 p-4 md:p-8">
         <div className="max-w-4xl mx-auto">
           <div className="mb-6">
             <h1 className="text-3xl font-semibold text-zinc-900 mb-2">Discover Profiles</h1>
@@ -406,6 +403,6 @@ export default function DiscoverPage() {
           </div>
         </div>
       )}
-    </div>
+    </AppShell>
   )
 }

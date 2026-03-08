@@ -5,7 +5,7 @@ import { useAuth } from "@clerk/nextjs"
 import { useRouter, useParams } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
-import { Sidebar } from "@/components/layout/Sidebar"
+import { AppShell } from "@/components/layout/AppShell"
 import { api } from "@/lib/api"
 
 type Message = {
@@ -128,22 +128,20 @@ export default function ConversationPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex">
-        <Sidebar />
+      <AppShell>
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-900 mx-auto"></div>
             <p className="mt-4 text-gray-600">Loading...</p>
           </div>
         </div>
-      </div>
+      </AppShell>
     )
   }
 
   if (!match) {
     return (
-      <div className="min-h-screen flex">
-        <Sidebar />
+      <AppShell>
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <h2 className="text-2xl font-semibold text-zinc-900 mb-4">Conversation not found</h2>
@@ -155,15 +153,14 @@ export default function ConversationPage() {
             </Link>
           </div>
         </div>
-      </div>
+      </AppShell>
     )
   }
 
   const otherUser = match.target_user
 
   return (
-    <div className="min-h-screen flex">
-      <Sidebar />
+    <AppShell>
       <div className="flex-1 flex flex-col">
         {/* Header */}
         <div className="bg-white border-b border-zinc-200 p-4">
@@ -269,6 +266,6 @@ export default function ConversationPage() {
           </form>
         </div>
       </div>
-    </div>
+    </AppShell>
   )
 }

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { useAuth } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Sidebar } from "@/components/layout/Sidebar"
+import { AppShell } from "@/components/layout/AppShell"
 import { api } from "@/lib/api"
 import type { ReportListItem, User, Organization, Resource, Event, AuditLogEntry } from "@/lib/types"
 
@@ -643,9 +643,8 @@ export default function AdminPage() {
 
   if (!isAdmin) {
     return (
-      <div className="min-h-screen flex">
-        <Sidebar />
-        <main className="flex-1 p-8 flex items-center justify-center">
+      <AppShell>
+        <main className="flex-1 p-4 md:p-8 flex items-center justify-center">
           <div className="text-center max-w-md">
             <h1 className="text-2xl font-semibold text-zinc-900 mb-2">Access denied</h1>
             <p className="text-zinc-600 mb-6">
@@ -665,7 +664,7 @@ export default function AdminPage() {
             </Link>
           </div>
         </main>
-      </div>
+      </AppShell>
     )
   }
 
@@ -682,9 +681,8 @@ export default function AdminPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      <Sidebar />
-      <main className="flex-1 p-8 overflow-auto">
+    <AppShell>
+      <main className="flex-1 p-4 md:p-8 overflow-auto">
         <div className="max-w-6xl mx-auto">
           <h1 className="text-3xl font-semibold text-zinc-900 mb-2">Admin</h1>
           <p className="text-zinc-600 mb-6">Manage users, reports, and organizations.</p>
@@ -1723,6 +1721,6 @@ export default function AdminPage() {
           )}
         </div>
       </main>
-    </div>
+    </AppShell>
   )
 }

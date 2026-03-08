@@ -1,15 +1,31 @@
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
 import { ClerkProvider } from "@clerk/nextjs"
+import { WebVitals } from "@/components/WebVitals"
 import "./globals.css"
+import Script from "next/script"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
 
 export const dynamic = "force-dynamic"
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: "cover",
+  themeColor: "#18181b",
+}
+
 export const metadata: Metadata = {
   title: "Co-Founder Matching Platform",
   description: "Find your perfect co-founder and access entrepreneurial resources",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "CoFounder Match",
+  },
   icons: {
     icon: "/favicon.png",
     apple: "/favicon.png",
@@ -54,7 +70,21 @@ export default function RootLayout({
     >
       <html lang="en" suppressHydrationWarning>
         <body className={`${inter.variable} font-sans antialiased bg-white text-zinc-900`}>
+          <WebVitals />
           {children}
+          <Script
+            id="register-sw"
+            strategy="afterInteractive"
+            dangerouslySetInnerHTML={{
+              __html: `
+                if ('serviceWorker' in navigator) {
+                  window.addEventListener('load', function() {
+                    navigator.serviceWorker.register('/sw.js').catch(function() {});
+                  });
+                }
+              `,
+            }}
+          />
         </body>
       </html>
     </ClerkProvider>

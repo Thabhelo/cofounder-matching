@@ -5,7 +5,7 @@ import { useAuth } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
-import { Sidebar } from "@/components/layout/Sidebar"
+import { AppShell } from "@/components/layout/AppShell"
 import { api } from "@/lib/api"
 
 type Conversation = {
@@ -98,15 +98,14 @@ export default function InboxPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex">
-        <Sidebar />
+      <AppShell>
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-900 mx-auto"></div>
             <p className="mt-4 text-gray-600">Loading...</p>
           </div>
         </div>
-      </div>
+      </AppShell>
     )
   }
 
@@ -131,9 +130,8 @@ export default function InboxPage() {
   const hasAnyContent = conversations.length > 0 || pendingInvites.length > 0 || sentInvites.length > 0
 
   return (
-    <div className="min-h-screen flex">
-      <Sidebar />
-      <div className="flex-1 p-8">
+    <AppShell>
+      <div className="flex-1 p-4 md:p-8">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-3xl font-semibold text-zinc-900 mb-6">Inbox</h1>
 
@@ -300,6 +298,6 @@ export default function InboxPage() {
           )}
         </div>
       </div>
-    </div>
+    </AppShell>
   )
 }
