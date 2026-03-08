@@ -50,7 +50,7 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-wait_for_port 5432 "PostgreSQL"
+wait_for_port 5433 "PostgreSQL"
 
 # Backend setup
 echo ""

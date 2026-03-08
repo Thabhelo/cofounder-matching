@@ -56,7 +56,7 @@ export default function RootLayout({
         elements: {
           formButtonPrimary:
             "bg-zinc-900 hover:bg-zinc-800 text-sm normal-case font-medium",
-          card: "shadow-sm",
+          card: "shadow-xs",
           headerTitle: "text-zinc-900 font-semibold",
           headerSubtitle: "text-zinc-600",
           socialButtonsBlockButton:

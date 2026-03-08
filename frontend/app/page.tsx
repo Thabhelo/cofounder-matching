@@ -18,7 +18,7 @@ export default function Home() {
                 </button>
               </SignInButton>
               <SignUpButton mode="modal">
-                <button className="px-5 py-2 bg-zinc-900 text-white text-sm font-medium rounded-lg hover:bg-zinc-800 transition-colors shadow-sm">
+                <button className="px-5 py-2 bg-zinc-900 text-white text-sm font-medium rounded-lg hover:bg-zinc-800 transition-colors shadow-xs">
                   Get Started
                 </button>
               </SignUpButton>
@@ -27,7 +27,7 @@ export default function Home() {
               <div className="flex items-center gap-3">
                 <Link
                   href="/dashboard"
-                  className="px-5 py-2 bg-zinc-900 text-white text-sm font-medium rounded-lg hover:bg-zinc-800 transition-colors shadow-sm"
+                  className="px-5 py-2 bg-zinc-900 text-white text-sm font-medium rounded-lg hover:bg-zinc-800 transition-colors shadow-xs"
                 >
                   Dashboard
                 </Link>

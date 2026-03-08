@@ -33,7 +33,7 @@ export default function OrganizationsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm border-b">
+      <nav className="bg-white shadow-xs border-b">
         <div className="container mx-auto px-4 py-4">
           <Link href="/dashboard" className="text-2xl font-bold text-zinc-900">
             CoFounder Match
@@ -89,7 +89,7 @@ export default function OrganizationsPage() {
               <Link
                 key={org.id}
                 href={`/organizations/${org.slug}`}
-                className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-6"
+                className="bg-white rounded-lg shadow-xs hover:shadow-md transition-shadow p-6"
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
@@ -106,7 +106,7 @@ export default function OrganizationsPage() {
                     <h3 className="text-lg font-semibold text-gray-900 mb-1">{org.name}</h3>
                   </div>
                   {org.is_verified && (
-                    <svg className="w-6 h-6 text-zinc-900 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="w-6 h-6 text-zinc-900 shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
                   )}

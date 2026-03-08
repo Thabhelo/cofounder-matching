@@ -87,7 +87,7 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm border-b">
+      <nav className="bg-white shadow-xs border-b">
         <div className="container mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
             <Link href="/dashboard" className="text-2xl font-bold text-zinc-900">
@@ -101,7 +101,7 @@ export default function ProfilePage() {
       </nav>
 
       <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="bg-white rounded-lg shadow-sm">
+        <div className="bg-white rounded-lg shadow-xs">
           <div className="p-6 border-b flex justify-between items-center flex-wrap gap-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Your Profile</h1>

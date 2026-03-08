@@ -33,7 +33,7 @@ export default function ResourcesPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm border-b">
+      <nav className="bg-white shadow-xs border-b">
         <div className="container mx-auto px-4 py-4">
           <Link href="/dashboard" className="text-2xl font-bold text-zinc-900">
             CoFounder Match
@@ -93,7 +93,7 @@ export default function ResourcesPage() {
               <Link
                 key={resource.id}
                 href={`/resources/${resource.id}`}
-                className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-6"
+                className="bg-white rounded-lg shadow-xs hover:shadow-md transition-shadow p-6"
               >
                 <div className="flex items-start justify-between mb-3">
                   <div>

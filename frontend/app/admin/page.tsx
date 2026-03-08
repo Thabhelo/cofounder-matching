@@ -853,7 +853,7 @@ export default function AdminPage() {
                           <p className="text-xs text-zinc-400 mt-2">{formatDate(r.created_at)}</p>
                         </div>
                         {r.status === "pending" && (
-                          <div className="flex flex-col gap-2 flex-shrink-0 min-w-[200px]">
+                          <div className="flex flex-col gap-2 shrink-0 min-w-[200px]">
                             <textarea
                               rows={2}
                               placeholder="Resolution notes (optional)"

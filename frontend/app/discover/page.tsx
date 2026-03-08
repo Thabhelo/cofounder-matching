@@ -336,7 +336,7 @@ export default function DiscoverPage() {
                 <button
                   onClick={handleInviteClick}
                   disabled={inviting === currentProfile.id}
-                  className="flex-1 px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 shadow-sm"
+                  className="flex-1 px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 shadow-xs"
                 >
                   {inviting === currentProfile.id ? "Sending..." : "Invite to Connect"}
                 </button>

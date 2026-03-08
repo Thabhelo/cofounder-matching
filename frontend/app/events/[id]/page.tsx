@@ -77,7 +77,7 @@ export default function EventDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm border-b">
+      <nav className="bg-white shadow-xs border-b">
         <div className="container mx-auto px-4 py-4">
           <Link href="/dashboard" className="text-2xl font-bold text-zinc-900">
             CoFounder Match
@@ -90,7 +90,7 @@ export default function EventDetailPage() {
           ← Back to Events
         </Link>
 
-        <div className="bg-white rounded-lg shadow-sm p-8">
+        <div className="bg-white rounded-lg shadow-xs p-8">
           <div className="mb-6">
             <div className="flex items-center gap-2 mb-3">
               {event.event_type && (

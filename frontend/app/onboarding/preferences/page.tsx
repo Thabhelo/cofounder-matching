@@ -68,7 +68,7 @@ export default function PreferencesPage() {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div className="bg-white rounded-lg shadow-xs border border-gray-200 p-6">
       <h1 className="text-2xl font-bold text-zinc-900 mb-6">Co-founder preferences</h1>
 
       <div className="space-y-6">

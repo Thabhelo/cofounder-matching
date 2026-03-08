@@ -34,7 +34,7 @@ export default function EventsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm border-b">
+      <nav className="bg-white shadow-xs border-b">
         <div className="container mx-auto px-4 py-4">
           <Link href="/dashboard" className="text-2xl font-bold text-zinc-900">
             CoFounder Match
@@ -91,7 +91,7 @@ export default function EventsPage() {
               <Link
                 key={event.id}
                 href={`/events/${event.id}`}
-                className="block bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-6"
+                className="block bg-white rounded-lg shadow-xs hover:shadow-md transition-shadow p-6"
               >
                 <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                   <div className="flex-1">
@@ -143,7 +143,7 @@ export default function EventsPage() {
                     </div>
                   </div>
 
-                  <div className="flex-shrink-0">
+                  <div className="shrink-0">
                     <div className="px-4 py-2 bg-zinc-900 text-white rounded-lg text-sm font-medium">
                       View Details →
                     </div>

@@ -57,7 +57,7 @@ function Toggle({
         aria-checked={checked}
         aria-label={label}
         onClick={() => onChange(!checked)}
-        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:ring-offset-2 ${
+        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-hidden focus:ring-2 focus:ring-zinc-900 focus:ring-offset-2 ${
           checked ? "bg-zinc-900" : "bg-zinc-200"
         }`}
       >
@@ -524,7 +524,7 @@ export default function SettingsPage() {
                 onChange={(e) => setDeletePhrase(e.target.value)}
                 placeholder="delete my account"
                 aria-describedby="delete-confirm-warning"
-                className="w-full px-3 py-2 text-sm border border-red-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400"
+                className="w-full px-3 py-2 text-sm border border-red-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-red-400"
               />
               <div className="flex gap-2">
                 <button

@@ -166,7 +166,7 @@ export function Sidebar() {
   return (
     <>
       {/* ── Desktop sidebar ─────────────────────────────────────── */}
-      <aside className="hidden md:flex w-64 bg-white border-r border-zinc-200 min-h-screen flex-col flex-shrink-0">
+      <aside className="hidden md:flex w-64 bg-white border-r border-zinc-200 min-h-screen flex-col shrink-0">
         <div className="p-6 border-b border-zinc-200">
           <Link href="/dashboard" className="text-xl font-semibold text-zinc-900 hover:text-zinc-700 transition-colors">
             CoFounder Match
