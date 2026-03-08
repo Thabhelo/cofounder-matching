@@ -1,12 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { CountrySelect, StateSelect, CitySelect } from "react-country-state-city"
-import "react-country-state-city/dist/react-country-state-city.css"
-
-type CountryItem = { id: number; name: string }
-type StateItem = { id: number; name: string }
-type CityItem = { id: number; name: string; latitude?: string; longitude?: string }
+import Select from "react-select"
+import { Country, State, City } from "country-state-city"
 
 export type LocationComponents = {
   city?: string
@@ -25,9 +21,10 @@ type LocationPickerProps = {
   error?: string
 }
 
+type Option = { value: string; label: string }
+
 function buildLocationString(city?: string, state?: string, country?: string): string {
-  const parts = [city, state, country].filter(Boolean)
-  return parts.join(", ") || ""
+  return [city, state, country].filter(Boolean).join(", ")
 }
 
 export function LocationPicker({
@@ -37,70 +34,115 @@ export function LocationPicker({
   className = "",
   error,
 }: LocationPickerProps) {
-  const [countryId, setCountryId] = useState(0)
-  const [stateId, setStateId] = useState(0)
-  const [countryName, setCountryName] = useState("")
-  const [stateName, setStateName] = useState("")
+  const [countryCode, setCountryCode] = useState<string | null>(null)
+  const [stateCode, setStateCode] = useState<string | null>(null)
 
-  const handleCountryChange = (c: CountryItem) => {
-    setCountryId(c.id)
-    setCountryName(c.name)
-    setStateId(0)
-    setStateName("")
-    onChange(buildLocationString(undefined, undefined, c.name), { country: c.name })
+  const countryOptions: Option[] = Country.getAllCountries().map((c) => ({
+    value: c.isoCode,
+    label: c.name,
+  }))
+
+  const stateOptions: Option[] = countryCode
+    ? State.getStatesOfCountry(countryCode).map((s) => ({
+        value: s.isoCode,
+        label: s.name,
+      }))
+    : []
+
+  const cityOptions: Option[] = countryCode && stateCode
+    ? City.getCitiesOfState(countryCode, stateCode).map((c) => ({
+        value: c.name,
+        label: c.name,
+      }))
+    : []
+
+  const handleCountryChange = (opt: Option | null) => {
+    setCountryCode(opt?.value ?? null)
+    setStateCode(null)
+    if (opt) {
+      const country = Country.getCountryByCode(opt.value)
+      onChange(opt.label, { country: opt.label })
+    } else {
+      onChange("", undefined)
+    }
   }
 
-  const handleStateChange = (s: StateItem) => {
-    setStateId(s.id)
-    setStateName(s.name)
-    onChange(buildLocationString(undefined, s.name, countryName), {
-      state: s.name,
-      country: countryName,
-    })
+  const handleStateChange = (opt: Option | null) => {
+    setStateCode(opt?.value ?? null)
+    if (countryCode) {
+      const country = Country.getCountryByCode(countryCode)
+      const location = buildLocationString(undefined, opt?.label, country?.name)
+      onChange(location, { state: opt?.label, country: country?.name })
+    }
   }
 
-  const handleCityChange = (c: CityItem) => {
-    const location = buildLocationString(c.name, stateName, countryName)
-    const lat = c.latitude ? parseFloat(c.latitude) : undefined
-    const lng = c.longitude ? parseFloat(c.longitude) : undefined
+  const handleCityChange = (opt: Option | null) => {
+    if (!countryCode) return
+    const country = Country.getCountryByCode(countryCode)
+    const state = stateCode ? State.getStateByCodeAndCountry(stateCode, countryCode) : undefined
+    const cityData = opt && countryCode && stateCode
+      ? City.getCitiesOfState(countryCode, stateCode).find((c) => c.name === opt.value)
+      : undefined
+    const location = buildLocationString(opt?.label, state?.name, country?.name)
     onChange(location, {
-      city: c.name,
-      state: stateName || undefined,
-      country: countryName,
-      lat,
-      lng,
+      city: opt?.label,
+      state: state?.name,
+      country: country?.name,
+      lat: cityData?.latitude ? parseFloat(cityData.latitude) : undefined,
+      lng: cityData?.longitude ? parseFloat(cityData.longitude) : undefined,
     })
   }
 
-  const isSelection = (e: unknown): e is { id: number; name: string } =>
-    typeof e === "object" && e !== null && "id" in e && "name" in e
+  const selectStyles = {
+    control: (base: object) => ({
+      ...base,
+      borderColor: "#d1d5db",
+      borderRadius: "0.5rem",
+      padding: "0.125rem 0.25rem",
+      boxShadow: "none",
+      "&:hover": { borderColor: "#6b7280" },
+    }),
+    option: (base: object, state: { isSelected: boolean; isFocused: boolean }) => ({
+      ...base,
+      backgroundColor: state.isSelected ? "#18181b" : state.isFocused ? "#f4f4f5" : "white",
+      color: state.isSelected ? "white" : "#111827",
+    }),
+  }
 
   return (
-    <div className={`space-y-3 ${className} [&_.stdropdown-menu]:!z-50`}>
-      <CountrySelect
-        placeHolder={placeholder ?? "Select country"}
-        onChange={(e) => isSelection(e) && handleCountryChange(e)}
-        containerClassName="!w-full !relative"
-        inputClassName="!w-full !px-4 !py-2 !border !border-gray-300 !rounded-lg focus:!ring-2 focus:!ring-zinc-900"
-        showFlag={false}
+    <div className={`space-y-3 ${className}`}>
+      <Select
+        instanceId="country-select"
+        options={countryOptions}
+        onChange={handleCountryChange}
+        placeholder={placeholder ?? "Select country"}
+        isDisabled={disabled}
+        isClearable
+        styles={selectStyles}
+        classNamePrefix="location"
       />
-      {countryId > 0 && (
-        <StateSelect
-          countryid={countryId}
-          placeHolder="Select state / region"
-          onChange={(e) => isSelection(e) && handleStateChange(e)}
-          containerClassName="!w-full"
-          inputClassName="!w-full !px-4 !py-2 !border !border-gray-300 !rounded-lg focus:!ring-2 focus:!ring-zinc-900"
+      {countryCode && stateOptions.length > 0 && (
+        <Select
+          instanceId="state-select"
+          options={stateOptions}
+          onChange={handleStateChange}
+          placeholder="Select state / region"
+          isDisabled={disabled}
+          isClearable
+          styles={selectStyles}
+          classNamePrefix="location"
         />
       )}
-      {countryId > 0 && stateId > 0 && (
-        <CitySelect
-          countryid={countryId}
-          stateid={stateId}
-          placeHolder="Select city"
-          onChange={(e) => isSelection(e) && handleCityChange(e as CityItem)}
-          containerClassName="!w-full"
-          inputClassName="!w-full !px-4 !py-2 !border !border-gray-300 !rounded-lg focus:!ring-2 focus:!ring-zinc-900"
+      {countryCode && stateCode && cityOptions.length > 0 && (
+        <Select
+          instanceId="city-select"
+          options={cityOptions}
+          onChange={handleCityChange}
+          placeholder="Select city"
+          isDisabled={disabled}
+          isClearable
+          styles={selectStyles}
+          classNamePrefix="location"
         />
       )}
       {error && <p className="text-sm text-red-600">{error}</p>}

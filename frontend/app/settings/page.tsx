@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { useAuth, useUser, useClerk } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
+import { AppShell } from "@/components/layout/AppShell"
 import { api } from "@/lib/api"
 import type { UserSettings, UserSettingsUpdate } from "@/lib/types"
 
@@ -246,13 +247,16 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <p className="text-zinc-500 text-sm">Loading settings...</p>
-      </div>
+      <AppShell>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <p className="text-zinc-500 text-sm">Loading settings...</p>
+        </div>
+      </AppShell>
     )
   }
 
   return (
+    <AppShell>
     <div className="max-w-2xl mx-auto px-4 py-8 pb-24 space-y-6">
       <div>
         <h1 className="text-2xl font-semibold text-zinc-900">Settings</h1>
@@ -549,5 +553,6 @@ export default function SettingsPage() {
 
       <SaveBar dirty={dirty} saving={saving} onSave={handleSave} onDiscard={handleDiscard} />
     </div>
+    </AppShell>
   )
 }
