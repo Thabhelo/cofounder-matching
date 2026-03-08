@@ -54,6 +54,7 @@ function Toggle({
         type="button"
         role="switch"
         aria-checked={checked}
+        aria-label={label}
         onClick={() => onChange(!checked)}
         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:ring-offset-2 ${
           checked ? "bg-zinc-900" : "bg-zinc-200"
@@ -259,10 +260,10 @@ export default function SettingsPage() {
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">{error}</div>
+        <div role="alert" aria-live="polite" className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">{error}</div>
       )}
       {successMsg && (
-        <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-sm text-green-700">
+        <div role="status" aria-live="polite" className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-sm text-green-700">
           {successMsg}
         </div>
       )}
@@ -324,6 +325,7 @@ export default function SettingsPage() {
               <button
                 key={f}
                 type="button"
+                aria-pressed={settings.notifications.frequency === f}
                 onClick={() =>
                   setSettings((s) => ({ ...s, notifications: { ...s.notifications, frequency: f } }))
                 }
@@ -350,6 +352,7 @@ export default function SettingsPage() {
               <button
                 key={v}
                 type="button"
+                aria-pressed={settings.privacy.profile_visibility === v}
                 onClick={() =>
                   setSettings((s) => ({ ...s, privacy: { ...s.privacy, profile_visibility: v } }))
                 }
@@ -399,6 +402,7 @@ export default function SettingsPage() {
               <button
                 key={v}
                 type="button"
+                aria-pressed={settings.communication.who_can_send_intros === v}
                 onClick={() =>
                   setSettings((s) => ({ ...s, communication: { ...s.communication, who_can_send_intros: v } }))
                 }
@@ -505,14 +509,17 @@ export default function SettingsPage() {
           </div>
           {showDeleteConfirm && (
             <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg space-y-3">
-              <p className="text-sm text-red-700 font-medium">
+              <p id="delete-confirm-warning" className="text-sm text-red-700 font-medium">
                 Type <span className="font-bold">delete my account</span> to confirm.
               </p>
+              <label htmlFor="delete-confirm" className="sr-only">Type DELETE to confirm</label>
               <input
+                id="delete-confirm"
                 type="text"
                 value={deletePhrase}
                 onChange={(e) => setDeletePhrase(e.target.value)}
                 placeholder="delete my account"
+                aria-describedby="delete-confirm-warning"
                 className="w-full px-3 py-2 text-sm border border-red-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400"
               />
               <div className="flex gap-2">

@@ -100,8 +100,9 @@ export default function InboxPage() {
     return (
       <AppShell>
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
+          <div className="text-center" role="status" aria-label="Loading">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-900 mx-auto"></div>
+            <span className="sr-only">Loading...</span>
             <p className="mt-4 text-gray-600">Loading...</p>
           </div>
         </div>
@@ -138,6 +139,7 @@ export default function InboxPage() {
           {!hasAnyContent ? (
             <div className="bg-white border border-zinc-200 rounded-lg p-12 text-center">
               <svg
+                aria-hidden="true"
                 className="w-16 h-16 text-zinc-400 mx-auto mb-4"
                 fill="none"
                 stroke="currentColor"
@@ -277,7 +279,10 @@ export default function InboxPage() {
                           <div className="flex items-center gap-2">
                             <h3 className="font-semibold text-zinc-900">{conv.other_user.name}</h3>
                             {conv.unread_count > 0 && (
-                              <span className="px-2 py-0.5 bg-green-600 text-white text-xs font-medium rounded-full">
+                              <span
+                                aria-label={`${conv.unread_count} unread message${conv.unread_count !== 1 ? "s" : ""}`}
+                                className="px-2 py-0.5 bg-green-600 text-white text-xs font-medium rounded-full"
+                              >
                                 {conv.unread_count}
                               </span>
                             )}

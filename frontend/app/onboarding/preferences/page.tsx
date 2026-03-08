@@ -78,6 +78,7 @@ export default function PreferencesPage() {
           onChange={(v) => update("looking_for_description", v)}
           minLength={50}
           maxLength={1000}
+          required
         />
 
         <div>
@@ -98,8 +99,8 @@ export default function PreferencesPage() {
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Want a technical co-founder?</label>
+        <fieldset>
+          <legend className="text-sm font-medium text-gray-700 mb-2">Want a technical co-founder?</legend>
           <div className="flex gap-4 mb-2">
             <label className="flex items-center gap-2">
               <input type="radio" name="pref_technical" checked={form.pref_technical === true} onChange={() => update("pref_technical", true)} className="rounded border-gray-300" />
@@ -115,12 +116,13 @@ export default function PreferencesPage() {
             </label>
           </div>
           <ImportanceSelector value={form.pref_technical_importance} onChange={(v) => update("pref_technical_importance", v)} />
-        </div>
+        </fieldset>
 
-        <div>
+        <fieldset>
+          <legend className="text-sm font-medium text-gray-700 mb-1">Timing preference</legend>
           <label className="flex items-center gap-2 mb-1">
             <input type="checkbox" checked={form.pref_match_timing} onChange={(e) => update("pref_match_timing", e.target.checked)} className="rounded border-gray-300" />
-            <span className="text-sm font-medium text-gray-700">Want co-founder who matches my timing</span>
+            <span className="text-sm text-gray-700">Want co-founder who matches my timing</span>
           </label>
           {form.pref_match_timing && (
             <div className="ml-6 mt-2">
@@ -128,7 +130,7 @@ export default function PreferencesPage() {
               <ImportanceSelector value={form.pref_timing_importance} onChange={(v) => update("pref_timing_importance", v)} />
             </div>
           )}
-        </div>
+        </fieldset>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Location preference</label>
@@ -193,10 +195,11 @@ export default function PreferencesPage() {
         />
         <ImportanceSelector value={form.pref_areas_importance} onChange={(v) => update("pref_areas_importance", v)} />
 
-        <div>
+        <fieldset>
+          <legend className="text-sm font-medium text-gray-700 mb-1">Shared interests</legend>
           <label className="flex items-center gap-2 mb-1">
             <input type="checkbox" checked={form.pref_shared_interests} onChange={(e) => update("pref_shared_interests", e.target.checked)} className="rounded border-gray-300" />
-            <span className="text-sm font-medium text-gray-700">Match only with shared topics</span>
+            <span className="text-sm text-gray-700">Match only with shared topics</span>
           </label>
           {form.pref_shared_interests && (
             <div className="ml-6 mt-2">
@@ -204,7 +207,7 @@ export default function PreferencesPage() {
               <ImportanceSelector value={form.pref_interests_importance} onChange={(v) => update("pref_interests_importance", v)} />
             </div>
           )}
-        </div>
+        </fieldset>
 
         <label className="flex items-center gap-2">
           <input type="checkbox" checked={form.alert_on_new_matches} onChange={(e) => update("alert_on_new_matches", e.target.checked)} className="rounded border-gray-300" />

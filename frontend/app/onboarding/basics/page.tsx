@@ -87,12 +87,13 @@ export default function BasicsPage() {
   }
 
   if (loading) {
-    return <div className="animate-pulse h-64 bg-gray-100 rounded-lg" />
+    return <div aria-busy="true" className="animate-pulse h-64 bg-gray-100 rounded-lg" />
   }
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
       <h1 className="text-2xl font-bold text-zinc-900 mb-6">Basics</h1>
+      <p className="text-sm text-zinc-500 mb-6">Fields marked with * are required</p>
 
       <div className="space-y-4">
         <div>
@@ -123,6 +124,7 @@ export default function BasicsPage() {
             onChange={(e) => update("linkedin_url", e.target.value)}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg"
             placeholder="https://linkedin.com/in/yourprofile"
+            aria-required="true"
           />
         </div>
         <div>
@@ -151,6 +153,7 @@ export default function BasicsPage() {
           minLength={50}
           maxLength={2000}
           placeholder="A paragraph or two about your background and skills"
+          required
         />
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
