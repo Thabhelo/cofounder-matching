@@ -67,6 +67,52 @@ export default function AdminPage() {
   const [actioning, setActioning] = useState<string | null>(null)
   const [resolutionNotes, setResolutionNotes] = useState<Record<string, string>>({})
 
+  // Create event form
+  const [createEventForm, setCreateEventForm] = useState({
+    title: "",
+    description: "",
+    event_type: "",
+    start_datetime: "",
+    end_datetime: "",
+    timezone: "America/Chicago",
+    location_type: "",
+    location_address: "",
+    location_url: "",
+    registration_url: "",
+    is_featured: false,
+  })
+  const [createEventNotify, setCreateEventNotify] = useState(false)
+  const [createEventLoading, setCreateEventLoading] = useState(false)
+  const [createEventError, setCreateEventError] = useState<string | null>(null)
+
+  // Create resource form
+  const [createResourceForm, setCreateResourceForm] = useState({
+    title: "",
+    description: "",
+    category: "",
+    resource_type: "",
+    application_url: "",
+    is_featured: false,
+  })
+  const [createResourceLoading, setCreateResourceLoading] = useState(false)
+  const [createResourceError, setCreateResourceError] = useState<string | null>(null)
+
+  // Create organization form
+  const [createOrgForm, setCreateOrgForm] = useState({
+    name: "",
+    description: "",
+    org_type: "",
+    website_url: "",
+    location: "",
+  })
+  const [createOrgLoading, setCreateOrgLoading] = useState(false)
+  const [createOrgError, setCreateOrgError] = useState<string | null>(null)
+
+  // Broadcast email form
+  const [broadcastForm, setBroadcastForm] = useState({ subject: "", message: "" })
+  const [broadcastLoading, setBroadcastLoading] = useState(false)
+  const [broadcastResult, setBroadcastResult] = useState<string | null>(null)
+
   useEffect(() => {
     let cancelled = false
     async function check() {
@@ -432,6 +478,159 @@ export default function AdminPage() {
     }
   }
 
+  const handleMakeAdmin = async (userId: string) => {
+    if (!confirm("Grant admin access to this user?")) return
+    const token = await getToken()
+    if (!token) return
+    try {
+      setActioning(userId)
+      await api.admin.makeAdmin(userId, token)
+      setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, is_admin: true } : u)))
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Failed to grant admin")
+    } finally {
+      setActioning(null)
+    }
+  }
+
+  const handleRemoveAdmin = async (userId: string) => {
+    if (!confirm("Revoke admin access from this user?")) return
+    const token = await getToken()
+    if (!token) return
+    try {
+      setActioning(userId)
+      await api.admin.removeAdmin(userId, token)
+      setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, is_admin: false } : u)))
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Failed to revoke admin")
+    } finally {
+      setActioning(null)
+    }
+  }
+
+  const handleBanFromReport = async (reportedUserId: string | null, reportId: string) => {
+    if (!reportedUserId) return
+    if (!confirm("Ban the reported user?")) return
+    const token = await getToken()
+    if (!token) return
+    try {
+      setActioning(reportId)
+      await api.admin.banUser(reportedUserId, token)
+      setReports((prev) => prev.map((r) => r.id === reportId ? { ...r, status: "resolved" as const } : r))
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Failed to ban user")
+    } finally {
+      setActioning(null)
+    }
+  }
+
+  const handleCreateEvent = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const token = await getToken()
+    if (!token) return
+    setCreateEventLoading(true)
+    setCreateEventError(null)
+    try {
+      const data: Record<string, unknown> = {
+        title: createEventForm.title,
+        description: createEventForm.description,
+        start_datetime: createEventForm.start_datetime,
+        timezone: createEventForm.timezone,
+      }
+      if (createEventForm.event_type) data.event_type = createEventForm.event_type
+      if (createEventForm.end_datetime) data.end_datetime = createEventForm.end_datetime
+      if (createEventForm.location_type) data.location_type = createEventForm.location_type
+      if (createEventForm.location_address) data.location_address = createEventForm.location_address
+      if (createEventForm.location_url) data.location_url = createEventForm.location_url
+      if (createEventForm.registration_url) data.registration_url = createEventForm.registration_url
+      data.is_featured = createEventForm.is_featured
+      const created = await api.admin.createEvent(data, createEventNotify, token)
+      setEvents((prev) => [created, ...prev])
+      setCreateEventForm({
+        title: "",
+        description: "",
+        event_type: "",
+        start_datetime: "",
+        end_datetime: "",
+        timezone: "America/Chicago",
+        location_type: "",
+        location_address: "",
+        location_url: "",
+        registration_url: "",
+        is_featured: false,
+      })
+      setCreateEventNotify(false)
+    } catch (err) {
+      setCreateEventError(err instanceof Error ? err.message : "Failed to create event")
+    } finally {
+      setCreateEventLoading(false)
+    }
+  }
+
+  const handleCreateResource = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const token = await getToken()
+    if (!token) return
+    setCreateResourceLoading(true)
+    setCreateResourceError(null)
+    try {
+      const data: Record<string, unknown> = {
+        title: createResourceForm.title,
+        description: createResourceForm.description,
+        category: createResourceForm.category,
+        is_featured: createResourceForm.is_featured,
+      }
+      if (createResourceForm.resource_type) data.resource_type = createResourceForm.resource_type
+      if (createResourceForm.application_url) data.application_url = createResourceForm.application_url
+      const created = await api.admin.createResource(data, token)
+      setResources((prev) => [created, ...prev])
+      setCreateResourceForm({ title: "", description: "", category: "", resource_type: "", application_url: "", is_featured: false })
+    } catch (err) {
+      setCreateResourceError(err instanceof Error ? err.message : "Failed to create resource")
+    } finally {
+      setCreateResourceLoading(false)
+    }
+  }
+
+  const handleCreateOrg = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const token = await getToken()
+    if (!token) return
+    setCreateOrgLoading(true)
+    setCreateOrgError(null)
+    try {
+      const data: Record<string, unknown> = { name: createOrgForm.name }
+      if (createOrgForm.description) data.description = createOrgForm.description
+      if (createOrgForm.org_type) data.org_type = createOrgForm.org_type
+      if (createOrgForm.website_url) data.website_url = createOrgForm.website_url
+      if (createOrgForm.location) data.location = createOrgForm.location
+      const created = await api.admin.createOrganization(data, token)
+      setOrganizations((prev) => [created, ...prev])
+      setCreateOrgForm({ name: "", description: "", org_type: "", website_url: "", location: "" })
+    } catch (err) {
+      setCreateOrgError(err instanceof Error ? err.message : "Failed to create organization")
+    } finally {
+      setCreateOrgLoading(false)
+    }
+  }
+
+  const handleBroadcastEmail = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const token = await getToken()
+    if (!token) return
+    setBroadcastLoading(true)
+    setBroadcastResult(null)
+    try {
+      const result = await api.admin.broadcastEmail(broadcastForm.subject, broadcastForm.message, token)
+      setBroadcastResult(`Sent to ${result.recipients} user(s).`)
+      setBroadcastForm({ subject: "", message: "" })
+    } catch (err) {
+      setBroadcastResult(err instanceof Error ? err.message : "Failed to send broadcast")
+    } finally {
+      setBroadcastLoading(false)
+    }
+  }
+
   const formatDate = (s: string | null) => (s ? new Date(s).toLocaleString() : "-")
 
   if (loading) {
@@ -664,7 +863,7 @@ export default function AdminPage() {
                               onChange={(e) => setResolutionNotes((prev) => ({ ...prev, [r.id]: e.target.value }))}
                               className="border border-zinc-300 rounded px-2 py-1 text-sm text-zinc-900 resize-none"
                             />
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 flex-wrap">
                               <button
                                 type="button"
                                 onClick={() => handleReviewReport(r.id, "resolved")}
@@ -680,6 +879,14 @@ export default function AdminPage() {
                                 className="px-3 py-1.5 text-sm border border-zinc-300 text-zinc-700 rounded hover:bg-zinc-50 disabled:opacity-50"
                               >
                                 Dismiss
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleBanFromReport(r.reported_user_id, r.id)}
+                                disabled={actioning === r.id || !r.reported_user_id}
+                                className="px-3 py-1.5 text-sm border border-red-300 text-red-700 rounded hover:bg-red-50 disabled:opacity-50"
+                              >
+                                Ban user
                               </button>
                             </div>
                           </div>
@@ -730,6 +937,7 @@ export default function AdminPage() {
                         <th className="px-4 py-3 text-sm font-medium text-zinc-900">Profile status</th>
                         <th className="px-4 py-3 text-sm font-medium text-zinc-900">Banned</th>
                         <th className="px-4 py-3 text-sm font-medium text-zinc-900">Active</th>
+                        <th className="px-4 py-3 text-sm font-medium text-zinc-900">Admin</th>
                         <th className="px-4 py-3 text-sm font-medium text-zinc-900">Actions</th>
                       </tr>
                     </thead>
@@ -741,6 +949,7 @@ export default function AdminPage() {
                           <td className="px-4 py-3 text-zinc-700">{u.profile_status ?? "incomplete"}</td>
                           <td className="px-4 py-3">{u.is_banned ? "Yes" : "No"}</td>
                           <td className="px-4 py-3">{u.is_active ? "Yes" : "No"}</td>
+                          <td className="px-4 py-3">{u.is_admin ? "Yes" : "No"}</td>
                           <td className="px-4 py-3 flex gap-2 flex-wrap">
                             {u.is_banned ? (
                               <button
@@ -759,6 +968,25 @@ export default function AdminPage() {
                                 className="text-sm text-red-600 hover:underline disabled:opacity-50"
                               >
                                 Ban
+                              </button>
+                            )}
+                            {u.is_admin ? (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveAdmin(u.id)}
+                                disabled={actioning === u.id}
+                                className="text-sm text-red-600 hover:underline disabled:opacity-50"
+                              >
+                                Revoke Admin
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleMakeAdmin(u.id)}
+                                disabled={actioning === u.id}
+                                className="text-sm text-zinc-600 hover:underline disabled:opacity-50"
+                              >
+                                Grant Admin
                               </button>
                             )}
                             {u.profile_status === "pending_review" && (
@@ -812,6 +1040,75 @@ export default function AdminPage() {
           )}
 
           {tab === "organizations" && (
+            <div className="space-y-6">
+              <div className="bg-white border border-zinc-200 rounded-lg p-6">
+                <h2 className="text-lg font-medium text-zinc-900 mb-4">Create Organization</h2>
+                <form onSubmit={handleCreateOrg} className="space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-zinc-700 mb-1">Name *</label>
+                      <input
+                        type="text"
+                        value={createOrgForm.name}
+                        onChange={(e) => setCreateOrgForm((p) => ({ ...p, name: e.target.value }))}
+                        required
+                        className="w-full border border-zinc-300 rounded px-3 py-2 text-zinc-900 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-zinc-700 mb-1">Type</label>
+                      <select
+                        value={createOrgForm.org_type}
+                        onChange={(e) => setCreateOrgForm((p) => ({ ...p, org_type: e.target.value }))}
+                        className="w-full border border-zinc-300 rounded px-3 py-2 text-zinc-900 text-sm"
+                      >
+                        <option value="">Select type</option>
+                        <option value="accelerator">Accelerator</option>
+                        <option value="university">University</option>
+                        <option value="nonprofit">Nonprofit</option>
+                        <option value="coworking">Co-working</option>
+                        <option value="government">Government</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-zinc-700 mb-1">Website URL</label>
+                      <input
+                        type="url"
+                        value={createOrgForm.website_url}
+                        onChange={(e) => setCreateOrgForm((p) => ({ ...p, website_url: e.target.value }))}
+                        className="w-full border border-zinc-300 rounded px-3 py-2 text-zinc-900 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-zinc-700 mb-1">Location</label>
+                      <input
+                        type="text"
+                        value={createOrgForm.location}
+                        onChange={(e) => setCreateOrgForm((p) => ({ ...p, location: e.target.value }))}
+                        className="w-full border border-zinc-300 rounded px-3 py-2 text-zinc-900 text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-700 mb-1">Description</label>
+                    <textarea
+                      rows={3}
+                      value={createOrgForm.description}
+                      onChange={(e) => setCreateOrgForm((p) => ({ ...p, description: e.target.value }))}
+                      className="w-full border border-zinc-300 rounded px-3 py-2 text-zinc-900 text-sm resize-none"
+                    />
+                  </div>
+                  {createOrgError && <p className="text-sm text-red-600">{createOrgError}</p>}
+                  <button
+                    type="submit"
+                    disabled={createOrgLoading}
+                    className="px-4 py-2 bg-zinc-900 text-white text-sm font-medium rounded-lg hover:bg-zinc-800 disabled:opacity-50"
+                  >
+                    {createOrgLoading ? "Creating..." : "Create Organization"}
+                  </button>
+                </form>
+              </div>
             <div className="bg-white border border-zinc-200 rounded-lg overflow-hidden">
               {organizations.length === 0 ? (
                 <p className="p-6 text-zinc-600">No organizations.</p>
@@ -868,6 +1165,7 @@ export default function AdminPage() {
                 </table>
               )}
             </div>
+            </div>
           )}
 
           {tab === "analytics" && (
@@ -918,6 +1216,87 @@ export default function AdminPage() {
           )}
 
           {tab === "resources" && (
+            <div className="space-y-6">
+              <div className="bg-white border border-zinc-200 rounded-lg p-6">
+                <h2 className="text-lg font-medium text-zinc-900 mb-4">Create Resource</h2>
+                <form onSubmit={handleCreateResource} className="space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-zinc-700 mb-1">Title *</label>
+                      <input
+                        type="text"
+                        value={createResourceForm.title}
+                        onChange={(e) => setCreateResourceForm((p) => ({ ...p, title: e.target.value }))}
+                        required
+                        className="w-full border border-zinc-300 rounded px-3 py-2 text-zinc-900 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-zinc-700 mb-1">Category *</label>
+                      <select
+                        value={createResourceForm.category}
+                        onChange={(e) => setCreateResourceForm((p) => ({ ...p, category: e.target.value }))}
+                        required
+                        className="w-full border border-zinc-300 rounded px-3 py-2 text-zinc-900 text-sm"
+                      >
+                        <option value="">Select category</option>
+                        <option value="funding">Funding</option>
+                        <option value="mentorship">Mentorship</option>
+                        <option value="legal">Legal</option>
+                        <option value="accounting">Accounting</option>
+                        <option value="prototyping">Prototyping</option>
+                        <option value="program">Program</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-zinc-700 mb-1">Resource type</label>
+                      <input
+                        type="text"
+                        value={createResourceForm.resource_type}
+                        onChange={(e) => setCreateResourceForm((p) => ({ ...p, resource_type: e.target.value }))}
+                        placeholder="grant, loan, service, program, tool"
+                        className="w-full border border-zinc-300 rounded px-3 py-2 text-zinc-900 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-zinc-700 mb-1">Application URL</label>
+                      <input
+                        type="url"
+                        value={createResourceForm.application_url}
+                        onChange={(e) => setCreateResourceForm((p) => ({ ...p, application_url: e.target.value }))}
+                        className="w-full border border-zinc-300 rounded px-3 py-2 text-zinc-900 text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-700 mb-1">Description *</label>
+                    <textarea
+                      rows={3}
+                      value={createResourceForm.description}
+                      onChange={(e) => setCreateResourceForm((p) => ({ ...p, description: e.target.value }))}
+                      required
+                      className="w-full border border-zinc-300 rounded px-3 py-2 text-zinc-900 text-sm resize-none"
+                    />
+                  </div>
+                  <label className="flex items-center gap-2 text-sm text-zinc-700">
+                    <input
+                      type="checkbox"
+                      checked={createResourceForm.is_featured}
+                      onChange={(e) => setCreateResourceForm((p) => ({ ...p, is_featured: e.target.checked }))}
+                    />
+                    Featured
+                  </label>
+                  {createResourceError && <p className="text-sm text-red-600">{createResourceError}</p>}
+                  <button
+                    type="submit"
+                    disabled={createResourceLoading}
+                    className="px-4 py-2 bg-zinc-900 text-white text-sm font-medium rounded-lg hover:bg-zinc-800 disabled:opacity-50"
+                  >
+                    {createResourceLoading ? "Creating..." : "Create Resource"}
+                  </button>
+                </form>
+              </div>
             <div className="bg-white border border-zinc-200 rounded-lg overflow-hidden">
               {resources.length === 0 ? (
                 <p className="p-6 text-zinc-600">No resources.</p>
@@ -965,9 +1344,148 @@ export default function AdminPage() {
                 </table>
               )}
             </div>
+            </div>
           )}
 
           {tab === "events" && (
+            <div className="space-y-6">
+              <div className="bg-white border border-zinc-200 rounded-lg p-6">
+                <h2 className="text-lg font-medium text-zinc-900 mb-4">Create Event</h2>
+                <form onSubmit={handleCreateEvent} className="space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-zinc-700 mb-1">Title *</label>
+                      <input
+                        type="text"
+                        value={createEventForm.title}
+                        onChange={(e) => setCreateEventForm((p) => ({ ...p, title: e.target.value }))}
+                        required
+                        className="w-full border border-zinc-300 rounded px-3 py-2 text-zinc-900 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-zinc-700 mb-1">Event type</label>
+                      <select
+                        value={createEventForm.event_type}
+                        onChange={(e) => setCreateEventForm((p) => ({ ...p, event_type: e.target.value }))}
+                        className="w-full border border-zinc-300 rounded px-3 py-2 text-zinc-900 text-sm"
+                      >
+                        <option value="">Select type</option>
+                        <option value="workshop">Workshop</option>
+                        <option value="networking">Networking</option>
+                        <option value="pitch">Pitch</option>
+                        <option value="conference">Conference</option>
+                        <option value="webinar">Webinar</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-zinc-700 mb-1">Start datetime *</label>
+                      <input
+                        type="datetime-local"
+                        value={createEventForm.start_datetime}
+                        onChange={(e) => setCreateEventForm((p) => ({ ...p, start_datetime: e.target.value }))}
+                        required
+                        className="w-full border border-zinc-300 rounded px-3 py-2 text-zinc-900 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-zinc-700 mb-1">End datetime</label>
+                      <input
+                        type="datetime-local"
+                        value={createEventForm.end_datetime}
+                        onChange={(e) => setCreateEventForm((p) => ({ ...p, end_datetime: e.target.value }))}
+                        className="w-full border border-zinc-300 rounded px-3 py-2 text-zinc-900 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-zinc-700 mb-1">Timezone</label>
+                      <input
+                        type="text"
+                        value={createEventForm.timezone}
+                        onChange={(e) => setCreateEventForm((p) => ({ ...p, timezone: e.target.value }))}
+                        className="w-full border border-zinc-300 rounded px-3 py-2 text-zinc-900 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-zinc-700 mb-1">Location type</label>
+                      <select
+                        value={createEventForm.location_type}
+                        onChange={(e) => setCreateEventForm((p) => ({ ...p, location_type: e.target.value }))}
+                        className="w-full border border-zinc-300 rounded px-3 py-2 text-zinc-900 text-sm"
+                      >
+                        <option value="">Select type</option>
+                        <option value="in_person">In person</option>
+                        <option value="virtual">Virtual</option>
+                        <option value="hybrid">Hybrid</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-zinc-700 mb-1">Location address</label>
+                      <input
+                        type="text"
+                        value={createEventForm.location_address}
+                        onChange={(e) => setCreateEventForm((p) => ({ ...p, location_address: e.target.value }))}
+                        className="w-full border border-zinc-300 rounded px-3 py-2 text-zinc-900 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-zinc-700 mb-1">Location URL</label>
+                      <input
+                        type="url"
+                        value={createEventForm.location_url}
+                        onChange={(e) => setCreateEventForm((p) => ({ ...p, location_url: e.target.value }))}
+                        className="w-full border border-zinc-300 rounded px-3 py-2 text-zinc-900 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-zinc-700 mb-1">Registration URL</label>
+                      <input
+                        type="url"
+                        value={createEventForm.registration_url}
+                        onChange={(e) => setCreateEventForm((p) => ({ ...p, registration_url: e.target.value }))}
+                        className="w-full border border-zinc-300 rounded px-3 py-2 text-zinc-900 text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-700 mb-1">Description *</label>
+                    <textarea
+                      rows={3}
+                      value={createEventForm.description}
+                      onChange={(e) => setCreateEventForm((p) => ({ ...p, description: e.target.value }))}
+                      required
+                      className="w-full border border-zinc-300 rounded px-3 py-2 text-zinc-900 text-sm resize-none"
+                    />
+                  </div>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 text-sm text-zinc-700">
+                      <input
+                        type="checkbox"
+                        checked={createEventForm.is_featured}
+                        onChange={(e) => setCreateEventForm((p) => ({ ...p, is_featured: e.target.checked }))}
+                      />
+                      Featured
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-zinc-700">
+                      <input
+                        type="checkbox"
+                        checked={createEventNotify}
+                        onChange={(e) => setCreateEventNotify(e.target.checked)}
+                      />
+                      Notify all users by email
+                    </label>
+                  </div>
+                  {createEventError && <p className="text-sm text-red-600">{createEventError}</p>}
+                  <button
+                    type="submit"
+                    disabled={createEventLoading}
+                    className="px-4 py-2 bg-zinc-900 text-white text-sm font-medium rounded-lg hover:bg-zinc-800 disabled:opacity-50"
+                  >
+                    {createEventLoading ? "Creating..." : "Create Event"}
+                  </button>
+                </form>
+              </div>
             <div className="bg-white border border-zinc-200 rounded-lg overflow-hidden">
               {events.length === 0 ? (
                 <p className="p-6 text-zinc-600">No events.</p>
@@ -1014,6 +1532,7 @@ export default function AdminPage() {
                   </tbody>
                 </table>
               )}
+            </div>
             </div>
           )}
 
@@ -1076,7 +1595,14 @@ export default function AdminPage() {
                       </div>
                       <div className="flex gap-3">
                         <dt className="text-zinc-500 w-48 shrink-0">Frontend URL</dt>
-                        <dd className="text-zinc-700 font-mono">{notifConfig.frontend_url}</dd>
+                        <dd>
+                          <span className="text-zinc-700 font-mono">{notifConfig.frontend_url}</span>
+                          {notifConfig.frontend_url.includes("localhost") && (
+                            <span className="ml-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-0.5">
+                              Warning: localhost URL - unsubscribe links will not work in production emails. Set FRONTEND_URL in .env.
+                            </span>
+                          )}
+                        </dd>
                       </div>
                     </dl>
                   </div>
@@ -1153,6 +1679,43 @@ export default function AdminPage() {
                         )}
                       </div>
                     </div>
+                  </div>
+
+                  <div className="bg-white border border-zinc-200 rounded-lg p-6">
+                    <h2 className="text-lg font-medium text-zinc-900 mb-1">Broadcast email</h2>
+                    <p className="text-sm text-zinc-500 mb-4">Send a custom email to all active, non-banned users.</p>
+                    <form onSubmit={handleBroadcastEmail} className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium text-zinc-700 mb-1">Subject *</label>
+                        <input
+                          type="text"
+                          value={broadcastForm.subject}
+                          onChange={(e) => setBroadcastForm((p) => ({ ...p, subject: e.target.value }))}
+                          required
+                          className="w-full border border-zinc-300 rounded px-3 py-2 text-zinc-900 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-zinc-700 mb-1">Message *</label>
+                        <textarea
+                          rows={4}
+                          value={broadcastForm.message}
+                          onChange={(e) => setBroadcastForm((p) => ({ ...p, message: e.target.value }))}
+                          required
+                          className="w-full border border-zinc-300 rounded px-3 py-2 text-zinc-900 text-sm resize-none"
+                        />
+                      </div>
+                      {broadcastResult && (
+                        <p className="text-sm text-zinc-700">{broadcastResult}</p>
+                      )}
+                      <button
+                        type="submit"
+                        disabled={broadcastLoading}
+                        className="px-4 py-2 bg-zinc-900 text-white text-sm font-medium rounded-lg hover:bg-zinc-800 disabled:opacity-50"
+                      >
+                        {broadcastLoading ? "Sending..." : "Send broadcast email"}
+                      </button>
+                    </form>
                   </div>
                 </>
               )}

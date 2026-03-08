@@ -1,4 +1,7 @@
+import re
+import uuid as _uuid_module
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import func, cast
 from sqlalchemy.types import Date
@@ -18,9 +21,9 @@ from app.models.event import UserEventRSVP
 from app.models.admin_audit import AdminAuditLog
 from app.schemas.report import ReportReview, ReportListItem
 from app.schemas.user import UserResponse, AdminUserUpdate
-from app.schemas.organization import OrganizationResponse, OrganizationUpdate
-from app.schemas.resource import ResourceResponse, ResourceUpdate
-from app.schemas.event import EventResponse, EventUpdate
+from app.schemas.organization import OrganizationResponse, OrganizationUpdate, AdminOrganizationCreate
+from app.schemas.resource import ResourceResponse, ResourceUpdate, ResourceCreate
+from app.schemas.event import EventResponse, EventUpdate, EventCreate
 from app.api.deps import get_current_user, get_current_admin_user, get_admin_clerk_ids
 from app.config import settings
 from app.services.email import send_profile_status_notification
@@ -52,7 +55,7 @@ def _log_admin_action(
 def admin_check(current_user: User = Depends(get_current_user)):
     """Return whether the current user is an admin (for UI to show/hide admin link)."""
     admin_ids = get_admin_clerk_ids()
-    is_admin = current_user.clerk_id in admin_ids
+    is_admin = current_user.is_admin or current_user.clerk_id in admin_ids
     out: dict = {"is_admin": is_admin}
     if not is_admin and settings.ENVIRONMENT != "production":
         if not admin_ids:
@@ -445,6 +448,42 @@ async def reject_user(
     return {"message": "User rejected", "user_id": str(user_id)}
 
 
+@router.put("/users/{user_id}/make-admin")
+def make_admin(
+    user_id: UUID,
+    admin: User = Depends(get_current_admin_user),
+    db: Session = Depends(get_db),
+):
+    """Grant admin status to a user."""
+    if user_id == admin.id:
+        raise HTTPException(status_code=400, detail="Cannot modify your own admin status")
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.is_admin = True
+    _log_admin_action(db, admin.id, "user_make_admin", "user", user_id)
+    db.commit()
+    return {"message": "Admin granted", "user_id": str(user_id)}
+
+
+@router.put("/users/{user_id}/remove-admin")
+def remove_admin(
+    user_id: UUID,
+    admin: User = Depends(get_current_admin_user),
+    db: Session = Depends(get_db),
+):
+    """Revoke admin status from a user."""
+    if user_id == admin.id:
+        raise HTTPException(status_code=400, detail="Cannot modify your own admin status")
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.is_admin = False
+    _log_admin_action(db, admin.id, "user_remove_admin", "user", user_id)
+    db.commit()
+    return {"message": "Admin revoked", "user_id": str(user_id)}
+
+
 @router.get("/organizations", response_model=list[OrganizationResponse])
 def list_organizations_admin(
     verified: bool | None = Query(None, description="Filter by is_verified"),
@@ -516,6 +555,28 @@ def delete_organization(
     return {"message": "Organization deactivated", "org_id": str(org_id)}
 
 
+@router.post("/organizations", response_model=OrganizationResponse)
+def create_organization_admin(
+    body: AdminOrganizationCreate,
+    admin: User = Depends(get_current_admin_user),
+    db: Session = Depends(get_db),
+):
+    """Create an organization as admin. Slug is auto-generated from name."""
+    slug = re.sub(r"[^a-z0-9]+", "-", body.name.lower()).strip("-")
+    existing = db.query(Organization).filter(Organization.slug == slug).first()
+    if existing:
+        slug = f"{slug}-{str(_uuid_module.uuid4())[:8]}"
+    data = body.model_dump()
+    data["slug"] = slug
+    org = Organization(**data)
+    db.add(org)
+    db.flush()
+    _log_admin_action(db, admin.id, "org_create", "organization", org.id, {"name": org.name})
+    db.commit()
+    db.refresh(org)
+    return org
+
+
 @router.get("/resources", response_model=list[ResourceResponse])
 def list_resources_admin(
     featured_only: bool | None = Query(None),
@@ -570,6 +631,22 @@ def deactivate_resource_admin(
     return {"message": "Resource deactivated", "resource_id": str(resource_id)}
 
 
+@router.post("/resources", response_model=ResourceResponse)
+def create_resource_admin(
+    body: ResourceCreate,
+    admin: User = Depends(get_current_admin_user),
+    db: Session = Depends(get_db),
+):
+    """Create a resource as admin."""
+    res = Resource(**body.model_dump(), created_by=admin.id)
+    db.add(res)
+    db.flush()
+    _log_admin_action(db, admin.id, "resource_create", "resource", res.id, {"title": res.title})
+    db.commit()
+    db.refresh(res)
+    return res
+
+
 @router.get("/events", response_model=list[EventResponse])
 def list_events_admin(
     featured_only: bool | None = Query(None),
@@ -622,6 +699,74 @@ def deactivate_event_admin(
     _log_admin_action(db, admin.id, "event_deactivate", "event", event_id)
     db.commit()
     return {"message": "Event deactivated", "event_id": str(event_id)}
+
+
+@router.post("/events", response_model=EventResponse)
+async def create_event_admin(
+    body: EventCreate,
+    notify_users: bool = Query(False, description="Send announcement email to all active users"),
+    admin: User = Depends(get_current_admin_user),
+    db: Session = Depends(get_db),
+):
+    """Create an event as admin. Optionally broadcast announcement email to all active users."""
+    from app.services.email import send_event_announcement
+    ev = Event(**body.model_dump(), created_by=admin.id)
+    db.add(ev)
+    db.flush()
+    _log_admin_action(db, admin.id, "event_create", "event", ev.id, {"title": ev.title})
+    db.commit()
+    db.refresh(ev)
+    if notify_users:
+        users = (
+            db.query(User)
+            .filter(User.is_active.is_(True), User.is_banned.is_(False), User.email.isnot(None))
+            .all()
+        )
+        for user in users:
+            await send_event_announcement(
+                user,
+                ev.title,
+                str(ev.start_datetime),
+                ev.location_address or ev.location_url or "",
+            )
+        _log_admin_action(db, admin.id, "event_broadcast", "event", ev.id, {"recipients": len(users)})
+        db.commit()
+    return ev
+
+
+class BroadcastEmailBody(BaseModel):
+    subject: str
+    message: str
+
+
+@router.post("/broadcast")
+async def broadcast_email(
+    body: BroadcastEmailBody,
+    admin: User = Depends(get_current_admin_user),
+    db: Session = Depends(get_db),
+):
+    """Send a custom email to all active, non-banned users."""
+    from app.services.email import send_email
+    users = (
+        db.query(User)
+        .filter(User.is_active.is_(True), User.is_banned.is_(False), User.email.isnot(None))
+        .all()
+    )
+    for user in users:
+        html = (
+            f"<p>Hi {user.name or 'there'},</p>"
+            f"<p>{body.message}</p>"
+            "<p>Best,<br>Cofounder Matching Team</p>"
+        )
+        text = (
+            f"Hi {user.name or 'there'},\n\n"
+            f"{body.message}\n\n"
+            "Best,\nCofounder Matching Team"
+        )
+        await send_email(user.email, body.subject, html, text)
+    _log_admin_action(db, admin.id, "broadcast_email", details={"subject": body.subject, "recipients": len(users)})
+    db.commit()
+    return {"recipients": len(users), "status": "ok"}
 
 
 # ---------------------------------------------------------------------------

@@ -412,11 +412,11 @@ def get_admin_clerk_ids() -> set[str]:
 async def get_current_admin_user(
     current_user: User = Depends(get_current_user),
 ) -> User:
-    """Require current user to be an admin (clerk_id in ADMIN_CLERK_IDS)."""
+    """Require current user to be an admin (is_admin flag or clerk_id in ADMIN_CLERK_IDS)."""
     admin_ids = get_admin_clerk_ids()
-    if not admin_ids or current_user.clerk_id not in admin_ids:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required",
-        )
-    return current_user
+    if current_user.is_admin or current_user.clerk_id in admin_ids:
+        return current_user
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Admin access required",
+    )

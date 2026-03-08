@@ -624,6 +624,46 @@ export const api = {
         "/api/v1/admin/notifications/trigger/event-reminders",
         { method: "POST", token },
       ),
+
+    makeAdmin: (userId: string, token: string) =>
+      request<{ message: string; user_id: string }>(`/api/v1/admin/users/${userId}/make-admin`, {
+        method: "PUT",
+        token,
+      }),
+
+    removeAdmin: (userId: string, token: string) =>
+      request<{ message: string; user_id: string }>(`/api/v1/admin/users/${userId}/remove-admin`, {
+        method: "PUT",
+        token,
+      }),
+
+    createEvent: (data: Record<string, unknown>, notifyUsers: boolean, token: string) =>
+      request<Event>(`/api/v1/admin/events?notify_users=${notifyUsers}`, {
+        method: "POST",
+        body: JSON.stringify(data),
+        token,
+      }),
+
+    createResource: (data: Record<string, unknown>, token: string) =>
+      request<Resource>("/api/v1/admin/resources", {
+        method: "POST",
+        body: JSON.stringify(data),
+        token,
+      }),
+
+    createOrganization: (data: Record<string, unknown>, token: string) =>
+      request<Organization>("/api/v1/admin/organizations", {
+        method: "POST",
+        body: JSON.stringify(data),
+        token,
+      }),
+
+    broadcastEmail: (subject: string, message: string, token: string) =>
+      request<{ recipients: number; status: string }>("/api/v1/admin/broadcast", {
+        method: "POST",
+        body: JSON.stringify({ subject, message }),
+        token,
+      }),
   },
 }
 

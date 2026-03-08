@@ -268,6 +268,35 @@ async def send_profile_incomplete_reminder(user: User) -> None:
     await send_email(user.email, subject, html_body, text_body)
 
 
+async def send_event_announcement(
+    user: User,
+    event_title: str,
+    event_start: str,
+    event_location: str,
+) -> None:
+    """Announce a new event to a user. Always sends (not gated by feature flag)."""
+    plain_footer, html_footer = _unsubscribe_footer(settings.FRONTEND_URL)
+    subject = f"New event: {event_title}"
+    location_line = f"\nLocation: {event_location}" if event_location else ""
+    text_body = (
+        f"Hi {user.name or 'there'},\n\n"
+        "A new event has been added to the co-founder matching platform:\n\n"
+        f"{event_title}\nStart: {event_start}{location_line}\n\n"
+        "Log in to view details and RSVP.\n\n"
+        "Best,\nCofounder Matching"
+    ) + plain_footer
+    html_body = (
+        f"<p>Hi {user.name or 'there'},</p>"
+        "<p>A new event has been added:</p>"
+        f"<p><strong>{event_title}</strong><br>Start: {event_start}"
+        + (f"<br>Location: {event_location}" if event_location else "")
+        + "</p>"
+        "<p>Log in to view details and RSVP.</p>"
+        "<p>Best,<br>Cofounder Matching</p>"
+    ) + html_footer
+    await send_email(user.email, subject, html_body, text_body)
+
+
 async def send_event_reminder(
     user: User,
     event_title: str,

@@ -27,6 +27,29 @@ class OrganizationCreate(BaseModel):
         return v
 
 
+class AdminOrganizationCreate(BaseModel):
+    """Admin org creation: slug is auto-generated from name."""
+    name: str = Field(..., min_length=2, max_length=255)
+    description: Optional[str] = Field(None, max_length=5000)
+    website_url: Optional[str] = Field(None, max_length=500)
+    logo_url: Optional[str] = Field(None, max_length=500)
+    org_type: Optional[str] = Field(None, description="accelerator, university, nonprofit, coworking, government, other")
+    focus_areas: Optional[list[str]] = Field(None, max_items=20)
+    location: Optional[str] = Field(None, max_length=255)
+    contact_email: Optional[str] = Field(None, max_length=255)
+    contact_phone: Optional[str] = Field(None, max_length=50)
+
+    @field_validator("org_type")
+    @classmethod
+    def validate_org_type(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        allowed = ["accelerator", "university", "nonprofit", "coworking", "government", "other"]
+        if v not in allowed:
+            raise ValueError(f"org_type must be one of {allowed}")
+        return v
+
+
 class OrganizationUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=2, max_length=255)
     description: Optional[str] = Field(None, max_length=5000)
