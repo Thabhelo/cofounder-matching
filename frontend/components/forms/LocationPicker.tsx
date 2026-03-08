@@ -28,6 +28,7 @@ function buildLocationString(city?: string, state?: string, country?: string): s
 }
 
 export function LocationPicker({
+  value,
   onChange,
   placeholder,
   disabled,
@@ -111,6 +112,11 @@ export function LocationPicker({
 
   return (
     <div className={`space-y-3 ${className}`}>
+      {value && !countryCode && (
+        <p className="text-sm text-zinc-600">
+          Current: <span className="font-medium text-zinc-900">{value}</span>
+        </p>
+      )}
       <Select
         instanceId="country-select"
         options={countryOptions}
