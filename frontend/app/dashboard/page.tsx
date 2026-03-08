@@ -21,6 +21,7 @@ export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null)
   const [counts, setCounts] = useState<ProfileCounts | null>(null)
   const [loading, setLoading] = useState(true)
+  const [approvedBannerDismissed, setApprovedBannerDismissed] = useState(false)
 
   useEffect(() => {
     async function loadData() {
@@ -102,16 +103,27 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {user?.profile_status === "approved" && (
+            {user?.profile_status === "approved" && !approvedBannerDismissed && (
               <div className="mb-8 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-                <p className="font-medium">Your profile has been approved.</p>
-                <p className="mt-1">
-                  You&apos;re now visible to other founders in the matching pool. Head to{" "}
-                  <Link href="/discover" className="underline">
-                    Discover
-                  </Link>{" "}
-                  to start meeting potential co-founders.
-                </p>
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="font-medium">Your profile has been approved.</p>
+                    <p className="mt-1">
+                      You&apos;re now visible to other founders in the matching pool. Head to{" "}
+                      <Link href="/discover" className="underline">
+                        Discover
+                      </Link>{" "}
+                      to start meeting potential co-founders.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setApprovedBannerDismissed(true)}
+                    className="shrink-0 text-emerald-600 hover:text-emerald-900"
+                    aria-label="Dismiss"
+                  >
+                    ✕
+                  </button>
+                </div>
               </div>
             )}
 
