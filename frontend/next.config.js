@@ -16,7 +16,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https://images.clerk.dev https://img.clerk.com",
       "font-src 'self'",
-      "connect-src 'self' https://*.clerk.accounts.dev https://api.resend.com",
+      "connect-src 'self' https://*.clerk.accounts.dev https://api.resend.com https://cofounder-api.onrender.com",
       "frame-src 'none'",
     ].join("; "),
   },
