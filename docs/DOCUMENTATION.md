@@ -924,6 +924,81 @@ This section logs major changes shipped to the project. Only significant changes
   - Rewrote STOP_SERVERS.sh to use port-based cleanup instead of PID files (prevents killing wrong processes after system restart)
 - **Impact**: All user accounts can now sign in successfully via email/password modal
 
+### 2026-02-28 - [ccfd7d2] Profile Approval Flow & Admin Badge
+- Full profile approval workflow: users submit profile for review, admins approve or reject with optional feedback
+- Profile status banner on dashboard shows current status (pending review, approved, rejected) with dismiss button
+- Admin badge in sidebar shows pending review count as red indicator
+- Email notification sent to user on approval or rejection via Resend
+- Fixed 409 duplicate-email error during onboarding when Clerk identity changes in development
+- `profile_status` field drives onboarding gating: approved profiles unlock discover and inbox
+
+### 2026-03-01 - [2897122] Email Notification System & APScheduler (closes #24)
+- Integrated Resend as transactional email provider; `RESEND_API_KEY` and `EMAIL_FROM` env vars required
+- APScheduler background task runs every 24h to email users about new profile matches when `alert_on_new_matches` is enabled
+- Admin controls: send custom announcement email to all active users from admin dashboard
+- `POST /api/v1/admin/email-blast` - admin-only bulk email endpoint
+- Reactivate user endpoint: `PUT /api/v1/admin/users/{id}/reactivate` restores banned or deactivated accounts
+- Background scheduler lifecycle managed with FastAPI startup/shutdown events
+
+### 2026-03-02 - [fed1383] Security Hardening Before Go-Live (closes #25)
+- Content Security Policy headers added to `next.config.js` covering `script-src`, `style-src`, `img-src`, `connect-src`, `worker-src`, `frame-src`
+- `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, `Strict-Transport-Security` headers applied to all routes
+- Service worker (`/sw.js`) served with `no-cache` headers to prevent stale SW serving stale assets
+- Trivy vulnerability scan runs on every CI push; SARIF results uploaded to GitHub Security tab
+- Backend: bandit static analysis added to CI; ruff replaces flake8 for linting
+- All admin endpoints require `ADMIN_CLERK_IDS` config; missing config returns 403 with dev hint
+
+### 2026-03-03 - [c7b1c10] User Settings & Preferences Page (closes #33)
+- New `/settings` page with notification preferences, account management, and danger zone
+- Notification settings: email on new match, email on intro request/acceptance, weekly digest toggle
+- Account section: update display name, change email (via Clerk), linked social accounts
+- Danger zone: delete account flow with confirmation dialog; triggers Clerk account deletion and DB cleanup
+- `PUT /api/v1/users/settings` and `GET /api/v1/users/settings` endpoints with `UserSettings` schema
+- Settings persisted in `user_settings` table; defaults applied on first access
+
+### 2026-03-04 - [992e6b5] Admin Dashboard Enhancements & Infrastructure Fixes
+- Admin dashboard: Resources and Events tabs with inline edit/delete; CSV export of users list
+- Fixed CSV export encoding bug causing corrupt downloads on Windows
+- Added settings quick-action buttons in admin overview for common configuration tasks
+- Fixed `CLERK_FRONTEND_API` not reaching backend container in Docker Compose (`env_file` directive)
+- Fixed CSP `connect-src` to include `https://cofounder-api.onrender.com` so production API calls are not blocked
+- Fixed onboarding redirect: existing users with null `behavior_agreement_accepted_at` no longer incorrectly sent to onboarding
+- CI: frontend Docker image now builds for `linux/amd64` only, halving build time
+
+### 2026-03-05 - [59f6367] Performance Optimizations (closes #26)
+- Lazy-loaded heavy page components (`discover`, `inbox`, `admin`) using `next/dynamic` with loading skeletons
+- Image optimization: all user avatars use `next/image` with explicit `width`/`height` to eliminate CLS
+- API response caching: organization list and resource directory cached for 60s with `stale-while-revalidate`
+- Database: added composite index on `matches(user_id, status)` and `messages(match_id, created_at DESC)` for inbox query speedup
+- Frontend bundle: moved `country-state-city` data import to dynamic import so it does not block initial page load
+- Lighthouse performance score improved from 61 to 84 on dashboard page
+
+### 2026-03-06 - [f57e61c, 585d451, b0ed56d] Branding & UI Polish
+- Added Techstars favicon (`/public/favicon.ico`, `/public/favicon.svg`) replacing browser default
+- Fixed browser 404 on `/favicon.ico` that was logging errors in CI smoke tests
+- Profile approved banner on dashboard now has a dismiss button; dismissal persisted in localStorage
+- Fixed CSP to allow `clerk-telemetry.com` in `connect-src` and `vercel.live` in `frame-src` (blocked Clerk telemetry and Vercel preview toolbar)
+
+### 2026-03-07 - [96daee2] Accessibility Audit & Mobile Responsiveness (closes #21, closes #22)
+- **Mobile layout**: `AppShell` component wraps all authenticated pages with `Sidebar` (desktop) + mobile top header (h-14) + mobile hamburger drawer + fixed bottom nav (h-16)
+- Mobile bottom nav shows Dashboard, Discover, Inbox, Account, Settings as quick-access tabs
+- PWA support: `manifest.json` with `display: standalone`, `start_url: /dashboard`; service worker with Cache API for offline shell; `viewport` metadata with `viewportFit: cover` for notched devices
+- `safe-area-inset-bottom` padding on bottom nav for iOS home indicator clearance
+- **Accessibility**: 65+ issues resolved across 14 files - ARIA roles, `aria-label`, `aria-live`, `aria-expanded`, `aria-required`, `role="alert"` on error messages, `role="listbox"` on dropdowns
+- `RichTextArea`, `MultiSelect`, `TagInput` components updated with full ARIA association between label, control, error, and character count
+- Skip-to-main-content link added to `AppShell` for keyboard navigation
+- `:focus-visible` outline and `prefers-reduced-motion` media query added to global CSS
+- Fixed layout scroll regression: removing `flex-col` from AppShell right column restored body scroll on all pages
+- All 7 authenticated pages migrated to `AppShell`: dashboard, discover, inbox, inbox thread, revisit, admin, profile detail
+
+### 2026-03-08 - [a397e19, 941d053, 1d2b3d2] LocationPicker Rewrite & UI Fixes
+- Replaced `react-country-state-city` (external runtime fetches, unreliable) with `react-select` + `country-state-city` npm package; all data now bundled at build time - no network dependency
+- Fixed root cause of blank location dropdown: CSP `connect-src` had typo `venkatmcaji.github.io` (single j) blocking all data fetches from the old library
+- LocationPicker now shows "Current: [saved value]" label so users know what location is already set before making changes
+- `CoFounder Match` title in Sidebar (desktop, mobile header, mobile drawer) changed from static text to `<Link href="/dashboard">` with hover styles
+- Location field labels updated to include "(Country)" hint so users know to start with country not city
+- Settings page wrapped in `AppShell` so sidebar navigation is present (was missing entirely)
+
 ### 2026-01-18 00:43 - [d254671] Initial Setup
 - Created project documentation structure (CLAUDE.md, IMPLEMENTATION_PLAN.md)
 - Set up repository configuration (.gitignore, .gitattributes, .claudeignore)
