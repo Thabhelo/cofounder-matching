@@ -160,7 +160,7 @@ export default function ProfilePage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Location (Country)</label>
                   <LocationPicker
                     value={formData.location ?? ""}
                     onChange={(v, components) => {

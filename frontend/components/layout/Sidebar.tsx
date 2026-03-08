@@ -168,7 +168,9 @@ export function Sidebar() {
       {/* ── Desktop sidebar ─────────────────────────────────────── */}
       <aside className="hidden md:flex w-64 bg-white border-r border-zinc-200 min-h-screen flex-col flex-shrink-0">
         <div className="p-6 border-b border-zinc-200">
-          <h1 className="text-xl font-semibold text-zinc-900">CoFounder Match</h1>
+          <Link href="/dashboard" className="text-xl font-semibold text-zinc-900 hover:text-zinc-700 transition-colors">
+            CoFounder Match
+          </Link>
         </div>
         <nav className="flex-1 p-4 space-y-1">
           {items.map((item) => (
@@ -195,7 +197,9 @@ export function Sidebar() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
-        <span className="font-semibold text-zinc-900 flex-1">CoFounder Match</span>
+        <Link href="/dashboard" className="font-semibold text-zinc-900 flex-1 hover:text-zinc-700 transition-colors">
+          CoFounder Match
+        </Link>
         <UserButton afterSignOutUrl="/" />
       </header>
 
@@ -211,7 +215,9 @@ export function Sidebar() {
           {/* Drawer panel */}
           <aside id="mobile-drawer" className="relative w-72 max-w-[80vw] bg-white flex flex-col h-full shadow-xl">
             <div className="p-5 border-b border-zinc-200 flex items-center justify-between">
-              <h1 className="text-xl font-semibold text-zinc-900">CoFounder Match</h1>
+              <Link href="/dashboard" className="text-xl font-semibold text-zinc-900 hover:text-zinc-700 transition-colors">
+                CoFounder Match
+              </Link>
               <button
                 onClick={() => setMobileOpen(false)}
                 className="p-2 rounded-lg text-zinc-500 hover:bg-zinc-100 touch-manipulation"

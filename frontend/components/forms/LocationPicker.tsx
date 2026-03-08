@@ -76,11 +76,11 @@ export function LocationPicker({
     typeof e === "object" && e !== null && "id" in e && "name" in e
 
   return (
-    <div className={`space-y-3 ${className}`}>
+    <div className={`space-y-3 ${className} [&_.stdropdown-menu]:!z-50`}>
       <CountrySelect
         placeHolder={placeholder ?? "Select country"}
         onChange={(e) => isSelection(e) && handleCountryChange(e)}
-        containerClassName="!w-full"
+        containerClassName="!w-full !relative"
         inputClassName="!w-full !px-4 !py-2 !border !border-gray-300 !rounded-lg focus:!ring-2 focus:!ring-zinc-900"
         showFlag={false}
       />
