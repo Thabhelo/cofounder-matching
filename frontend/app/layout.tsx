@@ -10,6 +10,10 @@ export const dynamic = "force-dynamic"
 export const metadata: Metadata = {
   title: "Co-Founder Matching Platform",
   description: "Find your perfect co-founder and access entrepreneurial resources",
+  icons: {
+    icon: "/favicon.png",
+    apple: "/favicon.png",
+  },
   openGraph: {
     title: "Co-Founder Matching Platform",
     description: "Find your perfect co-founder and access entrepreneurial resources",
