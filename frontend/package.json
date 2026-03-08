@@ -17,7 +17,7 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
-    "@clerk/nextjs": "^6.37.3",
+    "@clerk/nextjs": "^7.0.1",
     "@hookform/resolvers": "^3.3.4",
     "clsx": "^2.1.1",
     "country-state-city": "^3.2.1",
