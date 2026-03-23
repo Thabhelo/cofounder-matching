@@ -7,8 +7,6 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from prometheus_fastapi_instrumentator import Instrumentator
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy import text
 import logging
 import uuid
 from contextlib import asynccontextmanager
@@ -16,7 +14,6 @@ from contextlib import asynccontextmanager
 from app.config import settings
 from app.api.v1 import api_router
 from app.api import webhooks as webhooks_router
-from app.database import SessionLocal
 from app.logging_config import setup_logging, log_request_metrics, get_logger_with_request_id
 from app.sentry_config import setup_sentry
 
@@ -388,7 +385,7 @@ async def root():
 @app.get("/health")
 async def health_check():
     """Comprehensive health check including database connectivity and pool status"""
-    from app.database import check_database_connection, get_database_stats
+    from app.database import check_database_connection
 
     health_status = {
         "status": "healthy",

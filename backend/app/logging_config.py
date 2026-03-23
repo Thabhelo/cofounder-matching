@@ -4,7 +4,6 @@ Enhanced logging configuration with PII scrubbing and structured JSON output.
 
 import logging
 import re
-import json
 import sys
 from typing import Any, Dict, List, Pattern
 from pythonjsonlogger import jsonlogger

@@ -4,7 +4,6 @@ Test script for Sentry integration.
 Run this to verify Sentry is capturing errors correctly.
 """
 
-import os
 import sys
 import asyncio
 from pathlib import Path
@@ -18,7 +17,7 @@ from app.config import settings
 
 def test_basic_error_capture():
     """Test basic error capture functionality."""
-    print("🧪 Testing basic error capture...")
+    print("Testing basic error capture...")
 
     try:
         # This will raise an error
@@ -35,12 +34,12 @@ def test_basic_error_capture():
                 "environment": settings.ENVIRONMENT
             }
         )
-        print("✅ Basic error captured")
+        print("Basic error captured")
 
 
 def test_pii_scrubbing():
     """Test PII scrubbing functionality."""
-    print("🧪 Testing PII scrubbing...")
+    print("Testing PII scrubbing...")
 
     try:
         # Create an error with PII data
@@ -66,12 +65,12 @@ def test_pii_scrubbing():
                 "sensitive_info": "This should be redacted: user@example.com, +1-555-123-4567"
             }
         )
-        print("✅ PII scrubbing test completed")
+        print("PII scrubbing test completed")
 
 
 def test_custom_message():
     """Test custom message capture."""
-    print("🧪 Testing custom message capture...")
+    print("Testing custom message capture...")
 
     capture_message(
         "Test message from monitoring setup",
@@ -89,12 +88,12 @@ def test_custom_message():
             }
         }
     )
-    print("✅ Custom message captured")
+    print("Custom message captured")
 
 
 def test_performance_transaction():
     """Test performance monitoring."""
-    print("🧪 Testing performance monitoring...")
+    print("Testing performance monitoring...")
 
     import sentry_sdk
     import time
@@ -111,12 +110,12 @@ def test_performance_transaction():
         with sentry_sdk.start_span(op="compute", description="Simulated computation"):
             time.sleep(random.uniform(0.1, 0.3))
 
-    print("✅ Performance transaction recorded")
+    print("Performance transaction recorded")
 
 
 async def test_async_error():
     """Test async error capture."""
-    print("🧪 Testing async error capture...")
+    print("Testing async error capture...")
 
     try:
         # Simulate async operation failure
@@ -136,23 +135,23 @@ async def test_async_error():
                 "connection_pool_size": 20
             }
         )
-        print("✅ Async error captured")
+        print("Async error captured")
 
 
 def main():
     """Run all Sentry tests."""
-    print("🚀 Starting Sentry integration tests...")
+    print("Starting Sentry integration tests...")
     print(f"Environment: {settings.ENVIRONMENT}")
     print(f"Sentry DSN configured: {'Yes' if settings.SENTRY_DSN else 'No'}")
 
     if not settings.SENTRY_DSN:
-        print("❌ SENTRY_DSN not configured. Add it to your .env file to test Sentry integration.")
+        print("SENTRY_DSN not configured. Add it to your .env file to test Sentry integration.")
         print("Example: SENTRY_DSN=https://your_key@sentry.io/project_id")
         sys.exit(1)
 
     # Setup Sentry
     setup_sentry()
-    print("✅ Sentry initialized")
+    print("Sentry initialized")
 
     # Run tests
     test_basic_error_capture()
@@ -163,20 +162,20 @@ def main():
     # Run async test
     asyncio.run(test_async_error())
 
-    print("\n🎉 All Sentry tests completed!")
-    print("📊 Check your Sentry dashboard at https://sentry.io to see the captured events.")
-    print("🔍 Look for:")
+    print("\nAll Sentry tests completed!")
+    print("Check your Sentry dashboard at https://sentry.io to see the captured events.")
+    print("Look for:")
     print("  - Error events with scrubbed PII")
     print("  - Custom messages and context")
     print("  - Performance transactions")
     print("  - User context and additional metadata")
 
     # Give Sentry a moment to send events
-    print("\n⏳ Waiting 5 seconds for events to be sent to Sentry...")
+    print("\nWaiting 5 seconds for events to be sent to Sentry...")
     import time
     time.sleep(5)
 
-    print("✨ Test completed successfully!")
+    print("Test completed successfully!")
 
 
 if __name__ == "__main__":
