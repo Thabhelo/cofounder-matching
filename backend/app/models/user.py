@@ -3,6 +3,7 @@ import uuid
 
 from sqlalchemy import Column, String, Integer, Boolean, Text, TIMESTAMP, TypeDecorator, CHAR, Float, Date
 from sqlalchemy.dialects.postgresql import UUID as PostgreSQL_UUID, JSONB
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from app.database import Base
@@ -126,6 +127,14 @@ class User(Base):
 
     created_at = Column(TIMESTAMP, default=func.now())
     updated_at = Column(TIMESTAMP, default=func.now(), onupdate=func.now())
+
+    # Vetting system relationships (defined here to avoid circular imports)
+    trust_score = relationship("UserTrustScore", back_populates="user", uselist=False)
+    verifications = relationship("UserVerification", foreign_keys="UserVerification.user_id",
+                               back_populates="user")
+    quality_metrics = relationship("UserQualityMetrics", back_populates="user", uselist=False)
+    review_queue_items = relationship("AdminReviewQueue", foreign_keys="AdminReviewQueue.user_id",
+                                    back_populates="user")
 
     def __repr__(self):
         return f"<User {self.name}>"

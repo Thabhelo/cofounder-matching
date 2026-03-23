@@ -73,6 +73,11 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
 }
 
 export const api = {
+  // Generic GET helper (used by newer feature components that don't yet have
+  // a dedicated typed wrapper under `api.vetting.*`).
+  get: <T>(endpoint: string, token?: string): Promise<T> =>
+    request<T>(endpoint, token ? { token } : {}),
+
   users: {
     acceptBehaviorAgreement: (token: string) =>
       request<User>("/api/v1/users/accept-behavior-agreement", {

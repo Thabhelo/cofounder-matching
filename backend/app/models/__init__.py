@@ -15,6 +15,16 @@ from app.models.analytics import (
     PerformanceMetrics,
     RevenueMetrics,
 )
+from app.models.vetting import (
+    UserTrustScore,
+    UserVerification,
+    UserQualityMetrics,
+    AdminReviewQueue,
+    VerificationType,
+    VerificationStatus,
+    ReviewReason,
+    ReviewStatus,
+)
 
 __all__ = [
     "User",
@@ -35,4 +45,14 @@ __all__ = [
     "RetentionMetrics",
     "PerformanceMetrics",
     "RevenueMetrics",
+    # Vetting system models
+    "UserTrustScore",
+    "UserVerification",
+    "UserQualityMetrics",
+    "AdminReviewQueue",
+    # Vetting enums
+    "VerificationType",
+    "VerificationStatus",
+    "ReviewReason",
+    "ReviewStatus",
 ]
