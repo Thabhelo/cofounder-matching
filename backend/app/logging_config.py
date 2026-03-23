@@ -5,7 +5,7 @@ Enhanced logging configuration with PII scrubbing and structured JSON output.
 import logging
 import re
 import sys
-from typing import Any, Dict, List, Pattern
+from typing import Any, Dict, List, Pattern, Optional
 from pythonjsonlogger import jsonlogger
 from app.config import settings
 
@@ -217,7 +217,7 @@ def setup_logging():
     })
 
 
-def get_logger_with_request_id(name: str, request_id: str = None) -> logging.Logger:
+def get_logger_with_request_id(name: str, request_id: Optional[str] = None) -> logging.Logger:
     """
     Get a logger with request ID context.
 
@@ -249,9 +249,9 @@ def log_request_metrics(
     path: str,
     status_code: int,
     duration_ms: float,
-    request_id: str = None,
+    request_id: Optional[str] = None,
     user_id: str | None = None,
-    error: str = None
+    error: Optional[str] = None
 ):
     """
     Log request metrics in a structured format.

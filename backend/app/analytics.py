@@ -5,7 +5,7 @@ Uses PostHog for privacy-first analytics with PII protection.
 
 import logging
 import re
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 from datetime import datetime, timezone
 import posthog
 from app.config import settings
@@ -88,7 +88,7 @@ class AnalyticsManager:
 
         return sanitized
 
-    def _get_user_properties(self, user_id: str, additional_props: Dict[str, Any] = None) -> Dict[str, Any]:
+    def _get_user_properties(self, user_id: str, additional_props: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Get safe user properties for analytics (no PII).
         """
@@ -105,9 +105,9 @@ class AnalyticsManager:
     def track_event(
         self,
         event_name: str,
-        user_id: str = None,
-        properties: Dict[str, Any] = None,
-        anonymous_id: str = None
+        user_id: Optional[str] = None,
+        properties: Optional[Dict[str, Any]] = None,
+        anonymous_id: Optional[str] = None
     ):
         """
         Track an analytics event with privacy protection.

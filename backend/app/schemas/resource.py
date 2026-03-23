@@ -10,15 +10,15 @@ class ResourceCreate(BaseModel):
     description: str = Field(..., min_length=20, max_length=5000)
     category: str = Field(..., description="funding, mentorship, legal, accounting, prototyping, program, other")
     resource_type: Optional[str] = Field(None, description="grant, loan, service, program, tool")
-    stage_eligibility: Optional[list[str]] = Field(None, max_items=10)
-    location_eligibility: Optional[list[str]] = Field(None, max_items=50)
+    stage_eligibility: Optional[list[str]] = Field(default=None, max_length=10)
+    location_eligibility: Optional[list[str]] = Field(default=None, max_length=50)
     other_eligibility: Optional[str] = Field(None, max_length=1000)
     amount_min: Optional[Decimal] = Field(None, ge=0)
     amount_max: Optional[Decimal] = Field(None, ge=0)
     currency: str = Field("USD", min_length=3, max_length=3)
     application_url: Optional[str] = Field(None, max_length=500)
     deadline: Optional[date] = None
-    tags: Optional[list[str]] = Field(None, max_items=20)
+    tags: Optional[list[str]] = Field(default=None, max_length=20)
 
     @field_validator("category")
     @classmethod
@@ -34,14 +34,14 @@ class ResourceUpdate(BaseModel):
     description: Optional[str] = Field(None, min_length=20, max_length=5000)
     category: Optional[str] = None
     resource_type: Optional[str] = None
-    stage_eligibility: Optional[list[str]] = Field(None, max_items=10)
-    location_eligibility: Optional[list[str]] = Field(None, max_items=50)
+    stage_eligibility: Optional[list[str]] = Field(default=None, max_length=10)
+    location_eligibility: Optional[list[str]] = Field(default=None, max_length=50)
     other_eligibility: Optional[str] = Field(None, max_length=1000)
     amount_min: Optional[Decimal] = Field(None, ge=0)
     amount_max: Optional[Decimal] = Field(None, ge=0)
     application_url: Optional[str] = Field(None, max_length=500)
     deadline: Optional[date] = None
-    tags: Optional[list[str]] = Field(None, max_items=20)
+    tags: Optional[list[str]] = Field(default=None, max_length=20)
     is_active: Optional[bool] = None
     is_featured: Optional[bool] = None
 

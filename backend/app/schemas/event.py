@@ -16,8 +16,8 @@ class EventCreate(BaseModel):
     location_url: Optional[str] = Field(None, max_length=500)
     registration_url: Optional[str] = Field(None, max_length=500)
     registration_required: bool = False
-    max_attendees: Optional[int] = Field(None, ge=1, le=100000)
-    tags: Optional[list[str]] = Field(None, max_items=20)
+    max_attendees: Optional[int] = Field(default=None, ge=1, le=100000)
+    tags: Optional[list[str]] = Field(default=None, max_length=20)
 
     @field_validator("event_type")
     @classmethod
@@ -52,8 +52,8 @@ class EventUpdate(BaseModel):
     location_url: Optional[str] = Field(None, max_length=500)
     registration_url: Optional[str] = Field(None, max_length=500)
     registration_required: Optional[bool] = None
-    max_attendees: Optional[int] = Field(None, ge=1, le=100000)
-    tags: Optional[list[str]] = Field(None, max_items=20)
+    max_attendees: Optional[int] = Field(default=None, ge=1, le=100000)
+    tags: Optional[list[str]] = Field(default=None, max_length=20)
     is_active: Optional[bool] = None
     is_featured: Optional[bool] = None
 

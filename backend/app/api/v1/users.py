@@ -3,7 +3,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Response, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from typing import List
+from typing import List, Any
 
 from app.database import get_db
 from app.models.user import User
@@ -435,7 +435,8 @@ async def get_user_profile(
 
 def _apply_privacy(user: User) -> User:
     """Null-out fields that the user has hidden via privacy settings."""
-    privacy = (user.settings or {}).get("privacy", {})
+    settings_dict: dict[str, Any] = user.settings or {}
+    privacy = settings_dict.get("privacy", {})
     if not privacy.get("show_location", True):
         user.location = None
         user.location_city = None
@@ -489,5 +490,11 @@ async def search_users(
 
     users = query.offset(skip).limit(limit).all()
     # Exclude users who have opted out of search visibility
-    users = [u for u in users if (u.settings or {}).get("privacy", {}).get("search_visible", True)]
+    filtered_users = []
+    for u in users:
+        settings_dict: dict[str, Any] = u.settings or {}
+        privacy_settings = settings_dict.get("privacy", {})
+        if privacy_settings.get("search_visible", True):
+            filtered_users.append(u)
+    users = filtered_users
     return [_apply_privacy(u) for u in users]
