@@ -261,7 +261,7 @@ def setup_sentry():
 def capture_custom_error(
     error: Exception,
     context: Dict[str, Any] = None,
-    user_id: str = None,
+    user_id: str | None = None,
     extra: Dict[str, Any] = None,
     level: str = "error"
 ):
@@ -295,7 +295,7 @@ def capture_custom_error(
 def capture_message(
     message: str,
     level: str = "info",
-    user_id: str = None,
+    user_id: str | None = None,
     extra: Dict[str, Any] = None,
     context: Dict[str, Any] = None
 ):

@@ -250,7 +250,7 @@ def log_request_metrics(
     status_code: int,
     duration_ms: float,
     request_id: str = None,
-    user_id: str = None,
+    user_id: str | None = None,
     error: str = None
 ):
     """

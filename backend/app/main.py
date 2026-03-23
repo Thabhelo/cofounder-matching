@@ -281,7 +281,6 @@ async def limit_body_size(request: Request, call_next):
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     """Handle all unhandled exceptions with Sentry integration"""
-    import sentry_sdk
     from app.sentry_config import capture_custom_error
 
     request_id = getattr(request.state, "request_id", "unknown")
