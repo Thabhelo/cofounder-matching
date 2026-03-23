@@ -48,12 +48,12 @@ ENV PATH=/home/appuser/.local/bin:$PATH
 # Switch to non-root user
 USER appuser
 
-# Expose port
-EXPOSE 8000
+# Expose port (Render typically uses ports in 10000+ range)
+EXPOSE 8000 10000
 
-# Health check
+# Health check using PORT environment variable
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+    CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
 
 # Run application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
