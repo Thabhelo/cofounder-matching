@@ -1,7 +1,7 @@
 """Add user vetting system models
 
-Revision ID: a1b2c3d4e5f6
-Revises: f6a7b8c9d0e1
+Revision ID: b1c2d3e4f5a6
+Revises: dafdf7dd01d2
 Create Date: 2026-03-23 10:30:00.000000
 
 """
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = 'a1b2c3d4e5f6'
-down_revision: Union[str, None] = 'f6a7b8c9d0e1'
+revision: str = 'b1c2d3e4f5a6'
+down_revision: Union[str, None] = 'dafdf7dd01d2'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
