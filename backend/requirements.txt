@@ -15,6 +15,7 @@ svix==1.85.0
 python-multipart==0.0.22
 pgvector==0.3.2
 sentry-sdk[fastapi]==2.17.0
+posthog==3.7.4
 
 # Testing
 pytest>=8.2,<10

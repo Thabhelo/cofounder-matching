@@ -6,6 +6,15 @@ from app.models.match import Match
 from app.models.message import Message
 from app.models.report import Report
 from app.models.admin_audit import AdminAuditLog
+from app.models.analytics import (
+    AnalyticsEvent,
+    UserMetrics,
+    FeatureMetrics,
+    ConversionFunnel,
+    RetentionMetrics,
+    PerformanceMetrics,
+    RevenueMetrics,
+)
 
 __all__ = [
     "User",
@@ -19,4 +28,11 @@ __all__ = [
     "Message",
     "Report",
     "AdminAuditLog",
+    "AnalyticsEvent",
+    "UserMetrics",
+    "FeatureMetrics",
+    "ConversionFunnel",
+    "RetentionMetrics",
+    "PerformanceMetrics",
+    "RevenueMetrics",
 ]

@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import logging
 from fastapi import APIRouter, Depends, HTTPException, Response, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -6,6 +7,7 @@ from typing import List
 
 from app.database import get_db
 from app.models.user import User
+from app.analytics import track_user_signup, track_profile_completion
 from app.schemas.user import (
     UserOnboarding,
     UserUpdate,
@@ -97,6 +99,19 @@ async def onboarding_user(
             db.commit()
             db.refresh(existing_user)
             response.status_code = status.HTTP_200_OK
+
+            # Track profile completion
+            try:
+                track_profile_completion(
+                    user_id=str(existing_user.id),
+                    completion_percentage=100,
+                    signup_source="onboarding_update"
+                )
+            except Exception as e:
+                # Don't fail the request if analytics fails
+                logger = logging.getLogger(__name__)
+                logger.error(f"Analytics tracking failed for profile completion: {e}")
+
             await send_welcome_email(existing_user)
             return existing_user
         user = User(**user_dict)
@@ -105,6 +120,24 @@ async def onboarding_user(
         db.commit()
         db.refresh(user)
         response.status_code = status.HTTP_201_CREATED
+
+        # Track new user signup and profile completion
+        try:
+            track_user_signup(
+                user_id=str(user.id),
+                signup_source="onboarding",
+                email_domain=user.email.split('@')[1] if user.email else None
+            )
+            track_profile_completion(
+                user_id=str(user.id),
+                completion_percentage=100,
+                signup_source="onboarding"
+            )
+        except Exception as e:
+            # Don't fail the request if analytics fails
+            logger = logging.getLogger(__name__)
+            logger.error(f"Analytics tracking failed for new user signup: {e}")
+
         await send_welcome_email(user)
         return user
     except IntegrityError as e:
@@ -127,7 +160,6 @@ async def onboarding_user(
         )
     except Exception as e:
         db.rollback()
-        import logging
         logger = logging.getLogger(__name__)
         logger.error(f"Error saving user: {str(e)}", exc_info=True)
         raise HTTPException(
@@ -181,7 +213,6 @@ async def debug_token(
             "raw_token_preview": token[:50] + "..." if len(token) > 50 else token
         }
     except Exception as e:
-        import logging
         logger = logging.getLogger(__name__)
         logger.error(f"Debug token error: {str(e)}", exc_info=True)
         raise HTTPException(
