@@ -9,10 +9,12 @@ email-validator==2.3.0
 python-dotenv==1.2.2
 httpx==0.26.0
 apscheduler==3.10.4
-pyjwt==2.8.0
+pyjwt==2.12.0
 cryptography==46.0.5
 svix==1.85.0
 python-multipart==0.0.22
+pgvector==0.3.2
+sentry-sdk[fastapi]==2.17.0
 
 # Testing
 pytest>=8.2,<10
@@ -22,5 +24,5 @@ faker==40.8.0
 
 # Production
 slowapi==0.1.9  # Rate limiting
-python-json-logger==4.0.0  # Structured logging
+python-json-logger==2.0.7  # Structured logging
 prometheus-fastapi-instrumentator==6.1.0  # Metrics

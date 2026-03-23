@@ -216,7 +216,7 @@ async def delete_resource(
             detail="Not authorized to delete this resource"
         )
 
-    resource.is_active = False
+    resource.is_active = False  # type: ignore[assignment]
     db.commit()
 
     return None

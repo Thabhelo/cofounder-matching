@@ -231,7 +231,7 @@ async def rsvp_to_event(
 
     # Apply the RSVP change
     if existing_rsvp:
-        existing_rsvp.rsvp_status = rsvp_data.rsvp_status
+        existing_rsvp.rsvp_status = rsvp_data.rsvp_status  # type: ignore[assignment]
     else:
         rsvp = UserEventRSVP(
             user_id=current_user.id,
@@ -242,7 +242,8 @@ async def rsvp_to_event(
 
     # Update attendee count
     if net_attendee_change != 0:
-        event.current_attendees = max(0, event.current_attendees + net_attendee_change)  # type: ignore[assignment]
+        current = int(event.current_attendees or 0)
+        event.current_attendees = max(0, current + net_attendee_change)  # type: ignore[assignment]
 
     db.commit()
 
@@ -287,7 +288,7 @@ async def delete_event(
             detail="Not authorized to delete this event"
         )
 
-    event.is_active = False
+    event.is_active = False  # type: ignore[assignment]
     db.commit()
 
     return None
