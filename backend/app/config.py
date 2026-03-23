@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     RESEND_API_KEY: str = ""  # Optional: Resend API key for transactional emails
     EMAIL_FROM: str = ""  # Optional: From address for notification emails
     FRONTEND_URL: str = "http://localhost:3000"
+    SENTRY_DSN: str = ""  # Optional: Sentry DSN for error tracking
+    SENTRY_ENVIRONMENT: str = ""  # Optional: Sentry environment (defaults to ENVIRONMENT)
+    SENTRY_TRACES_SAMPLE_RATE: float = 1.0  # Performance monitoring sample rate (0.0 to 1.0)
 
     class Config:
         env_file = ".env"

@@ -17,12 +17,15 @@ from app.config import settings
 from app.api.v1 import api_router
 from app.api import webhooks as webhooks_router
 from app.database import SessionLocal
+from app.logging_config import setup_logging, log_request_metrics, get_logger_with_request_id
+from app.sentry_config import setup_sentry
 
-# Configure structured logging
-logging.basicConfig(
-    level=logging.INFO if settings.ENVIRONMENT == "production" else logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+# Setup enhanced structured logging with PII scrubbing
+setup_logging()
+
+# Setup Sentry error tracking
+setup_sentry()
+
 logger = logging.getLogger(__name__)
 
 # Initialize rate limiter
@@ -179,19 +182,78 @@ async def add_request_id(request: Request, call_next):
     response.headers["X-Request-ID"] = request_id
     return response
 
-# Add logging middleware
+# Add enhanced logging middleware with performance metrics
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
-    """Log all requests with request ID"""
+    """Log all requests with structured data and performance metrics"""
+    import time
+
     request_id = getattr(request.state, "request_id", "unknown")
-    logger.info(f"[{request_id}] {request.method} {request.url.path}")
+    start_time = time.time()
+
+    # Get user ID from request if available (after auth)
+    user_id = None
+    try:
+        # This would be set by auth middleware if present
+        user_id = getattr(request.state, "user_id", None)
+    except AttributeError:
+        pass
+
+    # Create logger with request context
+    request_logger = get_logger_with_request_id("app.requests", request_id)
 
     try:
+        # Log request start
+        request_logger.info("Request started", extra={
+            "event_type": "request_start",
+            "method": request.method,
+            "path": request.url.path,
+            "query_params": str(request.query_params) if request.query_params else None,
+            "user_agent": request.headers.get("user-agent"),
+            "client_ip": request.client.host if request.client else None,
+            "user_id": user_id
+        })
+
         response = await call_next(request)
-        logger.info(f"[{request_id}] Response: {response.status_code}")
+        duration_ms = (time.time() - start_time) * 1000
+
+        # Log structured request metrics
+        log_request_metrics(
+            method=request.method,
+            path=request.url.path,
+            status_code=response.status_code,
+            duration_ms=duration_ms,
+            request_id=request_id,
+            user_id=user_id
+        )
+
         return response
+
     except Exception as e:
-        logger.error(f"[{request_id}] Error: {str(e)}", exc_info=True)
+        duration_ms = (time.time() - start_time) * 1000
+
+        # Log error with context
+        request_logger.error("Request failed", extra={
+            "event_type": "request_error",
+            "method": request.method,
+            "path": request.url.path,
+            "duration_ms": duration_ms,
+            "error": str(e),
+            "error_type": type(e).__name__,
+            "user_id": user_id
+        }, exc_info=True)
+
+        # Also log to metrics
+        log_request_metrics(
+            method=request.method,
+            path=request.url.path,
+            status_code=500,
+            duration_ms=duration_ms,
+            request_id=request_id,
+            user_id=user_id,
+            error=str(e)
+        )
+
         raise
 
 # Add security headers middleware
@@ -218,12 +280,47 @@ async def limit_body_size(request: Request, call_next):
         )
     return await call_next(request)
 
-# Global exception handler - prevents information leakage
+# Global exception handler - prevents information leakage and captures to Sentry
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    """Handle all unhandled exceptions"""
+    """Handle all unhandled exceptions with Sentry integration"""
+    import sentry_sdk
+    from app.sentry_config import capture_custom_error
+
     request_id = getattr(request.state, "request_id", "unknown")
-    logger.error(f"[{request_id}] Unhandled exception: {str(exc)}", exc_info=True)
+    user_id = getattr(request.state, "user_id", None)
+
+    # Capture to Sentry with context
+    try:
+        capture_custom_error(
+            error=exc,
+            context={
+                "request": {
+                    "method": request.method,
+                    "path": request.url.path,
+                    "query_params": str(request.query_params),
+                    "headers": dict(request.headers),
+                    "request_id": request_id,
+                }
+            },
+            user_id=user_id,
+            extra={
+                "request_id": request_id,
+                "environment": settings.ENVIRONMENT,
+            }
+        )
+    except Exception as sentry_error:
+        # If Sentry capture fails, log it but don't crash
+        logger.error(f"Failed to capture exception to Sentry: {sentry_error}")
+
+    # Log locally
+    logger.error(f"[{request_id}] Unhandled exception: {str(exc)}", extra={
+        "request_id": request_id,
+        "user_id": user_id,
+        "method": request.method,
+        "path": request.url.path,
+        "error_type": type(exc).__name__,
+    }, exc_info=True)
 
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -290,31 +387,35 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    """Comprehensive health check including database connectivity"""
+    """Comprehensive health check including database connectivity and pool status"""
+    from app.database import check_database_connection, get_database_stats
+
     health_status = {
         "status": "healthy",
         "environment": settings.ENVIRONMENT,
         "database": "unknown"
     }
 
-    # Check database connectivity
+    # Check database connectivity with enhanced pool information
     try:
-        db = SessionLocal()
-        db.execute(text("SELECT 1"))
-        db.close()
-        health_status["database"] = "connected"
-    except SQLAlchemyError as e:
-        logger.error(f"Database health check failed: {str(e)}")
-        health_status["status"] = "unhealthy"
-        health_status["database"] = "disconnected"
-        return JSONResponse(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            content=health_status
-        )
+        is_healthy, pool_info = await check_database_connection()
+
+        if is_healthy:
+            health_status["database"] = "connected"
+            health_status["database_pool"] = pool_info
+        else:
+            health_status["status"] = "unhealthy"
+            health_status["database"] = "disconnected"
+            health_status["database_pool"] = pool_info
+            return JSONResponse(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                content=health_status
+            )
     except Exception as e:
         logger.error(f"Health check failed: {str(e)}")
         health_status["status"] = "unhealthy"
         health_status["database"] = "error"
+        health_status["error"] = str(e)
         return JSONResponse(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             content=health_status
