@@ -16,6 +16,7 @@ from app.api.v1 import api_router
 from app.api import webhooks as webhooks_router
 from app.logging_config import setup_logging, log_request_metrics, get_logger_with_request_id
 from app.sentry_config import setup_sentry
+from app.middleware.analytics import AnalyticsMiddleware
 
 # Setup enhanced structured logging with PII scrubbing
 setup_logging()
@@ -359,6 +360,10 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
 )
+
+# Add analytics middleware for automatic API usage tracking
+analytics_enabled = hasattr(settings, 'POSTHOG_API_KEY') and settings.POSTHOG_API_KEY
+app.add_middleware(AnalyticsMiddleware, enabled=analytics_enabled)
 
 # Add Prometheus metrics
 if settings.ENVIRONMENT == "production":

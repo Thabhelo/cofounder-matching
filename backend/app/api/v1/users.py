@@ -6,6 +6,7 @@ from typing import List
 
 from app.database import get_db
 from app.models.user import User
+from app.analytics import track_user_signup, track_profile_completion
 from app.schemas.user import (
     UserOnboarding,
     UserUpdate,
@@ -97,6 +98,19 @@ async def onboarding_user(
             db.commit()
             db.refresh(existing_user)
             response.status_code = status.HTTP_200_OK
+
+            # Track profile completion
+            try:
+                track_profile_completion(
+                    user_id=str(existing_user.id),
+                    completion_percentage=100,
+                    signup_source="onboarding_update"
+                )
+            except Exception as e:
+                # Don't fail the request if analytics fails
+                logger = logging.getLogger(__name__)
+                logger.error(f"Analytics tracking failed for profile completion: {e}")
+
             await send_welcome_email(existing_user)
             return existing_user
         user = User(**user_dict)
@@ -105,6 +119,24 @@ async def onboarding_user(
         db.commit()
         db.refresh(user)
         response.status_code = status.HTTP_201_CREATED
+
+        # Track new user signup and profile completion
+        try:
+            track_user_signup(
+                user_id=str(user.id),
+                signup_source="onboarding",
+                email_domain=user.email.split('@')[1] if user.email else None
+            )
+            track_profile_completion(
+                user_id=str(user.id),
+                completion_percentage=100,
+                signup_source="onboarding"
+            )
+        except Exception as e:
+            # Don't fail the request if analytics fails
+            logger = logging.getLogger(__name__)
+            logger.error(f"Analytics tracking failed for new user signup: {e}")
+
         await send_welcome_email(user)
         return user
     except IntegrityError as e:

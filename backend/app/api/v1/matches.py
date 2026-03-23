@@ -10,6 +10,7 @@ from app.database import get_db
 from app.models.user import User
 from app.models.match import Match
 from app.models.message import Message
+from app.analytics import track_match_generation, track_match_view, track_introduction_request, track_introduction_response
 from app.schemas.match import (
     IntroRequest,
     IntroResponse,

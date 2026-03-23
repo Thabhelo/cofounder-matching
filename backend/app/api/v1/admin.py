@@ -19,6 +19,15 @@ from app.models.event import Event
 from app.models.resource import UserSavedResource
 from app.models.event import UserEventRSVP
 from app.models.admin_audit import AdminAuditLog
+from app.models.analytics import (
+    AnalyticsEvent,
+    UserMetrics,
+    FeatureMetrics,
+    ConversionFunnel,
+    RetentionMetrics,
+    PerformanceMetrics,
+    RevenueMetrics,
+)
 from app.schemas.report import ReportReview, ReportListItem
 from app.schemas.user import UserResponse, AdminUserUpdate
 from app.schemas.organization import OrganizationResponse, OrganizationUpdate, AdminOrganizationCreate
@@ -838,3 +847,234 @@ async def trigger_event_reminders(
     _log_admin_action(db, admin.id, "notifications_trigger_event_reminders", details={"sent": count})
     db.commit()
     return {"rsvps_notified": count, "status": "ok"}
+
+
+# Enhanced Analytics Endpoints
+
+@router.get("/analytics/user-metrics")
+def get_user_metrics(
+    days: int = Query(30, ge=1, le=365, description="Number of days to retrieve"),
+    admin: User = Depends(get_current_admin_user),
+    db: Session = Depends(get_db),
+):
+    """Get daily user metrics for the specified period."""
+    since = datetime.now(timezone.utc).date() - timedelta(days=days)
+
+    metrics = (
+        db.query(UserMetrics)
+        .filter(UserMetrics.date >= since)
+        .order_by(UserMetrics.date.desc())
+        .all()
+    )
+
+    return {
+        "period_days": days,
+        "metrics": [
+            {
+                "date": str(metric.date),
+                "total_users": metric.total_users,
+                "new_signups": metric.new_signups,
+                "active_users_daily": metric.active_users_daily,
+                "active_users_weekly": metric.active_users_weekly,
+                "active_users_monthly": metric.active_users_monthly,
+                "profiles_completed": metric.profiles_completed,
+                "avg_profile_completion": metric.avg_profile_completion,
+                "total_sessions": metric.total_sessions,
+                "avg_session_duration_seconds": metric.avg_session_duration_seconds,
+            }
+            for metric in metrics
+        ]
+    }
+
+
+@router.get("/analytics/feature-metrics")
+def get_feature_metrics(
+    days: int = Query(30, ge=1, le=365, description="Number of days to retrieve"),
+    admin: User = Depends(get_current_admin_user),
+    db: Session = Depends(get_db),
+):
+    """Get daily feature usage metrics for the specified period."""
+    since = datetime.now(timezone.utc).date() - timedelta(days=days)
+
+    metrics = (
+        db.query(FeatureMetrics)
+        .filter(FeatureMetrics.date >= since)
+        .order_by(FeatureMetrics.date.desc())
+        .all()
+    )
+
+    return {
+        "period_days": days,
+        "metrics": [
+            {
+                "date": str(metric.date),
+                "matches_generated": metric.matches_generated,
+                "matches_viewed": metric.matches_viewed,
+                "introduction_requests": metric.introduction_requests,
+                "introduction_acceptances": metric.introduction_acceptances,
+                "introduction_rejections": metric.introduction_rejections,
+                "messages_sent": metric.messages_sent,
+                "conversations_started": metric.conversations_started,
+                "resources_viewed": metric.resources_viewed,
+                "resources_saved": metric.resources_saved,
+                "events_viewed": metric.events_viewed,
+                "event_rsvps": metric.event_rsvps,
+                "searches_performed": metric.searches_performed,
+            }
+            for metric in metrics
+        ]
+    }
+
+
+@router.get("/analytics/conversion-funnel")
+def get_conversion_funnel(
+    days: int = Query(30, ge=1, le=365, description="Number of days to retrieve"),
+    admin: User = Depends(get_current_admin_user),
+    db: Session = Depends(get_db),
+):
+    """Get conversion funnel metrics for the specified period."""
+    since = datetime.now(timezone.utc).date() - timedelta(days=days)
+
+    metrics = (
+        db.query(ConversionFunnel)
+        .filter(ConversionFunnel.date >= since)
+        .order_by(ConversionFunnel.date.desc())
+        .all()
+    )
+
+    return {
+        "period_days": days,
+        "metrics": [
+            {
+                "date": str(metric.date),
+                "visitors": metric.visitors,
+                "signups": metric.signups,
+                "signup_conversion_rate": metric.signup_conversion_rate,
+                "profile_starts": metric.profile_starts,
+                "profile_completions": metric.profile_completions,
+                "profile_completion_rate": metric.profile_completion_rate,
+                "first_match_views": metric.first_match_views,
+                "intro_requests": metric.intro_requests,
+                "intro_request_rate": metric.intro_request_rate,
+                "connections_made": metric.connections_made,
+                "first_messages": metric.first_messages,
+                "conversation_start_rate": metric.conversation_start_rate,
+            }
+            for metric in metrics
+        ]
+    }
+
+
+@router.get("/analytics/performance-metrics")
+def get_performance_metrics(
+    days: int = Query(7, ge=1, le=30, description="Number of days to retrieve"),
+    admin: User = Depends(get_current_admin_user),
+    db: Session = Depends(get_db),
+):
+    """Get API performance metrics for the specified period."""
+    since = datetime.now(timezone.utc).date() - timedelta(days=days)
+
+    metrics = (
+        db.query(PerformanceMetrics)
+        .filter(PerformanceMetrics.date >= since)
+        .order_by(PerformanceMetrics.date.desc(), PerformanceMetrics.hour.desc())
+        .all()
+    )
+
+    return {
+        "period_days": days,
+        "metrics": [
+            {
+                "date": str(metric.date),
+                "hour": metric.hour,
+                "total_requests": metric.total_requests,
+                "successful_requests": metric.successful_requests,
+                "error_requests": metric.error_requests,
+                "success_rate": round(metric.successful_requests / metric.total_requests * 100, 2) if metric.total_requests > 0 else 0,
+                "avg_response_time_ms": metric.avg_response_time_ms,
+                "p95_response_time_ms": metric.p95_response_time_ms,
+                "p99_response_time_ms": metric.p99_response_time_ms,
+                "error_4xx": metric.error_4xx,
+                "error_5xx": metric.error_5xx,
+            }
+            for metric in metrics
+        ]
+    }
+
+
+@router.get("/analytics/retention-metrics")
+def get_retention_metrics(
+    cohort_months: int = Query(6, ge=1, le=24, description="Number of cohort months to retrieve"),
+    admin: User = Depends(get_current_admin_user),
+    db: Session = Depends(get_db),
+):
+    """Get user retention cohort analysis for the specified period."""
+    since = datetime.now(timezone.utc).date().replace(day=1) - timedelta(days=cohort_months * 31)
+
+    metrics = (
+        db.query(RetentionMetrics)
+        .filter(RetentionMetrics.cohort_month >= since)
+        .order_by(RetentionMetrics.cohort_month.desc(), RetentionMetrics.period)
+        .all()
+    )
+
+    # Group by cohort month
+    cohort_data = {}
+    for metric in metrics:
+        cohort_key = str(metric.cohort_month)
+        if cohort_key not in cohort_data:
+            cohort_data[cohort_key] = {
+                "cohort_month": cohort_key,
+                "cohort_size": metric.cohort_size,
+                "periods": []
+            }
+
+        cohort_data[cohort_key]["periods"].append({
+            "period": metric.period,
+            "retained_users": metric.retained_users,
+            "retention_rate": metric.retention_rate,
+        })
+
+    return {
+        "cohort_months": cohort_months,
+        "cohorts": list(cohort_data.values())
+    }
+
+
+@router.get("/analytics/events")
+def get_analytics_events(
+    event_name: str = Query(None, description="Filter by specific event name"),
+    days: int = Query(7, ge=1, le=30, description="Number of days to retrieve"),
+    limit: int = Query(100, ge=1, le=1000, description="Maximum number of events to return"),
+    admin: User = Depends(get_current_admin_user),
+    db: Session = Depends(get_db),
+):
+    """Get analytics events for the specified period."""
+    since = datetime.now(timezone.utc).date() - timedelta(days=days)
+
+    query = db.query(AnalyticsEvent).filter(AnalyticsEvent.event_date >= since)
+
+    if event_name:
+        query = query.filter(AnalyticsEvent.event_name == event_name)
+
+    events = (
+        query
+        .order_by(AnalyticsEvent.event_date.desc(), AnalyticsEvent.hour.desc())
+        .limit(limit)
+        .all()
+    )
+
+    return {
+        "period_days": days,
+        "event_name_filter": event_name,
+        "events": [
+            {
+                "event_name": event.event_name,
+                "event_date": str(event.event_date),
+                "hour": event.hour,
+                "count": event.count,
+                "properties": event.properties,
+            }
+            for event in events
+        ]
+    }

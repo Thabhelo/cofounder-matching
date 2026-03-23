@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     SENTRY_DSN: str = ""  # Optional: Sentry DSN for error tracking
     SENTRY_ENVIRONMENT: str = ""  # Optional: Sentry environment (defaults to ENVIRONMENT)
     SENTRY_TRACES_SAMPLE_RATE: float = 1.0  # Performance monitoring sample rate (0.0 to 1.0)
+    POSTHOG_API_KEY: str = ""  # Optional: PostHog API key for analytics
+    POSTHOG_HOST: str = "https://app.posthog.com"  # PostHog instance host
 
     class Config:
         env_file = ".env"
