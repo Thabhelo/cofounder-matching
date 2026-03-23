@@ -90,12 +90,23 @@ async def check_database_connection():
 
         # Get pool information
         pool = engine.pool
+        invalid_value = None
+        # SQLAlchemy's pool API differs a bit across versions; some pool
+        # implementations may not expose an `invalid` attribute/method.
+        invalid_attr = getattr(pool, "invalid", None)
+        if callable(invalid_attr):
+            try:
+                invalid_value = invalid_attr()
+            except Exception:
+                invalid_value = "unknown"
+        elif invalid_attr is not None:
+            invalid_value = invalid_attr
         pool_info = {
             "pool_size": pool.size(),
             "checked_in": pool.checkedin(),
             "checked_out": pool.checkedout(),
             "overflow": pool.overflow(),
-            "invalid": pool.invalid(),
+            "invalid": invalid_value,
         }
 
         logger.info(f"Database health check passed. Pool status: {pool_info}")
@@ -109,6 +120,15 @@ async def check_database_connection():
 def get_database_stats():
     """Get detailed database connection pool statistics"""
     pool = engine.pool
+    invalid_value = None
+    invalid_attr = getattr(pool, "invalid", None)
+    if callable(invalid_attr):
+        try:
+            invalid_value = invalid_attr()
+        except Exception:
+            invalid_value = "unknown"
+    elif invalid_attr is not None:
+        invalid_value = invalid_attr
     return {
         "pool_size": getattr(pool, '_pool_size', 'unknown'),
         "max_overflow": getattr(pool, '_max_overflow', 'unknown'),
@@ -118,5 +138,5 @@ def get_database_stats():
         "checked_in": pool.checkedin(),
         "checked_out": pool.checkedout(),
         "overflow": pool.overflow(),
-        "invalid": pool.invalid(),
+        "invalid": invalid_value,
     }
