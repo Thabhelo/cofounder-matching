@@ -362,7 +362,7 @@ app.add_middleware(
 )
 
 # Add analytics middleware for automatic API usage tracking
-analytics_enabled = hasattr(settings, 'POSTHOG_API_KEY') and settings.POSTHOG_API_KEY
+analytics_enabled = bool(getattr(settings, "POSTHOG_API_KEY", None))
 app.add_middleware(AnalyticsMiddleware, enabled=analytics_enabled)
 
 # Add Prometheus metrics

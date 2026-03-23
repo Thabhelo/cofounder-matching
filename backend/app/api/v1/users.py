@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import logging
 from fastapi import APIRouter, Depends, HTTPException, Response, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -159,7 +160,6 @@ async def onboarding_user(
         )
     except Exception as e:
         db.rollback()
-        import logging
         logger = logging.getLogger(__name__)
         logger.error(f"Error saving user: {str(e)}", exc_info=True)
         raise HTTPException(
@@ -213,7 +213,6 @@ async def debug_token(
             "raw_token_preview": token[:50] + "..." if len(token) > 50 else token
         }
     except Exception as e:
-        import logging
         logger = logging.getLogger(__name__)
         logger.error(f"Debug token error: {str(e)}", exc_info=True)
         raise HTTPException(

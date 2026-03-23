@@ -1,5 +1,6 @@
 import re
 import uuid as _uuid_module
+from typing import TypedDict
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -26,7 +27,6 @@ from app.models.analytics import (
     ConversionFunnel,
     RetentionMetrics,
     PerformanceMetrics,
-    RevenueMetrics,
 )
 from app.schemas.report import ReportReview, ReportListItem
 from app.schemas.user import UserResponse, AdminUserUpdate
@@ -39,6 +39,19 @@ from app.services.email import send_profile_status_notification
 from app.services.feature_flags import get_all_flags, set_flag, FLAG_LABELS
 
 router = APIRouter()
+
+
+# TypedDict classes for retention metrics
+class RetentionPeriod(TypedDict):
+    period: int
+    retained_users: int
+    retention_rate: float | None
+
+
+class CohortItem(TypedDict):
+    cohort_month: str
+    cohort_size: int
+    periods: list[RetentionPeriod]
 
 
 def _log_admin_action(
@@ -236,25 +249,16 @@ def list_reports(
     else:
         q = q.order_by(order_col.desc())
     reports = q.offset(skip).limit(limit).all()
-    return [
-        ReportListItem(
-            id=r.id,
-            reporter_id=r.reporter_id,
-            reported_user_id=r.reported_user_id,
-            report_type=r.report_type,
-            description=r.description,
-            status=r.status,
-            reviewed_by=r.reviewed_by,
-            reviewed_at=r.reviewed_at,
-            resolution_notes=r.resolution_notes,
-            created_at=r.created_at,
-            reporter_name=r.reporter.name if r.reporter else None,
-            reporter_email=r.reporter.email if r.reporter else None,
-            reported_user_name=r.reported_user.name if r.reported_user else None,
-            reported_user_email=r.reported_user.email if r.reported_user else None,
-        )
-        for r in reports
-    ]
+    items: list[ReportListItem] = []
+    for r in reports:
+        item = ReportListItem.model_validate(r)  # ORM -> schema (from_attributes)
+        # add extra fields not on model:
+        item.reporter_name = r.reporter.name if r.reporter else None
+        item.reporter_email = r.reporter.email if r.reporter else None
+        item.reported_user_name = r.reported_user.name if r.reported_user else None
+        item.reported_user_email = r.reported_user.email if r.reported_user else None
+        items.append(item)
+    return items
 
 
 @router.put("/reports/{report_id}", response_model=ReportListItem)
@@ -275,22 +279,13 @@ def review_report(
     _log_admin_action(db, admin.id, "report_review", "report", report_id, {"status": body.status})
     db.commit()
     db.refresh(r)
-    return ReportListItem(
-        id=r.id,
-        reporter_id=r.reporter_id,
-        reported_user_id=r.reported_user_id,
-        report_type=r.report_type,
-        description=r.description,
-        status=r.status,
-        reviewed_by=r.reviewed_by,
-        reviewed_at=r.reviewed_at,
-        resolution_notes=r.resolution_notes,
-        created_at=r.created_at,
-        reporter_name=r.reporter.name if r.reporter else None,
-        reporter_email=r.reporter.email if r.reporter else None,
-        reported_user_name=r.reported_user.name if r.reported_user else None,
-        reported_user_email=r.reported_user.email if r.reported_user else None,
-    )
+    item = ReportListItem.model_validate(r)  # ORM -> schema (from_attributes)
+    # add extra fields not on model:
+    item.reporter_name = r.reporter.name if r.reporter else None
+    item.reporter_email = r.reporter.email if r.reporter else None
+    item.reported_user_name = r.reported_user.name if r.reported_user else None
+    item.reported_user_email = r.reported_user.email if r.reported_user else None
+    return item
 
 
 @router.get("/users", response_model=list[UserResponse])
@@ -1019,7 +1014,7 @@ def get_retention_metrics(
     )
 
     # Group by cohort month
-    cohort_data = {}
+    cohort_data: dict[str, CohortItem] = {}
     for metric in metrics:
         cohort_key = str(metric.cohort_month)
         if cohort_key not in cohort_data:
