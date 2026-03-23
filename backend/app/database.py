@@ -35,7 +35,6 @@ def get_engine_config():
                 "sslkey": None,        # Client private key (if needed)
                 "sslrootcert": None,   # CA certificate (if needed)
                 "application_name": f"cofounder_matching_{settings.ENVIRONMENT}",
-                "options": "-c log_statement=none",  # Disable SQL logging in production
             }
         }
     elif settings.ENVIRONMENT == "test":
