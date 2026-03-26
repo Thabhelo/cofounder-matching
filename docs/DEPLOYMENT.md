@@ -35,7 +35,7 @@ After the Blueprint is applied, go to the `cofounder-api` service -> **Environme
 |---|---|
 | `CLERK_SECRET_KEY` | Clerk Dashboard -> API Keys -> Secret key |
 | `CLERK_PUBLISHABLE_KEY` | Clerk Dashboard -> API Keys -> Publishable key |
-| `CLERK_FRONTEND_API` | Clerk Dashboard -> API Keys -> Frontend API URL (e.g. `https://your-instance.clerk.accounts.dev`) |
+| `CLERK_FRONTEND_API` | Clerk Dashboard -> API Keys -> Frontend API URL. **IMPORTANT**: For production, use `https://your-instance.clerk.accounts.com` (not `.dev`). The backend will auto-correct dev URLs in production, but set the correct domain. |
 | `CORS_ORIGINS` | `https://cofounder-matching-git-main-thabhelos-projects.vercel.app` |
 | `ADMIN_CLERK_IDS` | Comma-separated Clerk user IDs for admins. Find your ID: Clerk Dashboard -> Users -> click your user -> copy User ID (`user_...`) |
 | `CLERK_WEBHOOK_SECRET` | Clerk Dashboard -> Webhooks -> your endpoint -> Signing secret |
@@ -43,6 +43,28 @@ After the Blueprint is applied, go to the `cofounder-api` service -> **Environme
 | `EMAIL_FROM` | The verified sender address you configure in Resend, e.g. `Cofounder Matching <updates@yourdomain.com>` |
 
 After saving, Render redeploys automatically.
+
+### 🚨 Critical: Production Clerk Configuration
+
+**ISSUE**: If production redirects to Clerk dev handshake, check these:
+
+1. **Backend Environment Variables** (Render):
+   - `CLERK_PUBLISHABLE_KEY` → Use production key (not dev)
+   - `CLERK_SECRET_KEY` → Use production key (not dev)
+   - `CLERK_FRONTEND_API` → Use `https://your-instance.clerk.accounts.com` (not `.dev`)
+   - `ENVIRONMENT` → Set to `production`
+
+2. **Frontend Environment Variables** (Vercel):
+   - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` → Use production key (not dev)
+   - `NEXT_PUBLIC_API_URL` → Point to production backend URL
+
+3. **Clerk Dashboard Settings**:
+   - Go to Clerk Dashboard → Allowed origins
+   - Add your production frontend domain (e.g., `https://yourdomain.com`)
+   - Add your production backend domain for API calls
+   - Update redirect URLs to production domains
+
+**The fix automatically corrects `.clerk.accounts.dev` → `.clerk.accounts.com` in production, but you should set the correct URLs initially.**
 
 ---
 

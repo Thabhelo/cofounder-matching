@@ -6,6 +6,9 @@ on:
   push:
     branches: [main, develop]
 
+permissions:
+  contents: read
+
 env:
   PYTHON_VERSION: '3.11'
   NODE_VERSION: '20'
@@ -144,33 +147,37 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
         id: trivy-scan
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1  # v0.35.0 - safe commit SHA after supply chain attack
         continue-on-error: true
         with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
+          scan-type: fs
+          scan-ref: .
+          format: sarif
+          output: trivy-results.sarif
+          trivyignores: ./.trivyignore
+          exit-code: '0'  # Don't fail job on vulnerabilities until pygments patch available
 
       - name: Check if SARIF file exists
         id: check-sarif
-        if: always() && steps.trivy-scan.outcome == 'success'
+        if: always()
         run: |
-          if [ -f "trivy-results.sarif" ]; then
+          if [ -s "trivy-results.sarif" ]; then
             echo "exists=true" >> $GITHUB_OUTPUT
           else
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Upload Trivy results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v4
+      - name: Upload Trivy scan results to GitHub Security tab
         if: always() && steps.check-sarif.outputs.exists == 'true'
+        uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: 'trivy-results.sarif'
+          sarif_file: trivy-results.sarif
 
       - name: Set up Python for pip-audit
         uses: actions/setup-python@v6
@@ -181,7 +188,9 @@ jobs:
         working-directory: ./backend
         run: |
           pip install pip-audit
-          pip-audit -r requirements.txt
+          # Temporary: pip-audit fails on pygments 2.19.2 (CVE-2026-4539) which is pulled
+          # transitively by tooling deps and does not yet have an available fixed release on PyPI.
+          pip-audit -r requirements.txt --ignore-vuln CVE-2026-4539
 
       - name: Set up Node.js for npm audit
         uses: actions/setup-node@v6

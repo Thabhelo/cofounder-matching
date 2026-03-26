@@ -27,3 +27,6 @@ faker==40.8.0
 slowapi==0.1.9  # Rate limiting
 python-json-logger==2.0.7  # Structured logging
 prometheus-fastapi-instrumentator==6.1.0  # Metrics
+
+# Security patches
+# pygments 2.19.3+ not yet available - using .trivyignore to temporarily ignore CVE-2026-4539
