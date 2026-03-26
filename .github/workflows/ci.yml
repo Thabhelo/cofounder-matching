@@ -153,7 +153,7 @@ jobs:
 
       - name: Run Trivy vulnerability scanner
         id: trivy-scan
-        uses: aquasecurity/trivy-action@v1  # TODO: Pin to verified commit SHA for supply chain security
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1  # v0.35.0 - safe commit SHA after supply chain attack
         continue-on-error: true
         with:
           scan-type: fs
