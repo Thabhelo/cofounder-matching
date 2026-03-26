@@ -1,246 +1,34 @@
-import { useId } from "react"
-import { UseFormValidationResult } from "@/hooks/useFormValidation"
+import React from 'react'
+import { cn } from '@/lib/utils'
 
-/**
- * Base validated form field props
- */
-interface BaseFormFieldProps {
-  name: string
-  label?: string
+interface FormFieldProps {
+  label: string
+  error?: string | null
   required?: boolean
-  validation?: UseFormValidationResult<any>
+  children: React.ReactNode
   className?: string
 }
 
 /**
- * Validated text input field
+ * Form field wrapper with label and inline error display
  */
-interface TextFieldProps extends BaseFormFieldProps {
-  type?: "text" | "email" | "url" | "password"
-  value: string
-  onChange: (value: string) => void
-  placeholder?: string
-  maxLength?: number
-  minLength?: number
-}
-
-export function TextField({
-  name,
-  label,
-  type = "text",
-  value,
-  onChange,
-  placeholder,
-  required,
-  validation,
-  maxLength,
-  minLength,
-  className = "",
-}: TextFieldProps) {
-  const id = useId()
-  const error = validation?.getFieldError(name)
-  const isTouched = validation?.isFieldTouched(name)
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value
-    onChange(newValue)
-
-    // Validate on change if field has been touched
-    if (validation && isTouched) {
-      validation.validateField(name, newValue)
-    }
-  }
-
-  const handleBlur = () => {
-    if (validation) {
-      validation.validateField(name, value)
-    }
-  }
-
+export function FormField({ label, error, required, children, className }: FormFieldProps) {
   return (
-    <div className={className}>
-      {label && (
-        <label htmlFor={id} className="block text-sm font-medium text-gray-700 mb-1">
-          {label}
-          {required && <span className="text-red-500 ml-1">*</span>}
-        </label>
-      )}
-      <input
-        id={id}
-        name={name}
-        type={type}
-        value={value}
-        onChange={handleChange}
-        onBlur={handleBlur}
-        placeholder={placeholder}
-        maxLength={maxLength}
-        minLength={minLength}
-        required={required}
-        aria-invalid={!!error}
-        aria-describedby={error ? `${id}-error` : undefined}
-        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-zinc-900 focus:border-transparent ${
-          error ? "border-red-500" : "border-gray-300"
-        }`}
-      />
-      {error && (
-        <p id={`${id}-error`} className="mt-1 text-sm text-red-600" role="alert">
-          {error}
-        </p>
-      )}
-    </div>
-  )
-}
+    <div className={cn("space-y-1", className)}>
+      <label className="block text-sm font-medium text-gray-700">
+        {label}
+        {required && <span className="text-red-500 ml-1">*</span>}
+      </label>
 
-/**
- * Validated select field
- */
-interface SelectFieldProps extends BaseFormFieldProps {
-  value: string
-  onChange: (value: string) => void
-  options: readonly { value: string; label: string }[] | Array<{ value: string; label: string }>
-  placeholder?: string
-}
-
-export function SelectField({
-  name,
-  label,
-  value,
-  onChange,
-  options,
-  placeholder,
-  required,
-  validation,
-  className = "",
-}: SelectFieldProps) {
-  const id = useId()
-  const error = validation?.getFieldError(name)
-  const isTouched = validation?.isFieldTouched(name)
-
-  const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newValue = e.target.value
-    onChange(newValue)
-
-    // Validate on change if field has been touched
-    if (validation && isTouched) {
-      validation.validateField(name, newValue)
-    }
-  }
-
-  const handleBlur = () => {
-    if (validation) {
-      validation.validateField(name, value)
-    }
-  }
-
-  return (
-    <div className={className}>
-      {label && (
-        <label htmlFor={id} className="block text-sm font-medium text-gray-700 mb-1">
-          {label}
-          {required && <span className="text-red-500 ml-1">*</span>}
-        </label>
-      )}
-      <select
-        id={id}
-        name={name}
-        value={value}
-        onChange={handleChange}
-        onBlur={handleBlur}
-        required={required}
-        aria-invalid={!!error}
-        aria-describedby={error ? `${id}-error` : undefined}
-        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-zinc-900 focus:border-transparent ${
-          error ? "border-red-500" : "border-gray-300"
-        }`}
-      >
-        {placeholder && (
-          <option value="">{placeholder}</option>
-        )}
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-      {error && (
-        <p id={`${id}-error`} className="mt-1 text-sm text-red-600" role="alert">
-          {error}
-        </p>
-      )}
-    </div>
-  )
-}
-
-/**
- * Validated radio group field
- */
-interface RadioGroupFieldProps extends BaseFormFieldProps {
-  value: string | boolean
-  onChange: (value: string | boolean) => void
-  options: Array<{ value: string | boolean; label: string }>
-}
-
-export function RadioGroupField({
-  name,
-  label,
-  value,
-  onChange,
-  options,
-  required,
-  validation,
-  className = "",
-}: RadioGroupFieldProps) {
-  const id = useId()
-  const error = validation?.getFieldError(name)
-  const isTouched = validation?.isFieldTouched(name)
-
-  const handleChange = (newValue: string | boolean) => {
-    onChange(newValue)
-
-    // Validate on change if field has been touched
-    if (validation && isTouched) {
-      validation.validateField(name, newValue)
-    }
-  }
-
-  const handleBlur = () => {
-    if (validation) {
-      validation.validateField(name, value)
-    }
-  }
-
-  return (
-    <div className={className}>
-      {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          {label}
-          {required && <span className="text-red-500 ml-1">*</span>}
-        </label>
-      )}
-      <div
-        className="space-y-2"
-        role="radiogroup"
-        aria-labelledby={label ? `${id}-label` : undefined}
-        onBlur={handleBlur}
-      >
-        {options.map((option, index) => (
-          <label key={String(option.value)} className="flex items-center gap-2">
-            <input
-              type="radio"
-              name={name}
-              value={String(option.value)}
-              checked={value === option.value}
-              onChange={() => handleChange(option.value)}
-              required={required}
-              aria-describedby={error ? `${id}-error` : undefined}
-              className="rounded border-gray-300 text-zinc-900 focus:ring-zinc-900"
-            />
-            <span>{option.label}</span>
-          </label>
-        ))}
+      <div className="relative">
+        {children}
       </div>
+
       {error && (
-        <p id={`${id}-error`} className="mt-1 text-sm text-red-600" role="alert">
+        <p className="text-sm text-red-600 flex items-center gap-1">
+          <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+          </svg>
           {error}
         </p>
       )}
@@ -248,137 +36,83 @@ export function RadioGroupField({
   )
 }
 
+interface FormInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  error?: string | null
+}
+
 /**
- * Enhanced form components that wrap existing components with validation
+ * Input component with error state styling
  */
-import { RichTextArea as BaseRichTextArea } from "./RichTextArea"
-import { LocationPicker as BaseLocationPicker } from "./LocationPicker"
-import { MultiSelect as BaseMultiSelect } from "./MultiSelect"
-import { TagInput as BaseTagInput } from "./TagInput"
-
-interface ValidatedRichTextAreaProps extends BaseFormFieldProps {
-  value: string
-  onChange: (value: string) => void
-  placeholder?: string
-  minLength?: number
-  maxLength?: number
-  rows?: number
-}
-
-export function ValidatedRichTextArea({
-  name,
-  label,
-  value,
-  onChange,
-  validation,
-  ...props
-}: ValidatedRichTextAreaProps) {
-  const error = validation?.getFieldError(name)
-  const isTouched = validation?.isFieldTouched(name)
-
-  const handleChange = (newValue: string) => {
-    onChange(newValue)
-
-    // Validate on change if field has been touched
-    if (validation && isTouched) {
-      validation.validateField(name, newValue)
-    }
-  }
-
-  const handleBlur = () => {
-    if (validation) {
-      validation.validateField(name, value)
-    }
-  }
-
+export function FormInput({ error, className, ...props }: FormInputProps) {
   return (
-    <div onBlur={handleBlur}>
-      <BaseRichTextArea
-        {...props}
-        label={label}
-        value={value}
-        onChange={handleChange}
-        error={error}
-      />
-    </div>
-  )
-}
-
-interface ValidatedLocationPickerProps extends BaseFormFieldProps {
-  value: string
-  onChange: (value: string, components?: any) => void
-  placeholder?: string
-}
-
-export function ValidatedLocationPicker({
-  name,
-  value,
-  onChange,
-  validation,
-  ...props
-}: ValidatedLocationPickerProps) {
-  const error = validation?.getFieldError(name)
-
-  const handleChange = (newValue: string, components?: any) => {
-    onChange(newValue, components)
-
-    if (validation) {
-      validation.validateField(name, newValue)
-    }
-  }
-
-  return (
-    <BaseLocationPicker
+    <input
+      className={cn(
+        "w-full px-4 py-2 border rounded-lg transition-colors",
+        error
+          ? "border-red-300 text-red-900 placeholder-red-300 focus:outline-none focus:ring-red-500 focus:border-red-500"
+          : "border-gray-300 focus:outline-none focus:ring-zinc-500 focus:border-zinc-500",
+        className
+      )}
+      aria-invalid={error ? 'true' : 'false'}
+      aria-describedby={error ? `${props.name}-error` : undefined}
       {...props}
-      value={value}
-      onChange={handleChange}
-      error={error}
     />
   )
 }
 
-interface ValidatedMultiSelectProps extends BaseFormFieldProps {
-  value: string[]
-  onChange: (value: string[]) => void
-  options: readonly { value: string; label: string }[] | Array<{ value: string; label: string }>
-  minSelection?: number
+interface FormTextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+  error?: string | null
 }
 
-export function ValidatedMultiSelect({
-  name,
-  label,
-  value,
-  onChange,
-  validation,
-  ...props
-}: ValidatedMultiSelectProps) {
-  const error = validation?.getFieldError(name)
-  const isTouched = validation?.isFieldTouched(name)
-
-  const handleChange = (newValue: string[]) => {
-    onChange(newValue)
-
-    // Validate on change if field has been touched
-    if (validation && isTouched) {
-      validation.validateField(name, newValue)
-    }
-  }
-
-  const handleBlur = () => {
-    if (validation) {
-      validation.validateField(name, value)
-    }
-  }
-
+/**
+ * Textarea component with error state styling
+ */
+export function FormTextarea({ error, className, ...props }: FormTextareaProps) {
   return (
-    <div onBlur={handleBlur}>
-      <BaseMultiSelect
-        {...props}
-        label={label}
-        value={value}
-        onChange={handleChange}
-        error={error}
-      />
-    </div>
+    <textarea
+      className={cn(
+        "w-full px-4 py-2 border rounded-lg transition-colors",
+        error
+          ? "border-red-300 text-red-900 placeholder-red-300 focus:outline-none focus:ring-red-500 focus:border-red-500"
+          : "border-gray-300 focus:outline-none focus:ring-zinc-500 focus:border-zinc-500",
+        className
+      )}
+      aria-invalid={error ? 'true' : 'false'}
+      aria-describedby={error ? `${props.name}-error` : undefined}
+      {...props}
+    />
+  )
+}
+
+interface FormSelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
+  error?: string | null
+  options: readonly { value: string; label: string }[]
+  placeholder?: string
+}
+
+/**
+ * Select component with error state styling
+ */
+export function FormSelect({ error, options, placeholder, className, ...props }: FormSelectProps) {
+  return (
+    <select
+      className={cn(
+        "w-full px-4 py-2 border rounded-lg transition-colors bg-white",
+        error
+          ? "border-red-300 text-red-900 focus:outline-none focus:ring-red-500 focus:border-red-500"
+          : "border-gray-300 focus:outline-none focus:ring-zinc-500 focus:border-zinc-500",
+        className
+      )}
+      aria-invalid={error ? 'true' : 'false'}
+      aria-describedby={error ? `${props.name}-error` : undefined}
+      {...props}
+    >
+      {placeholder && <option value="">{placeholder}</option>}
+      {options.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
   )
 }

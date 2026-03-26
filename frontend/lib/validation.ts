@@ -1,182 +1,124 @@
-import { z } from "zod"
-
 /**
- * Form validation utilities for integrating Zod schemas with form components
+ * Validation error handling utilities for inline field-level errors
  */
 
 export type ValidationErrors = Record<string, string>
 
 /**
- * Parse backend validation errors into a format suitable for form fields
+ * Parse API validation errors into field-level error map
+ * @param error - API error response
+ * @returns Object mapping field names to error messages
  */
 export function parseValidationErrors(error: any): ValidationErrors {
   const errors: ValidationErrors = {}
 
   if (error?.detail && Array.isArray(error.detail)) {
-    // FastAPI/Pydantic validation errors
+    // FastAPI validation errors: [{ loc: [..., "field_name"], msg: "error message" }]
     error.detail.forEach((err: any) => {
-      const field = err.loc?.slice(-1)[0] // Get the field name from location
+      const field = err.loc?.slice(-1)[0]
       const message = err.msg
       if (field && message) {
         errors[field] = message
       }
     })
-  } else if (error?.errors && Array.isArray(error.errors)) {
-    // Generic validation errors array
-    error.errors.forEach((err: any) => {
-      if (err.field && err.message) {
-        errors[err.field] = err.message
-      }
-    })
-  } else if (error?.message && typeof error.message === "string") {
-    // Generic error message
-    errors._form = error.message
+  } else if (typeof error?.detail === 'string') {
+    // Generic error - apply to a general field
+    errors._general = error.detail
   }
 
   return errors
 }
 
 /**
- * Validate form data against a Zod schema and return errors
+ * Client-side validation functions
  */
-export function validateForm<T>(schema: z.ZodSchema<T>, data: any): ValidationErrors {
-  const result = schema.safeParse(data)
+export const validators = {
+  required: (value: string, fieldName = 'Field') => {
+    if (!value || value.trim() === '') {
+      return `${fieldName} is required`
+    }
+    return null
+  },
+
+  email: (value: string) => {
+    if (!value) return null
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(value)) {
+      return 'Please enter a valid email address'
+    }
+    return null
+  },
+
+  url: (value: string, fieldName = 'URL') => {
+    if (!value) return null
+    try {
+      new URL(value)
+      return null
+    } catch {
+      return `Please enter a valid ${fieldName}`
+    }
+  },
+
+  linkedinUrl: (value: string) => {
+    if (!value) return 'LinkedIn URL is required'
+    const urlError = validators.url(value, 'LinkedIn URL')
+    if (urlError) return urlError
+
+    if (!value.includes('linkedin.com')) {
+      return 'Please enter a valid LinkedIn URL (must contain linkedin.com)'
+    }
+    return null
+  },
+
+  minLength: (value: string, min: number, fieldName = 'Field') => {
+    if (!value) return null
+    if (value.trim().length < min) {
+      return `${fieldName} must be at least ${min} characters`
+    }
+    return null
+  },
+
+  maxLength: (value: string, max: number, fieldName = 'Field') => {
+    if (!value) return null
+    if (value.length > max) {
+      return `${fieldName} must be no more than ${max} characters`
+    }
+    return null
+  }
+}
+
+/**
+ * Validate a single field with multiple validators
+ */
+export function validateField(value: string, validatorFunctions: Array<(value: string) => string | null>): string | null {
+  for (const validate of validatorFunctions) {
+    const error = validate(value)
+    if (error) return error
+  }
+  return null
+}
+
+/**
+ * Validate an entire form object
+ * @param formData - Form data object
+ * @param fieldValidators - Map of field names to validator functions (partial - only validates specified fields)
+ * @returns ValidationErrors object with any errors found
+ */
+export function validateForm<T extends Record<string, any>>(
+  formData: T,
+  fieldValidators: Partial<Record<keyof T, Array<(value: any) => string | null>>>
+): ValidationErrors {
   const errors: ValidationErrors = {}
 
-  if (!result.success) {
-    result.error.issues.forEach((err: any) => {
-      const field = err.path.join(".")
-      errors[field] = err.message
-    })
+  for (const [field, validators] of Object.entries(fieldValidators)) {
+    if (validators) {
+      const value = formData[field]
+      const error = validateField(String(value || ''), validators)
+      if (error) {
+        errors[field] = error
+      }
+    }
   }
 
   return errors
-}
-
-/**
- * Validate a single field against a Zod schema
- */
-export function validateField<T>(schema: z.ZodSchema<T>, fieldName: string, value: any, fullData: any = {}): string | undefined {
-  try {
-    // Try to validate just this field by creating a partial schema
-    const schemaAny = schema as any
-    const fieldSchema = schemaAny.shape?.[fieldName]
-    if (fieldSchema) {
-      fieldSchema.parse(value)
-    } else {
-      // Fallback: validate the full object and extract this field's error
-      const result = schema.safeParse({ ...fullData, [fieldName]: value })
-      if (!result.success) {
-        const fieldError = result.error.issues.find((err: any) => err.path[0] === fieldName)
-        if (fieldError) {
-          return fieldError.message
-        }
-      }
-    }
-    return undefined
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return error.issues[0]?.message
-    }
-    return "Invalid value"
-  }
-}
-
-/**
- * Hook-like utility for managing form validation state
- */
-export class FormValidator<T> {
-  private schema: z.ZodSchema<T>
-  private errors: ValidationErrors = {}
-  private touchedFields: Set<string> = new Set()
-
-  constructor(schema: z.ZodSchema<T>) {
-    this.schema = schema
-  }
-
-  /**
-   * Validate the entire form
-   */
-  validateAll(data: any): ValidationErrors {
-    this.errors = validateForm(this.schema, data)
-    // Mark all fields as touched
-    Object.keys(data).forEach(key => this.touchedFields.add(key))
-    return this.errors
-  }
-
-  /**
-   * Validate a single field
-   */
-  validateField(fieldName: string, value: any, fullData: any = {}): string | undefined {
-    this.touchedFields.add(fieldName)
-    const error = validateField(this.schema, fieldName, value, fullData)
-
-    if (error) {
-      this.errors[fieldName] = error
-    } else {
-      delete this.errors[fieldName]
-    }
-
-    return error
-  }
-
-  /**
-   * Set backend validation errors
-   */
-  setBackendErrors(backendErrors: any): void {
-    const parsed = parseValidationErrors(backendErrors)
-    this.errors = { ...this.errors, ...parsed }
-    // Mark all error fields as touched
-    Object.keys(parsed).forEach(key => this.touchedFields.add(key))
-  }
-
-  /**
-   * Get error for a specific field
-   */
-  getFieldError(fieldName: string): string | undefined {
-    return this.errors[fieldName]
-  }
-
-  /**
-   * Get all errors
-   */
-  getErrors(): ValidationErrors {
-    return this.errors
-  }
-
-  /**
-   * Check if a field has been touched
-   */
-  isFieldTouched(fieldName: string): boolean {
-    return this.touchedFields.has(fieldName)
-  }
-
-  /**
-   * Check if form is valid
-   */
-  isValid(): boolean {
-    return Object.keys(this.errors).length === 0
-  }
-
-  /**
-   * Clear all errors
-   */
-  clearErrors(): void {
-    this.errors = {}
-  }
-
-  /**
-   * Clear errors for a specific field
-   */
-  clearFieldError(fieldName: string): void {
-    delete this.errors[fieldName]
-  }
-
-  /**
-   * Reset validation state
-   */
-  reset(): void {
-    this.errors = {}
-    this.touchedFields.clear()
-  }
 }
