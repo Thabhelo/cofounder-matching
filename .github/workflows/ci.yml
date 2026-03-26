@@ -160,11 +160,12 @@ jobs:
           scan-ref: .
           format: sarif
           output: trivy-results.sarif
+          trivyignores: .trivyignore
           exit-code: '0'  # Don't fail job on vulnerabilities until pygments patch available
 
       - name: Check if SARIF file exists
         id: check-sarif
-        if: always() && steps.trivy-scan.outcome == 'success'
+        if: always()
         run: |
           if [ -f "trivy-results.sarif" ]; then
             echo "exists=true" >> $GITHUB_OUTPUT
@@ -173,7 +174,7 @@ jobs:
           fi
 
       - name: Upload Trivy scan results to GitHub Security tab
-        if: always()
+        if: always() && steps.check-sarif.outputs.exists == 'true'
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: trivy-results.sarif
