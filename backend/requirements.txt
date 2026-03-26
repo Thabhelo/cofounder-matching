@@ -29,5 +29,4 @@ python-json-logger==2.0.7  # Structured logging
 prometheus-fastapi-instrumentator==6.1.0  # Metrics
 
 # Security patches
-# pygments - removed explicit pin as it's a transitive dependency
-# (required by pytest, rich, etc.) - let dependency resolution handle version
+# pygments 2.19.3+ not yet available - using .trivyignore to temporarily ignore CVE-2026-4539

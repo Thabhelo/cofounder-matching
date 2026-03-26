@@ -160,6 +160,7 @@ jobs:
           scan-ref: .
           format: sarif
           output: trivy-results.sarif
+          trivyignores: .trivyignore
 
       - name: Check if SARIF file exists
         id: check-sarif
