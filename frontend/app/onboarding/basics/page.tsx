@@ -4,17 +4,25 @@ import { useEffect, useState } from "react"
 import { useAuth, useUser } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { LocationPicker } from "@/components/forms/LocationPicker"
-import { RichTextArea } from "@/components/forms/RichTextArea"
-import { DatePicker } from "@/components/forms/DatePicker"
 import { GENDERS } from "@/lib/constants/enums"
 import { getDraft, setDraft } from "@/hooks/useOnboardingDraft"
+import { useFormValidation } from "@/hooks/useFormValidation"
+import { onboardingSchema } from "@/lib/validations/profileSchema"
+import {
+  TextField,
+  SelectField,
+  ValidatedRichTextArea,
+  ValidatedLocationPicker,
+} from "@/components/forms/FormField"
+import { DatePicker } from "@/components/forms/DatePicker"
 
 export default function BasicsPage() {
   const { getToken } = useAuth()
   const { user: clerkUser } = useUser()
   const router = useRouter()
   const [loading, setLoading] = useState(true)
+  const [validationErrors, setValidationErrors] = useState<string[]>([])
+
   type FormState = {
     name: string
     email: string
@@ -33,6 +41,7 @@ export default function BasicsPage() {
     calendly_url: string
     video_intro_url: string
   }
+
   const [form, setForm] = useState<FormState>({
     name: "",
     email: "",
@@ -50,6 +59,12 @@ export default function BasicsPage() {
     portfolio_url: "",
     calendly_url: "",
     video_intro_url: "",
+  })
+
+  // Initialize form validation
+  const validation = useFormValidation(onboardingSchema, {
+    validateOnBlur: true,
+    showErrorsOnlyAfterTouch: true,
   })
 
   useEffect(() => {
@@ -77,11 +92,29 @@ export default function BasicsPage() {
   }, [clerkUser])
 
   const update = (key: keyof FormState, value: string) => {
-    setForm((prev) => ({ ...prev, [key]: value }))
+    const newForm = { ...form, [key]: value }
+    setForm(newForm)
     setDraft({ [key]: value })
   }
 
   const handleNext = () => {
+    // Validate the form before allowing navigation
+    const isValid = validation.validateAll(form)
+
+    if (!isValid) {
+      const errorMessages = Object.entries(validation.errors).map(([field, message]) => `${field}: ${message}`)
+      setValidationErrors(errorMessages)
+
+      // Scroll to first error
+      const firstErrorElement = document.querySelector('[aria-invalid="true"]')
+      if (firstErrorElement) {
+        firstErrorElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        ;(firstErrorElement as HTMLElement).focus()
+      }
+      return
+    }
+
+    setValidationErrors([])
     setDraft(form)
     router.push("/onboarding/you")
   }
@@ -95,41 +128,54 @@ export default function BasicsPage() {
       <h1 className="text-2xl font-bold text-zinc-900 mb-6">Basics</h1>
       <p className="text-sm text-zinc-500 mb-6">Fields marked with * are required</p>
 
+      {validationErrors.length > 0 && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <h3 className="text-sm font-medium text-red-800 mb-2">Please fix the following errors:</h3>
+          <ul className="text-sm text-red-700 space-y-1">
+            {validationErrors.map((error, index) => (
+              <li key={index}>• {error}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="space-y-4">
+        <TextField
+          name="name"
+          label="Name"
+          value={form.name}
+          onChange={(v) => update("name", v)}
+          placeholder="Your full name"
+          validation={validation}
+        />
+
+        <TextField
+          name="email"
+          label="Email"
+          type="email"
+          value={form.email}
+          onChange={(v) => update("email", v)}
+          placeholder="you@example.com"
+          validation={validation}
+        />
+
+        <TextField
+          name="linkedin_url"
+          label="LinkedIn URL"
+          type="url"
+          value={form.linkedin_url}
+          onChange={(v) => update("linkedin_url", v)}
+          placeholder="https://linkedin.com/in/yourprofile"
+          required
+          validation={validation}
+        />
+
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-          <input
-            type="text"
-            value={form.name}
-            onChange={(e) => update("name", e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-            placeholder="Your full name"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-          <input
-            type="email"
-            value={form.email}
-            onChange={(e) => update("email", e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-            placeholder="you@example.com"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">LinkedIn URL *</label>
-          <input
-            type="url"
-            value={form.linkedin_url}
-            onChange={(e) => update("linkedin_url", e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-            placeholder="https://linkedin.com/in/yourprofile"
-            aria-required="true"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Location (Country) *</label>
-          <LocationPicker
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Location (Country) <span className="text-red-500">*</span>
+          </label>
+          <ValidatedLocationPicker
+            name="location"
             value={form.location}
             onChange={(v, components) => {
               update("location", v)
@@ -144,38 +190,52 @@ export default function BasicsPage() {
                 })
               }
             }}
+            placeholder="Select your country"
+            validation={validation}
+            required
           />
         </div>
-        <RichTextArea
-          label="Introduction *"
+
+        <ValidatedRichTextArea
+          name="introduction"
+          label="Introduction"
           value={form.introduction}
           onChange={(v) => update("introduction", v)}
           minLength={50}
           maxLength={2000}
           placeholder="A paragraph or two about your background and skills"
           required
+          validation={validation}
         />
+
+        <SelectField
+          name="gender"
+          label="Gender"
+          value={form.gender}
+          onChange={(v) => update("gender", v)}
+          options={GENDERS}
+          placeholder="Select"
+          validation={validation}
+        />
+
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
-          <select
-            value={form.gender}
-            onChange={(e) => update("gender", e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-          >
-            <option value="">Select</option>
-            {GENDERS.map((g) => (
-              <option key={g.value} value={g.value}>{g.label}</option>
-            ))}
-          </select>
+          <DatePicker
+            label="Birthdate"
+            value={form.birthdate}
+            onChange={(v) => update("birthdate", v)}
+          />
         </div>
-        <DatePicker label="Birthdate" value={form.birthdate} onChange={(v) => update("birthdate", v)} />
-        <RichTextArea
+
+        <ValidatedRichTextArea
+          name="impressive_accomplishment"
           label="Impressive accomplishment"
           value={form.impressive_accomplishment}
           onChange={(v) => update("impressive_accomplishment", v)}
           maxLength={2000}
           rows={3}
+          validation={validation}
         />
+
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Education (one per line)</label>
           <textarea
@@ -185,6 +245,7 @@ export default function BasicsPage() {
             className="w-full px-4 py-2 border border-gray-300 rounded-lg"
           />
         </div>
+
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Employment (one per line)</label>
           <textarea
@@ -194,65 +255,66 @@ export default function BasicsPage() {
             className="w-full px-4 py-2 border border-gray-300 rounded-lg"
           />
         </div>
+
         <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Experience (years)</label>
-            <input
-              type="number"
-              min={0}
-              max={70}
-              value={form.experience_years}
-              onChange={(e) => update("experience_years", e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Previous startups</label>
-            <input
-              type="number"
-              min={0}
-              value={form.previous_startups}
-              onChange={(e) => update("previous_startups", e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-            />
-          </div>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">GitHub URL</label>
-          <input
-            type="url"
-            value={form.github_url}
-            onChange={(e) => update("github_url", e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+          <TextField
+            name="experience_years"
+            label="Experience (years)"
+            type="text"
+            value={form.experience_years}
+            onChange={(v) => update("experience_years", v)}
+            validation={validation}
+          />
+
+          <TextField
+            name="previous_startups"
+            label="Previous startups"
+            type="text"
+            value={form.previous_startups}
+            onChange={(v) => update("previous_startups", v)}
+            validation={validation}
           />
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Portfolio URL</label>
-          <input
-            type="url"
-            value={form.portfolio_url}
-            onChange={(e) => update("portfolio_url", e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Calendly URL</label>
-          <input
-            type="url"
-            value={form.calendly_url}
-            onChange={(e) => update("calendly_url", e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Video intro URL</label>
-          <input
-            type="url"
-            value={form.video_intro_url}
-            onChange={(e) => update("video_intro_url", e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-          />
-        </div>
+
+        <TextField
+          name="github_url"
+          label="GitHub URL"
+          type="url"
+          value={form.github_url}
+          onChange={(v) => update("github_url", v)}
+          placeholder="https://github.com/yourusername"
+          validation={validation}
+        />
+
+        <TextField
+          name="portfolio_url"
+          label="Portfolio URL"
+          type="url"
+          value={form.portfolio_url}
+          onChange={(v) => update("portfolio_url", v)}
+          placeholder="https://yourportfolio.com"
+          validation={validation}
+        />
+
+        <TextField
+          name="calendly_url"
+          label="Calendly URL"
+          type="url"
+          value={form.calendly_url}
+          onChange={(v) => update("calendly_url", v)}
+          placeholder="https://calendly.com/yourusername"
+          validation={validation}
+        />
+
+        <TextField
+          name="video_intro_url"
+          label="Video intro URL"
+          type="url"
+          value={form.video_intro_url}
+          onChange={(v) => update("video_intro_url", v)}
+          placeholder="https://youtube.com/watch?v=..."
+          validation={validation}
+        />
       </div>
 
       <div className="flex gap-3 mt-8">

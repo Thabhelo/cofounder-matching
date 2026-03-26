@@ -3,9 +3,15 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { MultiSelect } from "@/components/forms/MultiSelect"
+import { useFormValidation } from "@/hooks/useFormValidation"
+import { onboardingSchema } from "@/lib/validations/profileSchema"
+import {
+  SelectField,
+  RadioGroupField,
+  ValidatedRichTextArea,
+  ValidatedMultiSelect,
+} from "@/components/forms/FormField"
 import { TagInput } from "@/components/forms/TagInput"
-import { RichTextArea } from "@/components/forms/RichTextArea"
 import {
   IDEA_STATUSES,
   READY_TO_START,
@@ -20,6 +26,14 @@ import { getDraft, setDraft } from "@/hooks/useOnboardingDraft"
 
 export default function YouPage() {
   const router = useRouter()
+  const [validationErrors, setValidationErrors] = useState<string[]>([])
+
+  // Initialize form validation
+  const validation = useFormValidation(onboardingSchema, {
+    validateOnBlur: true,
+    showErrorsOnlyAfterTouch: true,
+  })
+
   const [form, setForm] = useState({
     idea_status: "not_set_on_idea",
     is_technical: true,
@@ -66,6 +80,24 @@ export default function YouPage() {
   }
 
   const handleNext = () => {
+    // Validate the form before allowing navigation
+    const isValid = validation.validateAll(form)
+
+    if (!isValid) {
+      const errors = validation.errors
+      const errorMessages = Object.entries(errors).map(([field, message]) => `${field}: ${message}`)
+      setValidationErrors(errorMessages)
+
+      // Scroll to first error
+      const firstErrorElement = document.querySelector('[aria-invalid="true"]')
+      if (firstErrorElement) {
+        firstErrorElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        ;(firstErrorElement as HTMLElement).focus()
+      }
+      return
+    }
+
+    setValidationErrors([])
     setDraft(form)
     router.push("/onboarding/preferences")
   }
@@ -74,97 +106,69 @@ export default function YouPage() {
     <div className="bg-white rounded-lg shadow-xs border border-gray-200 p-6">
       <h1 className="text-2xl font-bold text-zinc-900 mb-6">You & your startup</h1>
 
+      {validationErrors.length > 0 && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <h3 className="text-sm font-medium text-red-800 mb-2">Please fix the following errors:</h3>
+          <ul className="text-sm text-red-700 space-y-1">
+            {validationErrors.map((error, index) => (
+              <li key={index}>• {error}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="space-y-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Are you working on an idea?</label>
-          <div className="space-y-2">
-            {IDEA_STATUSES.map((opt) => (
-              <label key={opt.value} className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  name="idea_status"
-                  value={opt.value}
-                  checked={form.idea_status === opt.value}
-                  onChange={() => update("idea_status", opt.value)}
-                  className="rounded border-gray-300 text-zinc-900"
-                />
-                <span>{opt.label}</span>
-              </label>
-            ))}
-          </div>
-        </div>
+        <RadioGroupField
+          name="idea_status"
+          label="Are you working on an idea?"
+          value={form.idea_status}
+          onChange={(v) => update("idea_status", v as string)}
+          options={IDEA_STATUSES.map(opt => ({ value: opt.value, label: opt.label }))}
+          required
+          validation={validation}
+        />
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Can you build the product without outside help? (Technical)</label>
-          <div className="flex gap-4">
-            <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                name="is_technical"
-                checked={form.is_technical === true}
-                onChange={() => update("is_technical", true)}
-                className="rounded border-gray-300 text-zinc-900"
-              />
-              Yes
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                name="is_technical"
-                checked={form.is_technical === false}
-                onChange={() => update("is_technical", false)}
-                className="rounded border-gray-300 text-zinc-900"
-              />
-              No
-            </label>
-          </div>
-        </div>
+        <RadioGroupField
+          name="is_technical"
+          label="Can you build the product without outside help? (Technical)"
+          value={form.is_technical}
+          onChange={(v) => update("is_technical", v as boolean)}
+          options={[
+            { value: true, label: "Yes" },
+            { value: false, label: "No" }
+          ]}
+          required
+          validation={validation}
+        />
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">When are you ready to go full-time?</label>
-          <div className="space-y-2">
-            {READY_TO_START.map((opt) => (
-              <label key={opt.value} className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  name="ready_to_start"
-                  value={opt.value}
-                  checked={form.ready_to_start === opt.value}
-                  onChange={() => update("ready_to_start", opt.value)}
-                  className="rounded border-gray-300 text-zinc-900"
-                />
-                <span>{opt.label}</span>
-              </label>
-            ))}
-          </div>
-        </div>
+        <RadioGroupField
+          name="ready_to_start"
+          label="When are you ready to go full-time?"
+          value={form.ready_to_start}
+          onChange={(v) => update("ready_to_start", v as string)}
+          options={READY_TO_START.map(opt => ({ value: opt.value, label: opt.label }))}
+          required
+          validation={validation}
+        />
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Commitment</label>
-          <select
-            value={form.commitment}
-            onChange={(e) => update("commitment", e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-          >
-            {COMMITMENT_LEVELS.map((c) => (
-              <option key={c.value} value={c.value}>{c.label}</option>
-            ))}
-          </select>
-        </div>
+        <SelectField
+          name="commitment"
+          label="Commitment"
+          value={form.commitment}
+          onChange={(v) => update("commitment", v)}
+          options={COMMITMENT_LEVELS}
+          validation={validation}
+        />
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Work location preference</label>
-          <select
-            value={form.work_location_preference}
-            onChange={(e) => update("work_location_preference", e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-          >
-            <option value="">Select</option>
-            {WORK_LOCATION_PREFERENCES.map((w) => (
-              <option key={w.value} value={w.value}>{w.label}</option>
-            ))}
-          </select>
-        </div>
+        <SelectField
+          name="work_location_preference"
+          label="Work location preference"
+          value={form.work_location_preference}
+          onChange={(v) => update("work_location_preference", v)}
+          options={WORK_LOCATION_PREFERENCES}
+          placeholder="Select"
+          validation={validation}
+        />
 
         {(form.idea_status === "building_specific_idea" || form.idea_status === "have_ideas_flexible") && (
           <>
@@ -177,79 +181,87 @@ export default function YouPage() {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg"
               />
             </div>
-            <RichTextArea
+            <ValidatedRichTextArea
+              name="startup_description"
               label="What are you building?"
               value={form.startup_description}
               onChange={(v) => update("startup_description", v)}
               maxLength={2000}
               rows={3}
+              validation={validation}
             />
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Progress</label>
-              <select
-                value={form.startup_progress}
-                onChange={(e) => update("startup_progress", e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-              >
-                <option value="">Select</option>
-                {STARTUP_PROGRESS.map((s) => (
-                  <option key={s.value} value={s.value}>{s.label}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Funding status</label>
-              <select
-                value={form.startup_funding}
-                onChange={(e) => update("startup_funding", e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-              >
-                <option value="">Select</option>
-                {STARTUP_FUNDING.map((f) => (
-                  <option key={f.value} value={f.value}>{f.label}</option>
-                ))}
-              </select>
-            </div>
+            <SelectField
+              name="startup_progress"
+              label="Progress"
+              value={form.startup_progress}
+              onChange={(v) => update("startup_progress", v)}
+              options={STARTUP_PROGRESS}
+              placeholder="Select"
+              validation={validation}
+            />
+            <SelectField
+              name="startup_funding"
+              label="Funding status"
+              value={form.startup_funding}
+              onChange={(v) => update("startup_funding", v)}
+              options={STARTUP_FUNDING}
+              placeholder="Select"
+              validation={validation}
+            />
           </>
         )}
 
-        <MultiSelect
+        <ValidatedMultiSelect
+          name="areas_of_ownership"
+          label="Which areas will you own?"
           options={AREAS_OF_OWNERSHIP}
           value={form.areas_of_ownership}
           onChange={(v) => update("areas_of_ownership", v)}
-          label="Which areas will you own?"
           minSelection={1}
+          required
+          validation={validation}
         />
 
-        <TagInput
-          options={TOPICS_OF_INTEREST}
-          value={form.topics_of_interest}
-          onChange={(v) => update("topics_of_interest", v)}
-          label="Topics of interest"
-          minSelection={1}
-        />
+        <div>
+          <TagInput
+            options={TOPICS_OF_INTEREST}
+            value={form.topics_of_interest}
+            onChange={(v) => update("topics_of_interest", v)}
+            label="Topics of interest"
+            minSelection={1}
+            error={validation.getFieldError("topics_of_interest")}
+          />
+        </div>
 
-        <RichTextArea
-          label="Equity expectations *"
+        <ValidatedRichTextArea
+          name="equity_expectation"
+          label="Equity expectations"
           value={form.equity_expectation}
           onChange={(v) => update("equity_expectation", v)}
           maxLength={500}
           placeholder="How you prefer to split equity"
+          required
+          validation={validation}
         />
 
-        <RichTextArea
+        <ValidatedRichTextArea
+          name="life_story"
           label="Life story"
           value={form.life_story}
           onChange={(v) => update("life_story", v)}
           maxLength={2000}
           rows={3}
+          validation={validation}
         />
-        <RichTextArea
+
+        <ValidatedRichTextArea
+          name="hobbies"
           label="Hobbies"
           value={form.hobbies}
           onChange={(v) => update("hobbies", v)}
           maxLength={1000}
           rows={2}
+          validation={validation}
         />
       </div>
 

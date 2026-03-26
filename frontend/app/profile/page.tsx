@@ -6,9 +6,17 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { api } from "@/lib/api"
 import type { User } from "@/lib/types"
-import { LocationPicker } from "@/components/forms/LocationPicker"
-import { MultiSelect } from "@/components/forms/MultiSelect"
+import { useFormValidation } from "@/hooks/useFormValidation"
+import { profileUpdateSchema } from "@/lib/validations/profileSchema"
+import {
+  TextField,
+  SelectField,
+  ValidatedRichTextArea,
+  ValidatedLocationPicker,
+  ValidatedMultiSelect,
+} from "@/components/forms/FormField"
 import { TagInput } from "@/components/forms/TagInput"
+import { MultiSelect } from "@/components/forms/MultiSelect"
 import { RichTextArea } from "@/components/forms/RichTextArea"
 import {
   IDEA_STATUSES,
@@ -31,6 +39,12 @@ export default function ProfilePage() {
   const [formData, setFormData] = useState<Partial<User>>({})
   const [saving, setSaving] = useState(false)
 
+  // Initialize form validation
+  const validation = useFormValidation(profileUpdateSchema, {
+    validateOnBlur: true,
+    showErrorsOnlyAfterTouch: true,
+  })
+
   useEffect(() => {
     async function loadUser() {
       try {
@@ -52,6 +66,19 @@ export default function ProfilePage() {
   }, [getToken, router])
 
   const handleSave = async () => {
+    // Validate form before saving
+    const isValid = validation.validateAll(formData)
+
+    if (!isValid) {
+      // Scroll to first error
+      const firstErrorElement = document.querySelector('[aria-invalid="true"]')
+      if (firstErrorElement) {
+        firstErrorElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        ;(firstErrorElement as HTMLElement).focus()
+      }
+      return
+    }
+
     setSaving(true)
     try {
       const token = await getToken()
@@ -59,9 +86,17 @@ export default function ProfilePage() {
       const updated = await api.users.updateMe(formData, token)
       setUser(updated)
       setFormData(updated)
-    } catch (error) {
+      validation.clearErrors() // Clear any validation errors on success
+    } catch (error: any) {
       console.error("Failed to update profile:", error)
-      alert("Failed to update profile. Please try again.")
+
+      // Try to parse backend validation errors
+      validation.setBackendErrors(error)
+
+      // If no specific field errors, show generic alert
+      if (Object.keys(validation.errors).length === 0) {
+        alert("Failed to update profile. Please try again.")
+      }
     } finally {
       setSaving(false)
     }
@@ -138,30 +173,31 @@ export default function ProfilePage() {
             {tab === "basics" && (
               <>
                 <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                    <input
-                      value={formData.name ?? ""}
-                      onChange={(e) => update("name", e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                    />
-                  </div>
+                  <TextField
+                    name="name"
+                    label="Name"
+                    value={formData.name ?? ""}
+                    onChange={(v) => update("name", v)}
+                    validation={validation}
+                  />
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                     <p className="text-gray-900 py-2">{user?.email}</p>
                   </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">LinkedIn URL</label>
-                  <input
-                    value={formData.linkedin_url ?? ""}
-                    onChange={(e) => update("linkedin_url", e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                  />
-                </div>
+                <TextField
+                  name="linkedin_url"
+                  label="LinkedIn URL"
+                  type="url"
+                  value={formData.linkedin_url ?? ""}
+                  onChange={(v) => update("linkedin_url", v)}
+                  placeholder="https://linkedin.com/in/yourprofile"
+                  validation={validation}
+                />
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Location (Country)</label>
-                  <LocationPicker
+                  <ValidatedLocationPicker
+                    name="location"
                     value={formData.location ?? ""}
                     onChange={(v, components) => {
                       if (components) {
@@ -178,14 +214,17 @@ export default function ProfilePage() {
                         update("location", v)
                       }
                     }}
+                    validation={validation}
                   />
                 </div>
-                <RichTextArea
+                <ValidatedRichTextArea
+                  name="introduction"
                   label="Introduction"
                   value={formData.introduction ?? ""}
                   onChange={(v) => update("introduction", v)}
                   maxLength={2000}
                   rows={4}
+                  validation={validation}
                 />
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -233,22 +272,24 @@ export default function ProfilePage() {
                     />
                   </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">GitHub URL</label>
-                  <input
-                    value={formData.github_url ?? ""}
-                    onChange={(e) => update("github_url", e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Portfolio URL</label>
-                  <input
-                    value={formData.portfolio_url ?? ""}
-                    onChange={(e) => update("portfolio_url", e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                  />
-                </div>
+                <TextField
+                  name="github_url"
+                  label="GitHub URL"
+                  type="url"
+                  value={formData.github_url ?? ""}
+                  onChange={(v) => update("github_url", v)}
+                  placeholder="https://github.com/yourusername"
+                  validation={validation}
+                />
+                <TextField
+                  name="portfolio_url"
+                  label="Portfolio URL"
+                  type="url"
+                  value={formData.portfolio_url ?? ""}
+                  onChange={(v) => update("portfolio_url", v)}
+                  placeholder="https://yourportfolio.com"
+                  validation={validation}
+                />
               </>
             )}
 

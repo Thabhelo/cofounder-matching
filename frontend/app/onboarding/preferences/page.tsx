@@ -3,7 +3,15 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { RichTextArea } from "@/components/forms/RichTextArea"
+import { useFormValidation } from "@/hooks/useFormValidation"
+import { onboardingSchema } from "@/lib/validations/profileSchema"
+import {
+  TextField,
+  SelectField,
+  RadioGroupField,
+  ValidatedRichTextArea,
+  ValidatedMultiSelect,
+} from "@/components/forms/FormField"
 import { ImportanceSelector } from "@/components/forms/ImportanceSelector"
 import { MultiSelect } from "@/components/forms/MultiSelect"
 import { AREAS_OF_OWNERSHIP, PREF_IDEA_STATUSES, PREF_LOCATION_TYPES } from "@/lib/constants/enums"
@@ -11,6 +19,14 @@ import { getDraft, setDraft } from "@/hooks/useOnboardingDraft"
 
 export default function PreferencesPage() {
   const router = useRouter()
+  const [validationErrors, setValidationErrors] = useState<string[]>([])
+
+  // Initialize form validation
+  const validation = useFormValidation(onboardingSchema, {
+    validateOnBlur: true,
+    showErrorsOnlyAfterTouch: true,
+  })
+
   const [form, setForm] = useState({
     looking_for_description: "",
     pref_idea_status: "",
@@ -63,6 +79,24 @@ export default function PreferencesPage() {
   }
 
   const handleNext = () => {
+    // Validate the form before allowing navigation
+    const isValid = validation.validateAll(form)
+
+    if (!isValid) {
+      const errors = validation.errors
+      const errorMessages = Object.entries(errors).map(([field, message]) => `${field}: ${message}`)
+      setValidationErrors(errorMessages)
+
+      // Scroll to first error
+      const firstErrorElement = document.querySelector('[aria-invalid="true"]')
+      if (firstErrorElement) {
+        firstErrorElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        ;(firstErrorElement as HTMLElement).focus()
+      }
+      return
+    }
+
+    setValidationErrors([])
     setDraft(form)
     router.push("/onboarding/preview")
   }
@@ -71,14 +105,27 @@ export default function PreferencesPage() {
     <div className="bg-white rounded-lg shadow-xs border border-gray-200 p-6">
       <h1 className="text-2xl font-bold text-zinc-900 mb-6">Co-founder preferences</h1>
 
+      {validationErrors.length > 0 && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <h3 className="text-sm font-medium text-red-800 mb-2">Please fix the following errors:</h3>
+          <ul className="text-sm text-red-700 space-y-1">
+            {validationErrors.map((error, index) => (
+              <li key={index}>• {error}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="space-y-6">
-        <RichTextArea
-          label="What are you looking for? *"
+        <ValidatedRichTextArea
+          name="looking_for_description"
+          label="What are you looking for?"
           value={form.looking_for_description}
           onChange={(v) => update("looking_for_description", v)}
           minLength={50}
           maxLength={1000}
           required
+          validation={validation}
         />
 
         <div>
@@ -164,25 +211,29 @@ export default function PreferencesPage() {
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Age range</label>
           <div className="flex gap-2 items-center mb-2">
-            <input
-              type="number"
-              min={18}
-              max={100}
-              value={form.pref_age_min}
-              onChange={(e) => update("pref_age_min", e.target.value)}
-              placeholder="Min"
-              className="w-24 px-4 py-2 border border-gray-300 rounded-lg"
-            />
+            <div>
+              <TextField
+                name="pref_age_min"
+                type="text"
+                value={form.pref_age_min}
+                onChange={(v) => update("pref_age_min", v)}
+                placeholder="Min"
+                validation={validation}
+                className="w-24"
+              />
+            </div>
             <span>-</span>
-            <input
-              type="number"
-              min={18}
-              max={100}
-              value={form.pref_age_max}
-              onChange={(e) => update("pref_age_max", e.target.value)}
-              placeholder="Max"
-              className="w-24 px-4 py-2 border border-gray-300 rounded-lg"
-            />
+            <div>
+              <TextField
+                name="pref_age_max"
+                type="text"
+                value={form.pref_age_max}
+                onChange={(v) => update("pref_age_max", v)}
+                placeholder="Max"
+                validation={validation}
+                className="w-24"
+              />
+            </div>
           </div>
           <ImportanceSelector value={form.pref_age_importance} onChange={(v) => update("pref_age_importance", v)} />
         </div>
