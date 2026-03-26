@@ -86,7 +86,7 @@ export function FormTextarea({ error, className, ...props }: FormTextareaProps) 
 
 interface FormSelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   error?: string | null
-  options: Array<{ value: string; label: string }>
+  options: readonly { value: string; label: string }[]
   placeholder?: string
 }
 

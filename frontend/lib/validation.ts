@@ -101,20 +101,22 @@ export function validateField(value: string, validatorFunctions: Array<(value: s
 /**
  * Validate an entire form object
  * @param formData - Form data object
- * @param fieldValidators - Map of field names to validator functions
+ * @param fieldValidators - Map of field names to validator functions (partial - only validates specified fields)
  * @returns ValidationErrors object with any errors found
  */
 export function validateForm<T extends Record<string, any>>(
   formData: T,
-  fieldValidators: Record<keyof T, Array<(value: any) => string | null>>
+  fieldValidators: Partial<Record<keyof T, Array<(value: any) => string | null>>>
 ): ValidationErrors {
   const errors: ValidationErrors = {}
 
   for (const [field, validators] of Object.entries(fieldValidators)) {
-    const value = formData[field]
-    const error = validateField(String(value || ''), validators)
-    if (error) {
-      errors[field] = error
+    if (validators) {
+      const value = formData[field]
+      const error = validateField(String(value || ''), validators)
+      if (error) {
+        errors[field] = error
+      }
     }
   }
 
