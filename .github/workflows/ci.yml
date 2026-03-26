@@ -6,6 +6,9 @@ on:
   push:
     branches: [main, develop]
 
+permissions:
+  contents: read
+
 env:
   PYTHON_VERSION: '3.11'
   NODE_VERSION: '20'
@@ -144,17 +147,19 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@v1
         id: trivy-scan
+        uses: aquasecurity/trivy-action@v1  # TODO: Pin to verified commit SHA for supply chain security
         continue-on-error: true
         with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
+          scan-type: fs
+          scan-ref: .
+          format: sarif
+          output: trivy-results.sarif
 
       - name: Check if SARIF file exists
         id: check-sarif
@@ -166,11 +171,11 @@ jobs:
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Upload Trivy results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v4
-        if: always() && steps.check-sarif.outputs.exists == 'true'
+      - name: Upload Trivy scan results to GitHub Security tab
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: 'trivy-results.sarif'
+          sarif_file: trivy-results.sarif
 
       - name: Set up Python for pip-audit
         uses: actions/setup-python@v6
