@@ -147,7 +147,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@v0
         id: trivy-scan
         continue-on-error: true
         with:
