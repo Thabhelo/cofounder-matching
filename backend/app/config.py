@@ -35,19 +35,25 @@ class Settings(BaseSettings):
         https://<your-instance>/.well-known/jwks.json
 
         We derive the instance URL from CLERK_FRONTEND_API.
-        
+
         Reference: https://clerk.com/docs/guides/sessions/manual-jwt-verification
         """
         # If CLERK_FRONTEND_API is set, use it directly
         if self.CLERK_FRONTEND_API and self.CLERK_FRONTEND_API.strip():
             instance_url = self.CLERK_FRONTEND_API.strip().rstrip('/')
+
+            # Auto-correct development domains to production domains in production environment
+            if self.ENVIRONMENT == "production" and "clerk.accounts.dev" in instance_url:
+                instance_url = instance_url.replace("clerk.accounts.dev", "clerk.accounts.com")
+                print(f"WARNING: Auto-corrected development Clerk domain to production domain: {instance_url}")
+
             jwks_url = f"{instance_url}/.well-known/jwks.json"
             return jwks_url
-        
+
         # CLERK_FRONTEND_API is required to construct the JWKS URL
         raise ValueError(
             "CLERK_FRONTEND_API must be set in .env file to derive JWKS URL. "
-            "Example: CLERK_FRONTEND_API=https://your-instance.clerk.accounts.dev"
+            f"Example for {self.ENVIRONMENT}: CLERK_FRONTEND_API=https://your-instance.clerk.accounts.{'com' if self.ENVIRONMENT == 'production' else 'dev'}"
         )
 
 
