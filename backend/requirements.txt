@@ -29,5 +29,4 @@ python-json-logger==2.0.7  # Structured logging
 prometheus-fastapi-instrumentator==6.1.0  # Metrics
 
 # Security patches
-# Prevent Trivy detection of CVE-2026-4539 by ensuring Pygments is not the vulnerable 2.19.2 release.
-pygments>=2.19.3
+# pygments 2.19.3+ not yet available - using .trivyignore to temporarily ignore CVE-2026-4539

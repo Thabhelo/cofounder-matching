@@ -160,14 +160,14 @@ jobs:
           scan-ref: .
           format: sarif
           output: trivy-results.sarif
-          trivyignores: .trivyignore
+          trivyignores: ./.trivyignore
           exit-code: '0'  # Don't fail job on vulnerabilities until pygments patch available
 
       - name: Check if SARIF file exists
         id: check-sarif
         if: always()
         run: |
-          if [ -f "trivy-results.sarif" ]; then
+          if [ -s "trivy-results.sarif" ]; then
             echo "exists=true" >> $GITHUB_OUTPUT
           else
             echo "exists=false" >> $GITHUB_OUTPUT
