@@ -2,6 +2,8 @@ from pydantic import BaseModel, Field, field_validator, model_validator, ConfigD
 from typing import Optional
 from datetime import datetime, date
 from uuid import UUID
+import re
+from urllib.parse import urlparse
 
 from app.constants.enums import (
     IDEA_STATUSES,
@@ -59,6 +61,68 @@ def _validate_list_items(value: list[str], allowed: list[str], field_name: str) 
         if item not in allowed:
             raise ValueError(f"Invalid {field_name}: {item}. Must be one of {allowed}")
     return value
+
+
+def _validate_url_format(url: str) -> bool:
+    """Validate basic URL format and structure."""
+    if not url:
+        return False
+
+    try:
+        result = urlparse(url)
+        # Must have scheme and netloc (domain)
+        return all([result.scheme, result.netloc]) and result.scheme in ['http', 'https']
+    except Exception:
+        return False
+
+
+def _validate_linkedin_url(url: str) -> str:
+    """Validate LinkedIn URL format and domain."""
+    if not url:
+        raise ValueError("LinkedIn URL is required")
+
+    if not _validate_url_format(url):
+        raise ValueError("Please enter a valid LinkedIn URL")
+
+    # Check domain
+    parsed = urlparse(url.lower())
+    if 'linkedin.com' not in parsed.netloc:
+        raise ValueError("LinkedIn URL must be from linkedin.com domain")
+
+    # Check for reasonable path pattern (optional but helpful)
+    if parsed.path and not re.match(r'^/(in|pub|company)/', parsed.path):
+        # Allow it but could add warning in future
+        pass
+
+    return url
+
+
+def _validate_optional_url(url: Optional[str], field_name: str) -> Optional[str]:
+    """Validate optional URL fields - must be valid format when provided."""
+    if not url or url.strip() == "":
+        return None
+
+    url = url.strip()
+    if not _validate_url_format(url):
+        raise ValueError(f"Please enter a valid {field_name}")
+
+    return url
+
+
+def _validate_domain_specific_url(url: Optional[str], domain: str, field_name: str) -> Optional[str]:
+    """Validate URL for specific domain (e.g., GitHub, Twitter)."""
+    if not url or url.strip() == "":
+        return None
+
+    url = url.strip()
+    if not _validate_url_format(url):
+        raise ValueError(f"Please enter a valid {field_name}")
+
+    parsed = urlparse(url.lower())
+    if domain not in parsed.netloc:
+        raise ValueError(f"{field_name} must be from {domain}")
+
+    return url
 
 
 class UserOnboarding(BaseModel):
@@ -191,6 +255,53 @@ class UserOnboarding(BaseModel):
         n = _normalize_int(v) if (v is not None and (isinstance(v, str) or v == "")) else v
         return 0 if n is None else n
 
+    @field_validator("linkedin_url")
+    @classmethod
+    def validate_linkedin_url(cls, v: str) -> str:
+        return _validate_linkedin_url(v)
+
+    @field_validator("github_url")
+    @classmethod
+    def validate_github_url(cls, v: Optional[str]) -> Optional[str]:
+        return _validate_domain_specific_url(v, "github.com", "GitHub URL")
+
+    @field_validator("portfolio_url")
+    @classmethod
+    def validate_portfolio_url(cls, v: Optional[str]) -> Optional[str]:
+        return _validate_optional_url(v, "Portfolio URL")
+
+    @field_validator("calendly_url")
+    @classmethod
+    def validate_calendly_url(cls, v: Optional[str]) -> Optional[str]:
+        return _validate_domain_specific_url(v, "calendly.com", "Calendly URL")
+
+    @field_validator("video_intro_url")
+    @classmethod
+    def validate_video_intro_url(cls, v: Optional[str]) -> Optional[str]:
+        return _validate_optional_url(v, "Video intro URL")
+
+    @field_validator("twitter_url")
+    @classmethod
+    def validate_twitter_url(cls, v: Optional[str]) -> Optional[str]:
+        # Accept both twitter.com and x.com
+        if not v or v.strip() == "":
+            return None
+
+        v = v.strip()
+        if not _validate_url_format(v):
+            raise ValueError("Please enter a valid Twitter/X URL")
+
+        parsed = urlparse(v.lower())
+        if not any(domain in parsed.netloc for domain in ['twitter.com', 'x.com']):
+            raise ValueError("Twitter URL must be from twitter.com or x.com")
+
+        return v
+
+    @field_validator("instagram_url")
+    @classmethod
+    def validate_instagram_url(cls, v: Optional[str]) -> Optional[str]:
+        return _validate_domain_specific_url(v, "instagram.com", "Instagram URL")
+
     @model_validator(mode="after")
     def validate_age_range(self):
         if self.pref_age_min is not None and self.pref_age_max is not None:
@@ -306,6 +417,64 @@ class UserUpdate(BaseModel):
     @classmethod
     def normalize_integers(cls, v):
         return _normalize_int(v) if (v is not None and (isinstance(v, str) or v == "")) else v
+
+    @field_validator("linkedin_url")
+    @classmethod
+    def validate_linkedin_url(cls, v: Optional[str]) -> Optional[str]:
+        if not v or v.strip() == "":
+            return None
+
+        v = v.strip()
+        if not _validate_url_format(v):
+            raise ValueError("Please enter a valid LinkedIn URL")
+
+        parsed = urlparse(v.lower())
+        if 'linkedin.com' not in parsed.netloc:
+            raise ValueError("LinkedIn URL must be from linkedin.com domain")
+
+        return v
+
+    @field_validator("github_url")
+    @classmethod
+    def validate_github_url(cls, v: Optional[str]) -> Optional[str]:
+        return _validate_domain_specific_url(v, "github.com", "GitHub URL")
+
+    @field_validator("portfolio_url")
+    @classmethod
+    def validate_portfolio_url(cls, v: Optional[str]) -> Optional[str]:
+        return _validate_optional_url(v, "Portfolio URL")
+
+    @field_validator("calendly_url")
+    @classmethod
+    def validate_calendly_url(cls, v: Optional[str]) -> Optional[str]:
+        return _validate_domain_specific_url(v, "calendly.com", "Calendly URL")
+
+    @field_validator("video_intro_url")
+    @classmethod
+    def validate_video_intro_url(cls, v: Optional[str]) -> Optional[str]:
+        return _validate_optional_url(v, "Video intro URL")
+
+    @field_validator("twitter_url")
+    @classmethod
+    def validate_twitter_url(cls, v: Optional[str]) -> Optional[str]:
+        # Accept both twitter.com and x.com
+        if not v or v.strip() == "":
+            return None
+
+        v = v.strip()
+        if not _validate_url_format(v):
+            raise ValueError("Please enter a valid Twitter/X URL")
+
+        parsed = urlparse(v.lower())
+        if not any(domain in parsed.netloc for domain in ['twitter.com', 'x.com']):
+            raise ValueError("Twitter URL must be from twitter.com or x.com")
+
+        return v
+
+    @field_validator("instagram_url")
+    @classmethod
+    def validate_instagram_url(cls, v: Optional[str]) -> Optional[str]:
+        return _validate_domain_specific_url(v, "instagram.com", "Instagram URL")
 
     @model_validator(mode="after")
     def validate_age_range(self):
