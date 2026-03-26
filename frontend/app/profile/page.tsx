@@ -19,6 +19,8 @@ import {
   GENDERS,
 } from "@/lib/constants/enums"
 import { TOPICS_OF_INTEREST } from "@/lib/constants/topics"
+import { parseValidationErrors, type ValidationErrors } from "@/lib/validation"
+import { FormField, FormInput, FormSelect } from "@/components/forms/FormField"
 
 type Tab = "basics" | "you" | "preferences"
 
@@ -30,6 +32,7 @@ export default function ProfilePage() {
   const [tab, setTab] = useState<Tab>("basics")
   const [formData, setFormData] = useState<Partial<User>>({})
   const [saving, setSaving] = useState(false)
+  const [errors, setErrors] = useState<ValidationErrors>({})
 
   useEffect(() => {
     async function loadUser() {
@@ -53,15 +56,40 @@ export default function ProfilePage() {
 
   const handleSave = async () => {
     setSaving(true)
+    setErrors({}) // Clear previous errors
+
     try {
       const token = await getToken()
       if (!token) return
       const updated = await api.users.updateMe(formData, token)
       setUser(updated)
       setFormData(updated)
-    } catch (error) {
+
+      // Show success message briefly
+      const successMessage = document.createElement('div')
+      successMessage.className = 'fixed top-4 right-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded z-50'
+      successMessage.textContent = 'Profile updated successfully!'
+      document.body.appendChild(successMessage)
+      setTimeout(() => document.body.removeChild(successMessage), 3000)
+
+    } catch (error: any) {
       console.error("Failed to update profile:", error)
-      alert("Failed to update profile. Please try again.")
+
+      // Parse validation errors from API response
+      const validationErrors = parseValidationErrors(error)
+
+      if (Object.keys(validationErrors).length > 0) {
+        setErrors(validationErrors)
+        // Scroll to first error
+        const firstErrorField = Object.keys(validationErrors)[0]
+        if (firstErrorField) {
+          const element = document.querySelector(`[name="${firstErrorField}"]`)
+          element?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }
+      } else {
+        // Generic error - show original alert as fallback
+        alert("Failed to update profile. Please try again.")
+      }
     } finally {
       setSaving(false)
     }
@@ -69,6 +97,11 @@ export default function ProfilePage() {
 
   const update = (key: keyof User, value: unknown) => {
     setFormData((prev) => ({ ...prev, [key]: value }))
+
+    // Clear field error when user starts editing
+    if (errors[key]) {
+      setErrors((prev) => ({ ...prev, [key]: '' }))
+    }
   }
 
   if (loading) {
@@ -106,6 +139,29 @@ export default function ProfilePage() {
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Your Profile</h1>
               <p className="text-gray-600 mt-1">Manage your information and preferences</p>
+
+              {/* Show validation error summary */}
+              {Object.keys(errors).length > 0 && (
+                <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <svg className="w-4 h-4 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-sm font-medium text-red-800">Please fix the following errors before saving:</span>
+                  </div>
+                  <ul className="mt-2 text-sm text-red-700">
+                    {Object.entries(errors)
+                      .filter(([, message]) => message)
+                      .slice(0, 3)
+                      .map(([field, message]) => (
+                        <li key={field}>• {message}</li>
+                      ))}
+                    {Object.keys(errors).length > 3 && (
+                      <li className="text-red-600">• And {Object.keys(errors).length - 3} more...</li>
+                    )}
+                  </ul>
+                </div>
+              )}
             </div>
             <button
               onClick={handleSave}
@@ -138,27 +194,29 @@ export default function ProfilePage() {
             {tab === "basics" && (
               <>
                 <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                    <input
+                  <FormField label="Name" error={errors.name}>
+                    <FormInput
+                      name="name"
                       value={formData.name ?? ""}
                       onChange={(e) => update("name", e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                      error={errors.name}
                     />
-                  </div>
+                  </FormField>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                     <p className="text-gray-900 py-2">{user?.email}</p>
                   </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">LinkedIn URL</label>
-                  <input
+                <FormField label="LinkedIn URL" error={errors.linkedin_url}>
+                  <FormInput
+                    name="linkedin_url"
+                    type="url"
                     value={formData.linkedin_url ?? ""}
                     onChange={(e) => update("linkedin_url", e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                    placeholder="https://linkedin.com/in/yourprofile"
+                    error={errors.linkedin_url}
                   />
-                </div>
+                </FormField>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Location (Country)</label>
                   <LocationPicker
@@ -188,19 +246,16 @@ export default function ProfilePage() {
                   rows={4}
                 />
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
-                    <select
+                  <FormField label="Gender" error={errors.gender}>
+                    <FormSelect
+                      name="gender"
                       value={formData.gender ?? ""}
                       onChange={(e) => update("gender", e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                    >
-                      <option value="">Select</option>
-                      {GENDERS.map((g) => (
-                        <option key={g.value} value={g.value}>{g.label}</option>
-                      ))}
-                    </select>
-                  </div>
+                      options={GENDERS}
+                      placeholder="Select"
+                      error={errors.gender}
+                    />
+                  </FormField>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Birthdate</label>
                     <input
