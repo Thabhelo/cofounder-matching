@@ -36,6 +36,7 @@ export default function BasicsPage() {
     calendly_url: string
     video_intro_url: string
   }
+
   const [form, setForm] = useState<FormState>({
     name: "",
     email: "",
@@ -54,6 +55,8 @@ export default function BasicsPage() {
     calendly_url: "",
     video_intro_url: "",
   })
+
+  // No longer using the hook-based validation
 
   useEffect(() => {
     const draft = getDraft() as Record<string, unknown>
@@ -80,7 +83,8 @@ export default function BasicsPage() {
   }, [clerkUser])
 
   const update = (key: keyof FormState, value: string) => {
-    setForm((prev) => ({ ...prev, [key]: value }))
+    const newForm = { ...form, [key]: value }
+    setForm(newForm)
     setDraft({ [key]: value })
 
     // Clear field error when user starts typing
@@ -180,6 +184,7 @@ export default function BasicsPage() {
                 })
               }
             }}
+            placeholder="Select your country"
           />
         </FormField>
 
@@ -275,24 +280,38 @@ export default function BasicsPage() {
             className="w-full px-4 py-2 border border-gray-300 rounded-lg"
           />
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Calendly URL</label>
-          <input
+        <FormField label="Portfolio URL" error={errors.portfolio_url}>
+          <FormInput
+            name="portfolio_url"
+            type="url"
+            value={form.portfolio_url}
+            onChange={(e) => update("portfolio_url", e.target.value)}
+            placeholder="https://yourportfolio.com"
+            error={errors.portfolio_url}
+          />
+        </FormField>
+
+        <FormField label="Calendly URL" error={errors.calendly_url}>
+          <FormInput
+            name="calendly_url"
             type="url"
             value={form.calendly_url}
             onChange={(e) => update("calendly_url", e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+            placeholder="https://calendly.com/yourusername"
+            error={errors.calendly_url}
           />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Video intro URL</label>
-          <input
+        </FormField>
+
+        <FormField label="Video intro URL" error={errors.video_intro_url}>
+          <FormInput
+            name="video_intro_url"
             type="url"
             value={form.video_intro_url}
             onChange={(e) => update("video_intro_url", e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+            placeholder="https://youtube.com/watch?v=..."
+            error={errors.video_intro_url}
           />
-        </div>
+        </FormField>
       </div>
 
       {/* Show validation summary if there are errors */}

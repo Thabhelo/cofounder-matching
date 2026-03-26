@@ -6,9 +6,16 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { api } from "@/lib/api"
 import type { User } from "@/lib/types"
-import { LocationPicker } from "@/components/forms/LocationPicker"
-import { MultiSelect } from "@/components/forms/MultiSelect"
+import { useFormValidation } from "@/hooks/useFormValidation"
+import { profileUpdateSchema } from "@/lib/validations/profileSchema"
+import {
+  FormField,
+  FormInput,
+  FormTextarea,
+  FormSelect,
+} from "@/components/forms/FormField"
 import { TagInput } from "@/components/forms/TagInput"
+import { MultiSelect } from "@/components/forms/MultiSelect"
 import { RichTextArea } from "@/components/forms/RichTextArea"
 import {
   IDEA_STATUSES,
@@ -20,7 +27,6 @@ import {
 } from "@/lib/constants/enums"
 import { TOPICS_OF_INTEREST } from "@/lib/constants/topics"
 import { parseValidationErrors, type ValidationErrors } from "@/lib/validation"
-import { FormField, FormInput, FormSelect } from "@/components/forms/FormField"
 
 type Tab = "basics" | "you" | "preferences"
 
@@ -33,6 +39,12 @@ export default function ProfilePage() {
   const [formData, setFormData] = useState<Partial<User>>({})
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState<ValidationErrors>({})
+
+  // Initialize form validation
+  const validation = useFormValidation(profileUpdateSchema, {
+    validateOnBlur: true,
+    showErrorsOnlyAfterTouch: true,
+  })
 
   useEffect(() => {
     async function loadUser() {
@@ -55,6 +67,19 @@ export default function ProfilePage() {
   }, [getToken, router])
 
   const handleSave = async () => {
+    // Validate form before saving
+    const isValid = validation.validateAll(formData)
+
+    if (!isValid) {
+      // Scroll to first error
+      const firstErrorElement = document.querySelector('[aria-invalid="true"]')
+      if (firstErrorElement) {
+        firstErrorElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        ;(firstErrorElement as HTMLElement).focus()
+      }
+      return
+    }
+
     setSaving(true)
     setErrors({}) // Clear previous errors
 
@@ -219,31 +244,21 @@ export default function ProfilePage() {
                 </FormField>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Location (Country)</label>
-                  <LocationPicker
+                  <FormInput
+                    name="location"
                     value={formData.location ?? ""}
-                    onChange={(v, components) => {
-                      if (components) {
-                        setFormData((prev) => ({
-                          ...prev,
-                          location: v,
-                          location_city: components.city ?? prev?.location_city,
-                          location_state: components.state ?? prev?.location_state,
-                          location_country: components.country ?? prev?.location_country,
-                          location_latitude: components.lat ?? prev?.location_latitude,
-                          location_longitude: components.lng ?? prev?.location_longitude,
-                        }))
-                      } else {
-                        update("location", v)
-                      }
-                    }}
+                    onChange={(e) => update("location", e.target.value)}
+                    placeholder="Enter your location"
+                    error={errors.location}
                   />
                 </div>
                 <RichTextArea
                   label="Introduction"
                   value={formData.introduction ?? ""}
-                  onChange={(v) => update("introduction", v)}
+                  onChange={(v: string) => update("introduction", v)}
                   maxLength={2000}
                   rows={4}
+                  error={errors.introduction}
                 />
                 <div className="grid grid-cols-2 gap-4">
                   <FormField label="Gender" error={errors.gender}>
@@ -288,22 +303,26 @@ export default function ProfilePage() {
                     />
                   </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">GitHub URL</label>
-                  <input
+                <FormField label="GitHub URL" error={errors.github_url}>
+                  <FormInput
+                    name="github_url"
+                    type="url"
                     value={formData.github_url ?? ""}
                     onChange={(e) => update("github_url", e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                    placeholder="https://github.com/yourusername"
+                    error={errors.github_url}
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Portfolio URL</label>
-                  <input
+                </FormField>
+                <FormField label="Portfolio URL" error={errors.portfolio_url}>
+                  <FormInput
+                    name="portfolio_url"
+                    type="url"
                     value={formData.portfolio_url ?? ""}
                     onChange={(e) => update("portfolio_url", e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                    placeholder="https://yourportfolio.com"
+                    error={errors.portfolio_url}
                   />
-                </div>
+                </FormField>
               </>
             )}
 
