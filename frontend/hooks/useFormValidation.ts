@@ -1,6 +1,5 @@
-import { useState, useCallback, useMemo } from "react"
-import { z } from "zod"
-import { FormValidator, ValidationErrors } from "@/lib/validation"
+import { useState, useCallback } from "react"
+import { validateForm, validators, type ValidationErrors } from "@/lib/validation"
 
 export interface UseFormValidationResult<T> {
   // Validation state
@@ -27,92 +26,86 @@ export interface UseFormValidationResult<T> {
 }
 
 /**
- * React hook for form validation using Zod schemas
- *
- * @param schema - Zod schema to validate against
- * @param options - Configuration options
- * @returns Validation utilities and state
+ * React hook for form validation using simple validators
+ * @deprecated - Use direct validateForm calls instead for simpler approach
  */
 export function useFormValidation<T>(
-  schema: z.ZodSchema<T>,
+  _schema: any, // Ignored, kept for compatibility
   options: {
     validateOnChange?: boolean
     validateOnBlur?: boolean
     showErrorsOnlyAfterTouch?: boolean
   } = {}
 ): UseFormValidationResult<T> {
+  const [errors, setErrors] = useState<ValidationErrors>({})
+  const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set())
+
   const {
-    validateOnChange = false,
-    validateOnBlur = true,
     showErrorsOnlyAfterTouch = true,
   } = options
 
-  // Create validator instance
-  const validator = useMemo(() => new FormValidator(schema), [schema])
+  // Field-level validation - basic implementation
+  const validateField = useCallback((fieldName: string, value: any, _fullData: any = {}) => {
+    // Mark field as touched
+    setTouchedFields(prev => new Set([...prev, fieldName]))
 
-  // Force re-render when validation state changes
-  const [, setUpdateTrigger] = useState({})
-  const triggerUpdate = useCallback(() => setUpdateTrigger({}), [])
+    // Simple validation - can be extended based on field requirements
+    let error: string | undefined
+    if (fieldName.includes('required') && !value) {
+      error = `${fieldName} is required`
+    }
 
-  // Validation methods
-  const validateField = useCallback((fieldName: string, value: any, fullData: any = {}) => {
-    const error = validator.validateField(fieldName, value, fullData)
-    triggerUpdate()
+    setErrors(prev => ({ ...prev, [fieldName]: error || '' }))
     return error
-  }, [validator, triggerUpdate])
+  }, [])
 
   const validateAll = useCallback((data: any): boolean => {
-    validator.validateAll(data)
-    triggerUpdate()
-    return validator.isValid()
-  }, [validator, triggerUpdate])
+    // This is a stub - actual validation should be done with validateForm from validation.ts
+    const hasErrors = Object.values(errors).some(error => error)
+    return !hasErrors
+  }, [errors])
 
   const validateAndGetErrors = useCallback((data: any): ValidationErrors => {
-    const errors = validator.validateAll(data)
-    triggerUpdate()
     return errors
-  }, [validator, triggerUpdate])
+  }, [errors])
 
   const setBackendErrors = useCallback((backendErrors: any) => {
-    validator.setBackendErrors(backendErrors)
-    triggerUpdate()
-  }, [validator, triggerUpdate])
+    // Handle backend errors
+    if (backendErrors && typeof backendErrors === 'object') {
+      setErrors(prev => ({ ...prev, ...backendErrors }))
+    }
+  }, [])
 
   const getFieldError = useCallback((fieldName: string): string | undefined => {
-    const error = validator.getFieldError(fieldName)
-    const isFieldTouched = validator.isFieldTouched(fieldName)
+    const error = errors[fieldName]
+    const isFieldTouched = touchedFields.has(fieldName)
 
-    // Only show error if field has been touched (when enabled)
     if (showErrorsOnlyAfterTouch && !isFieldTouched) {
       return undefined
     }
 
-    return error
-  }, [validator, showErrorsOnlyAfterTouch])
+    return error || undefined
+  }, [errors, touchedFields, showErrorsOnlyAfterTouch])
 
   const isFieldTouched = useCallback((fieldName: string): boolean => {
-    return validator.isFieldTouched(fieldName)
-  }, [validator])
+    return touchedFields.has(fieldName)
+  }, [touchedFields])
 
   const clearFieldError = useCallback((fieldName: string) => {
-    validator.clearFieldError(fieldName)
-    triggerUpdate()
-  }, [validator, triggerUpdate])
+    setErrors(prev => ({ ...prev, [fieldName]: '' }))
+  }, [])
 
   const clearErrors = useCallback(() => {
-    validator.clearErrors()
-    triggerUpdate()
-  }, [validator, triggerUpdate])
+    setErrors({})
+  }, [])
 
   const reset = useCallback(() => {
-    validator.reset()
-    triggerUpdate()
-  }, [validator, triggerUpdate])
+    setErrors({})
+    setTouchedFields(new Set())
+  }, [])
 
-  // Current validation state
-  const errors = validator.getErrors()
-  const isValid = validator.isValid()
-  const hasErrors = Object.keys(errors).length > 0
+  const isValid = Object.values(errors).every(error => !error)
+  const hasErrors = Object.values(errors).some(error => error)
 
   return {
     // State
@@ -136,32 +129,5 @@ export function useFormValidation<T>(
     // Utilities
     clearErrors,
     reset,
-  }
-}
-
-/**
- * Higher-order function to create field handlers with built-in validation
- */
-export function createValidatedFieldHandlers<T>(
-  validation: UseFormValidationResult<T>,
-  formData: any,
-  setFormData: (data: any) => void
-) {
-  const handleChange = (fieldName: string) => (value: any) => {
-    const newData = { ...formData, [fieldName]: value }
-    setFormData(newData)
-
-    // Validate on change if enabled
-    validation.validateField(fieldName, value, newData)
-  }
-
-  const handleBlur = (fieldName: string) => () => {
-    // Validate on blur
-    validation.validateField(fieldName, formData[fieldName], formData)
-  }
-
-  return {
-    handleChange,
-    handleBlur,
   }
 }

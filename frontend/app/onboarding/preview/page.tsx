@@ -6,8 +6,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { api } from "@/lib/api"
 import { DRAFT_KEY, getDraft } from "@/hooks/useOnboardingDraft"
-import { useFormValidation } from "@/hooks/useFormValidation"
-import { onboardingSchema } from "@/lib/validations/profileSchema"
+import { validateForm, validators, type ValidationErrors } from "@/lib/validation"
 
 function buildPayload(draft: Record<string, unknown>) {
   const num = (v: unknown) => (v === "" || v === undefined ? undefined : Number(v))
@@ -117,18 +116,14 @@ export default function PreviewPage() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
   const [validationErrors, setValidationErrors] = useState<Array<{field: string, message: string, page: string, path: string}>>([])
+  const [errors, setErrors] = useState<ValidationErrors>({})
 
-  // Initialize validation
-  const validation = useFormValidation(onboardingSchema)
+  // No longer using the validation hook
 
   useEffect(() => {
     const draftData = getDraft()
     setDraft(draftData)
-
-    // Validate the current draft data
-    const payload = buildPayload(draftData)
-    validation.validateAll(payload)
-  }, [validation])
+  }, [])
 
   const handleSubmit = async () => {
     setError("")
@@ -138,11 +133,25 @@ export default function PreviewPage() {
     const payload = buildPayload(draft)
 
     // Validate the payload
-    const isValid = validation.validateAll(payload)
+    const fieldValidators = {
+      linkedin_url: [validators.linkedinUrl],
+      location: [(value: string) => validators.required(value, 'Location')],
+      introduction: [(value: string) => validators.minLength(value, 50, 'Introduction')],
+      is_technical: [(value: boolean) => value === undefined ? "Please select technical background" : null],
+      idea_status: [validators.required],
+      ready_to_start: [validators.required],
+      areas_of_ownership: [(value: string[]) => Array.isArray(value) && value.length === 0 ? "Please select at least one area" : null],
+      topics_of_interest: [(value: string[]) => Array.isArray(value) && value.length === 0 ? "Please select at least one topic" : null],
+      equity_expectation: [(value: string) => validators.minLength(value, 10, 'Equity expectations')],
+      looking_for_description: [(value: string) => validators.minLength(value, 50, 'Looking for description')],
+    }
 
-    if (!isValid) {
+    const validationResult = validateForm(payload, fieldValidators)
+    setErrors(validationResult)
+
+    if (Object.keys(validationResult).length > 0) {
       // Convert validation errors to user-friendly format with page links
-      const errors = Object.entries(validation.errors).map(([field, message]) => {
+      const errorsList = Object.entries(validationResult).map(([field, message]) => {
         const displayName = getFieldDisplayName(field)
         const fieldPage = getFieldPage(field)
         return {
@@ -153,7 +162,7 @@ export default function PreviewPage() {
         }
       })
 
-      setValidationErrors(errors)
+      setValidationErrors(errorsList)
       setError("Please complete all required fields before submitting.")
       return
     }
@@ -180,9 +189,20 @@ export default function PreviewPage() {
       if (e instanceof Error) {
         try {
           const errorData = JSON.parse(e.message)
-          validation.setBackendErrors(errorData)
 
-          const backendErrors = Object.entries(validation.errors).map(([field, message]) => {
+          // Parse backend validation errors
+          const backendErrors: ValidationErrors = {}
+          if (errorData?.detail && Array.isArray(errorData.detail)) {
+            errorData.detail.forEach((err: any) => {
+              const field = err.loc?.slice(-1)[0] // Get the field name from location
+              const message = err.msg
+              if (field && message) {
+                backendErrors[field] = message
+              }
+            })
+          }
+
+          const backendErrorsList = Object.entries(backendErrors).map(([field, message]) => {
             const displayName = getFieldDisplayName(field)
             const fieldPage = getFieldPage(field)
             return {
@@ -193,8 +213,8 @@ export default function PreviewPage() {
             }
           })
 
-          if (backendErrors.length > 0) {
-            setValidationErrors(backendErrors)
+          if (backendErrorsList.length > 0) {
+            setValidationErrors(backendErrorsList)
             setError("Please fix the following issues and try again.")
           } else {
             setError(e.message)

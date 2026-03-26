@@ -3,29 +3,17 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { useFormValidation } from "@/hooks/useFormValidation"
-import { onboardingSchema } from "@/lib/validations/profileSchema"
-import {
-  TextField,
-  SelectField,
-  RadioGroupField,
-  ValidatedRichTextArea,
-  ValidatedMultiSelect,
-} from "@/components/forms/FormField"
+import { FormField, FormInput, FormTextarea, FormSelect } from "@/components/forms/FormField"
 import { ImportanceSelector } from "@/components/forms/ImportanceSelector"
 import { MultiSelect } from "@/components/forms/MultiSelect"
+import { RichTextArea } from "@/components/forms/RichTextArea"
 import { AREAS_OF_OWNERSHIP, PREF_IDEA_STATUSES, PREF_LOCATION_TYPES } from "@/lib/constants/enums"
 import { getDraft, setDraft } from "@/hooks/useOnboardingDraft"
+import { validateForm, validators, type ValidationErrors } from "@/lib/validation"
 
 export default function PreferencesPage() {
   const router = useRouter()
-  const [validationErrors, setValidationErrors] = useState<string[]>([])
-
-  // Initialize form validation
-  const validation = useFormValidation(onboardingSchema, {
-    validateOnBlur: true,
-    showErrorsOnlyAfterTouch: true,
-  })
+  const [errors, setErrors] = useState<ValidationErrors>({})
 
   const [form, setForm] = useState({
     looking_for_description: "",
@@ -76,56 +64,81 @@ export default function PreferencesPage() {
   const update = (key: string, value: unknown) => {
     setForm((prev) => ({ ...prev, [key]: value }))
     setDraft({ [key]: value })
+
+    // Clear field error when user starts typing
+    if (errors[key]) {
+      setErrors((prev) => ({ ...prev, [key]: '' }))
+    }
+  }
+
+  const validatePreferencesForm = (): boolean => {
+    const fieldValidators = {
+      looking_for_description: [(value: string) => validators.minLength(value, 50, 'Looking for description')],
+      pref_age_min: [(value: string) => {
+        if (value && form.pref_age_max && Number(value) > Number(form.pref_age_max)) {
+          return "Minimum age cannot be greater than maximum age"
+        }
+        return null
+      }],
+      pref_age_max: [(value: string) => {
+        if (value && form.pref_age_min && Number(value) < Number(form.pref_age_min)) {
+          return "Maximum age cannot be less than minimum age"
+        }
+        return null
+      }]
+    }
+
+    const validationErrors = validateForm(form, fieldValidators)
+    setErrors(validationErrors)
+
+    return Object.keys(validationErrors).length === 0
   }
 
   const handleNext = () => {
-    // Validate the form before allowing navigation
-    const isValid = validation.validateAll(form)
-
-    if (!isValid) {
-      const errors = validation.errors
-      const errorMessages = Object.entries(errors).map(([field, message]) => `${field}: ${message}`)
-      setValidationErrors(errorMessages)
-
+    if (validatePreferencesForm()) {
+      setDraft(form)
+      router.push("/onboarding/preview")
+    } else {
       // Scroll to first error
-      const firstErrorElement = document.querySelector('[aria-invalid="true"]')
-      if (firstErrorElement) {
-        firstErrorElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        ;(firstErrorElement as HTMLElement).focus()
+      const firstErrorField = Object.keys(errors)[0]
+      if (firstErrorField) {
+        const element = document.querySelector(`[name="${firstErrorField}"]`)
+        element?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       }
-      return
     }
-
-    setValidationErrors([])
-    setDraft(form)
-    router.push("/onboarding/preview")
   }
 
   return (
     <div className="bg-white rounded-lg shadow-xs border border-gray-200 p-6">
       <h1 className="text-2xl font-bold text-zinc-900 mb-6">Co-founder preferences</h1>
 
-      {validationErrors.length > 0 && (
+      {Object.keys(errors).length > 0 && (
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <h3 className="text-sm font-medium text-red-800 mb-2">Please fix the following errors:</h3>
-          <ul className="text-sm text-red-700 space-y-1">
-            {validationErrors.map((error, index) => (
-              <li key={index}>• {error}</li>
-            ))}
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            <h4 className="text-sm font-medium text-red-800">Please fix the following errors:</h4>
+          </div>
+          <ul className="mt-2 list-disc list-inside text-sm text-red-700">
+            {Object.entries(errors)
+              .filter(([, message]) => message)
+              .map(([field, message]) => (
+                <li key={field}>{message}</li>
+              ))}
           </ul>
         </div>
       )}
 
       <div className="space-y-6">
-        <ValidatedRichTextArea
-          name="looking_for_description"
+        <RichTextArea
           label="What are you looking for?"
           value={form.looking_for_description}
-          onChange={(v) => update("looking_for_description", v)}
+          onChange={(v: string) => update("looking_for_description", v)}
           minLength={50}
           maxLength={1000}
           required
-          validation={validation}
+          error={errors.looking_for_description}
         />
 
         <div>
@@ -211,31 +224,29 @@ export default function PreferencesPage() {
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Age range</label>
           <div className="flex gap-2 items-center mb-2">
-            <div>
-              <TextField
+            <div className="w-24">
+              <FormInput
                 name="pref_age_min"
-                type="text"
+                type="number"
                 value={form.pref_age_min}
-                onChange={(v) => update("pref_age_min", v)}
+                onChange={(e) => update("pref_age_min", e.target.value)}
                 placeholder="Min"
-                validation={validation}
-                className="w-24"
+                error={errors.pref_age_min}
               />
             </div>
             <span>-</span>
-            <div>
-              <TextField
+            <div className="w-24">
+              <FormInput
                 name="pref_age_max"
-                type="text"
+                type="number"
                 value={form.pref_age_max}
-                onChange={(v) => update("pref_age_max", v)}
+                onChange={(e) => update("pref_age_max", e.target.value)}
                 placeholder="Max"
-                validation={validation}
-                className="w-24"
+                error={errors.pref_age_max}
               />
             </div>
           </div>
-          <ImportanceSelector value={form.pref_age_importance} onChange={(v) => update("pref_age_importance", v)} />
+          <ImportanceSelector value={form.pref_age_importance} onChange={(v: string) => update("pref_age_importance", v)} />
         </div>
 
         <MultiSelect

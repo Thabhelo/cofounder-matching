@@ -9,11 +9,10 @@ import type { User } from "@/lib/types"
 import { useFormValidation } from "@/hooks/useFormValidation"
 import { profileUpdateSchema } from "@/lib/validations/profileSchema"
 import {
-  TextField,
-  SelectField,
-  ValidatedRichTextArea,
-  ValidatedLocationPicker,
-  ValidatedMultiSelect,
+  FormField,
+  FormInput,
+  FormTextarea,
+  FormSelect,
 } from "@/components/forms/FormField"
 import { TagInput } from "@/components/forms/TagInput"
 import { MultiSelect } from "@/components/forms/MultiSelect"
@@ -28,7 +27,6 @@ import {
 } from "@/lib/constants/enums"
 import { TOPICS_OF_INTEREST } from "@/lib/constants/topics"
 import { parseValidationErrors, type ValidationErrors } from "@/lib/validation"
-import { FormField, FormInput, FormSelect } from "@/components/forms/FormField"
 
 type Tab = "basics" | "you" | "preferences"
 
@@ -246,35 +244,21 @@ export default function ProfilePage() {
                 </FormField>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Location (Country)</label>
-                  <ValidatedLocationPicker
+                  <FormInput
                     name="location"
                     value={formData.location ?? ""}
-                    onChange={(v, components) => {
-                      if (components) {
-                        setFormData((prev) => ({
-                          ...prev,
-                          location: v,
-                          location_city: components.city ?? prev?.location_city,
-                          location_state: components.state ?? prev?.location_state,
-                          location_country: components.country ?? prev?.location_country,
-                          location_latitude: components.lat ?? prev?.location_latitude,
-                          location_longitude: components.lng ?? prev?.location_longitude,
-                        }))
-                      } else {
-                        update("location", v)
-                      }
-                    }}
-                    validation={validation}
+                    onChange={(e) => update("location", e.target.value)}
+                    placeholder="Enter your location"
+                    error={errors.location}
                   />
                 </div>
-                <ValidatedRichTextArea
-                  name="introduction"
+                <RichTextArea
                   label="Introduction"
                   value={formData.introduction ?? ""}
-                  onChange={(v) => update("introduction", v)}
+                  onChange={(v: string) => update("introduction", v)}
                   maxLength={2000}
                   rows={4}
-                  validation={validation}
+                  error={errors.introduction}
                 />
                 <div className="grid grid-cols-2 gap-4">
                   <FormField label="Gender" error={errors.gender}>
@@ -319,24 +303,26 @@ export default function ProfilePage() {
                     />
                   </div>
                 </div>
-                <TextField
-                  name="github_url"
-                  label="GitHub URL"
-                  type="url"
-                  value={formData.github_url ?? ""}
-                  onChange={(v) => update("github_url", v)}
-                  placeholder="https://github.com/yourusername"
-                  validation={validation}
-                />
-                <TextField
-                  name="portfolio_url"
-                  label="Portfolio URL"
-                  type="url"
-                  value={formData.portfolio_url ?? ""}
-                  onChange={(v) => update("portfolio_url", v)}
-                  placeholder="https://yourportfolio.com"
-                  validation={validation}
-                />
+                <FormField label="GitHub URL" error={errors.github_url}>
+                  <FormInput
+                    name="github_url"
+                    type="url"
+                    value={formData.github_url ?? ""}
+                    onChange={(e) => update("github_url", e.target.value)}
+                    placeholder="https://github.com/yourusername"
+                    error={errors.github_url}
+                  />
+                </FormField>
+                <FormField label="Portfolio URL" error={errors.portfolio_url}>
+                  <FormInput
+                    name="portfolio_url"
+                    type="url"
+                    value={formData.portfolio_url ?? ""}
+                    onChange={(e) => update("portfolio_url", e.target.value)}
+                    placeholder="https://yourportfolio.com"
+                    error={errors.portfolio_url}
+                  />
+                </FormField>
               </>
             )}
 

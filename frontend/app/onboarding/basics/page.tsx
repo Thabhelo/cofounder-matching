@@ -56,11 +56,7 @@ export default function BasicsPage() {
     video_intro_url: "",
   })
 
-  // Initialize form validation
-  const validation = useFormValidation(onboardingSchema, {
-    validateOnBlur: true,
-    showErrorsOnlyAfterTouch: true,
-  })
+  // No longer using the hook-based validation
 
   useEffect(() => {
     const draft = getDraft() as Record<string, unknown>
@@ -189,8 +185,6 @@ export default function BasicsPage() {
               }
             }}
             placeholder="Select your country"
-            validation={validation}
-            required
           />
         </FormField>
 
@@ -222,7 +216,6 @@ export default function BasicsPage() {
           onChange={(v) => update("impressive_accomplishment", v)}
           maxLength={2000}
           rows={3}
-          validation={validation}
         />
         <FormField label="Education (one per line)" error={errors.education_history}>
           <FormTextarea
@@ -287,64 +280,38 @@ export default function BasicsPage() {
             className="w-full px-4 py-2 border border-gray-300 rounded-lg"
           />
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Calendly URL</label>
-          <input
+        <FormField label="Portfolio URL" error={errors.portfolio_url}>
+          <FormInput
+            name="portfolio_url"
+            type="url"
+            value={form.portfolio_url}
+            onChange={(e) => update("portfolio_url", e.target.value)}
+            placeholder="https://yourportfolio.com"
+            error={errors.portfolio_url}
+          />
+        </FormField>
+
+        <FormField label="Calendly URL" error={errors.calendly_url}>
+          <FormInput
+            name="calendly_url"
             type="url"
             value={form.calendly_url}
             onChange={(e) => update("calendly_url", e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+            placeholder="https://calendly.com/yourusername"
+            error={errors.calendly_url}
           />
+        </FormField>
 
-          <TextField
-            name="previous_startups"
-            label="Previous startups"
-            type="text"
-            value={form.previous_startups}
-            onChange={(v) => update("previous_startups", v)}
-            validation={validation}
+        <FormField label="Video intro URL" error={errors.video_intro_url}>
+          <FormInput
+            name="video_intro_url"
+            type="url"
+            value={form.video_intro_url}
+            onChange={(e) => update("video_intro_url", e.target.value)}
+            placeholder="https://youtube.com/watch?v=..."
+            error={errors.video_intro_url}
           />
-        </div>
-
-        <TextField
-          name="github_url"
-          label="GitHub URL"
-          type="url"
-          value={form.github_url}
-          onChange={(v) => update("github_url", v)}
-          placeholder="https://github.com/yourusername"
-          validation={validation}
-        />
-
-        <TextField
-          name="portfolio_url"
-          label="Portfolio URL"
-          type="url"
-          value={form.portfolio_url}
-          onChange={(v) => update("portfolio_url", v)}
-          placeholder="https://yourportfolio.com"
-          validation={validation}
-        />
-
-        <TextField
-          name="calendly_url"
-          label="Calendly URL"
-          type="url"
-          value={form.calendly_url}
-          onChange={(v) => update("calendly_url", v)}
-          placeholder="https://calendly.com/yourusername"
-          validation={validation}
-        />
-
-        <TextField
-          name="video_intro_url"
-          label="Video intro URL"
-          type="url"
-          value={form.video_intro_url}
-          onChange={(v) => update("video_intro_url", v)}
-          placeholder="https://youtube.com/watch?v=..."
-          validation={validation}
-        />
+        </FormField>
       </div>
 
       {/* Show validation summary if there are errors */}
