@@ -21,7 +21,7 @@ posthog==3.7.4
 pytest>=8.2,<10
 pytest-asyncio==1.3.0
 pytest-cov==7.0.0
-faker==40.8.0
+faker==40.11.1
 
 # Production
 slowapi==0.1.9  # Rate limiting
