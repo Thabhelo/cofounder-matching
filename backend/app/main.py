@@ -13,6 +13,7 @@ from contextlib import asynccontextmanager
 
 from app.config import settings
 from app.api.v1 import api_router
+from app.api.ws import router as ws_router
 from app.api import webhooks as webhooks_router
 from app.logging_config import setup_logging, log_request_metrics, get_logger_with_request_id
 from app.sentry_config import setup_sentry
@@ -374,7 +375,6 @@ app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 # Clerk webhooks (no auth; Clerk signs payloads)
 app.include_router(webhooks_router.router, prefix="/webhooks", tags=["webhooks"])
 # WebSocket for real-time messaging
-from app.api.ws import router as ws_router
 app.include_router(ws_router)
 
 
