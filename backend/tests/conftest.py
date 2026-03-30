@@ -93,6 +93,21 @@ def client(db):
     fastapi_app.dependency_overrides.clear()
 
 
+@pytest.fixture(scope="function")
+def client_no_auth(db):
+    """Test client WITHOUT auth override — for testing auth behavior itself."""
+    def override_get_db():
+        try:
+            yield db
+        finally:
+            pass
+
+    fastapi_app.dependency_overrides[get_db] = override_get_db
+    with TestClient(fastapi_app) as test_client:
+        yield test_client
+    fastapi_app.dependency_overrides.clear()
+
+
 @pytest.fixture
 def test_user_data() -> Dict:
     """Sample user data for testing (matches User model and UserOnboarding required fields)."""
