@@ -272,7 +272,7 @@ class AdminReviewFilters(BaseModel):
 
 class ReviewQueueExportRequest(BaseModel):
     """Request for exporting review queue data."""
-    format: str = Field("csv", regex="^(csv|json|xlsx)$")
+    format: str = Field("csv", pattern="^(csv|json|xlsx)$")
     filters: Optional[AdminReviewFilters] = None
     include_user_details: bool = False
     include_quality_metrics: bool = False
@@ -281,7 +281,7 @@ class ReviewQueueExportRequest(BaseModel):
 
 class AdminWebhookConfig(BaseModel):
     """Configuration for admin webhooks."""
-    webhook_url: str = Field(..., regex=r"^https?://.*")
+    webhook_url: str = Field(..., pattern=r"^https?://.*")
     events: List[str]  # Which events to send
     secret_token: Optional[str] = None
     enabled: bool = True
@@ -301,7 +301,7 @@ class ReviewEscalationRule(BaseModel):
 class BulkUserAction(BaseModel):
     """Bulk action on multiple users."""
     user_ids: List[UUID] = Field(..., max_items=100)
-    action: str = Field(..., regex="^(ban|suspend|activate|recalculate_trust|require_reverification)$")
+    action: str = Field(..., pattern="^(ban|suspend|activate|recalculate_trust|require_reverification)$")
     reason: str = Field(..., max_length=500)
     notify_users: bool = False
     batch_size: int = Field(10, ge=1, le=50)
@@ -329,7 +329,7 @@ class AdminActivityResponse(BaseModel):
 class UserRiskAssessment(BaseModel):
     """Risk assessment for a specific user."""
     user_id: UUID
-    risk_level: str = Field(..., regex="^(low|medium|high|critical)$")
+    risk_level: str = Field(..., pattern="^(low|medium|high|critical)$")
     risk_factors: List[Dict[str, Any]]
     recommended_actions: List[str]
     confidence_score: float = Field(..., ge=0.0, le=1.0)

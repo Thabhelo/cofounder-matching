@@ -373,6 +373,9 @@ if settings.ENVIRONMENT == "production":
 app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 # Clerk webhooks (no auth; Clerk signs payloads)
 app.include_router(webhooks_router.router, prefix="/webhooks", tags=["webhooks"])
+# WebSocket for real-time messaging
+from app.api.ws import router as ws_router
+app.include_router(ws_router)
 
 
 @app.get("/")
@@ -393,21 +396,20 @@ async def health_check():
 
     health_status = {
         "status": "healthy",
-        "environment": settings.ENVIRONMENT,
         "database": "unknown"
     }
 
-    # Check database connectivity with enhanced pool information
     try:
         is_healthy, pool_info = await check_database_connection()
 
         if is_healthy:
             health_status["database"] = "connected"
-            health_status["database_pool"] = pool_info
+            # Only expose pool details in development
+            if settings.ENVIRONMENT == "development":
+                health_status["database_pool"] = pool_info
         else:
             health_status["status"] = "unhealthy"
             health_status["database"] = "disconnected"
-            health_status["database_pool"] = pool_info
             return JSONResponse(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 content=health_status
@@ -416,7 +418,6 @@ async def health_check():
         logger.error(f"Health check failed: {str(e)}")
         health_status["status"] = "unhealthy"
         health_status["database"] = "error"
-        health_status["error"] = str(e)
         return JSONResponse(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             content=health_status

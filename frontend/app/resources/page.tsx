@@ -5,6 +5,7 @@ import Link from "next/link"
 import { api } from "@/lib/api"
 import type { Resource, ResourceCategory } from "@/lib/types"
 import { formatCurrency, formatDate } from "@/lib/utils"
+import { Loader } from "@/components/ui/loader"
 
 export default function ResourcesPage() {
   const [resources, setResources] = useState<Resource[]>([])
@@ -81,7 +82,7 @@ export default function ResourcesPage() {
 
         {loading ? (
           <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-900"></div>
+            <Loader size="md" />
           </div>
         ) : resources.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-lg">

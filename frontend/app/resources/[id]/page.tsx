@@ -5,7 +5,8 @@ import { useParams } from "next/navigation"
 import Link from "next/link"
 import { api } from "@/lib/api"
 import type { Resource } from "@/lib/types"
-import { formatCurrency, formatDate } from "@/lib/utils"
+import { formatCurrency, formatDate, safeHref } from "@/lib/utils"
+import { PageLoader } from "@/components/ui/loader"
 
 export default function ResourceDetailPage() {
   const params = useParams()
@@ -29,9 +30,7 @@ export default function ResourceDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-900"></div>
-      </div>
+      <PageLoader label="Loading resource..." />
     )
   }
 
@@ -152,7 +151,7 @@ export default function ResourceDetailPage() {
           {resource.application_url && (
             <div className="border-t pt-6 mt-6">
               <a
-                href={resource.application_url}
+                href={safeHref(resource.application_url)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-block px-6 py-3 bg-zinc-900 text-white font-medium rounded-lg hover:bg-black transition-colors"

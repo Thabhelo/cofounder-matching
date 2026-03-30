@@ -9,7 +9,7 @@ from fastapi import APIRouter, Request, HTTPException, status
 from fastapi.responses import JSONResponse
 
 from app.config import settings
-from app.database import get_db
+from app.database import SessionLocal
 from app.models.user import User
 from app.models.report import Report
 
@@ -62,7 +62,7 @@ async def clerk_webhook(request: Request):
             logger.warning("user.deleted webhook missing data.id")
             return JSONResponse(status_code=200, content={"ok": True})
 
-        db = next(get_db())
+        db = SessionLocal()
         try:
             user = db.query(User).filter(User.clerk_id == clerk_id).first()
             if not user:

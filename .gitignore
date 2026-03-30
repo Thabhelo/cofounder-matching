@@ -25,6 +25,10 @@ out/
 .env.*.local
 !.env.example
 
+# Internal docs (not for client repo)
+WORK_LOG.md
+fixes.md
+
 # Database
 *.db
 *.sqlite

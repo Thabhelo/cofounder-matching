@@ -400,6 +400,48 @@ export const api = {
         method: "PUT",
         token,
       }),
+
+    markAllRead: (matchId: string, token: string) =>
+      request<any>(`/api/v1/messages/match/${matchId}/read-all`, {
+        method: "PUT",
+        token,
+      }),
+  },
+
+  media: {
+    upload: async (matchId: string, encryptedBlob: Blob, iv: string, fileName: string, fileType: string, fileSize: number, token: string) => {
+      const formData = new FormData()
+      formData.append("match_id", matchId)
+      formData.append("file", encryptedBlob, "encrypted.enc")
+      formData.append("iv", iv)
+      formData.append("file_name", fileName)
+      formData.append("file_type", fileType)
+      formData.append("file_size", String(fileSize))
+
+      const response = await fetch(`${API_URL}/api/v1/media/upload`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: "Upload failed" }))
+        throw new APIError(response.status, error.detail || "Upload failed")
+      }
+      return response.json()
+    },
+
+    downloadUrl: (mediaId: string) => `${API_URL}/api/v1/media/download/${mediaId}`,
+
+    download: async (mediaId: string, token: string): Promise<ArrayBuffer> => {
+      const response = await fetch(`${API_URL}/api/v1/media/download/${mediaId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!response.ok) {
+        throw new APIError(response.status, "Download failed")
+      }
+      return response.arrayBuffer()
+    },
   },
 
   reports: {

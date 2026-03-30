@@ -38,7 +38,7 @@ export default function OnboardingLayout({
               style={{ width: `${progress}%` }}
             />
           </div>
-          <ul className="flex gap-4 mt-2 text-xs text-gray-500">
+          <ul className="hidden sm:flex gap-4 mt-2 text-xs text-gray-500">
             {STEPS.map((step, i) => (
               <li
                 key={step.path}

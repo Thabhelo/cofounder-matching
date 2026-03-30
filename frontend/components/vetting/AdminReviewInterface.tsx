@@ -476,7 +476,7 @@ const ReviewQueueItemCard: React.FC<{
               </Button>
 
               <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+                <DropdownMenuTrigger >
                   <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
                     <MoreHorizontal className="w-4 h-4" />
                   </Button>
@@ -572,7 +572,7 @@ const ReviewQueueItemCard: React.FC<{
                     <Separator orientation="vertical" className="h-6" />
 
                     <AlertDialog>
-                      <AlertDialogTrigger asChild>
+                      <AlertDialogTrigger >
                         <Button variant="outline" size="sm" className="text-red-600">
                           <Ban className="w-4 h-4 mr-1" />
                           Ban User

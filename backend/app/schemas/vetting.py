@@ -245,7 +245,7 @@ class TrustScoreHistory(BaseModel):
     """Historical trust score data."""
     user_id: UUID
     score_history: List[Dict[str, Any]] = Field(default_factory=list)
-    trend_direction: str = Field(..., regex="^(up|down|stable)$")
+    trend_direction: str = Field(..., pattern="^(up|down|stable)$")
     trend_percentage: float
     best_score: int
     worst_score: int
@@ -290,8 +290,8 @@ class VettingSystemHealth(BaseModel):
     highly_trusted_users_percentage: float
 
     # Trends
-    score_trend_30_days: str = Field(..., regex="^(improving|declining|stable)$")
-    new_user_quality_trend: str = Field(..., regex="^(improving|declining|stable)$")
+    score_trend_30_days: str = Field(..., pattern="^(improving|declining|stable)$")
+    new_user_quality_trend: str = Field(..., pattern="^(improving|declining|stable)$")
 
     # System performance
     average_verification_time_hours: float
@@ -328,7 +328,7 @@ class VettingConfiguration(BaseModel):
 class BulkVettingOperation(BaseModel):
     """Bulk operation on multiple users."""
     user_ids: List[UUID] = Field(..., max_items=100)
-    operation: str = Field(..., regex="^(recalculate_trust|update_metrics|verify_domain|flag_review)$")
+    operation: str = Field(..., pattern="^(recalculate_trust|update_metrics|verify_domain|flag_review)$")
     parameters: Optional[Dict[str, Any]] = Field(default_factory=dict)
     batch_size: int = Field(10, ge=1, le=50)
     notify_admins: bool = False
@@ -389,8 +389,8 @@ class QualityMetricsUpdate(BaseModel):
 class VettingAlert(BaseModel):
     """Vetting system alert."""
     id: UUID
-    alert_type: str = Field(..., regex="^(low_trust|suspicious_activity|verification_failure|system_health)$")
-    severity: str = Field(..., regex="^(low|medium|high|critical)$")
+    alert_type: str = Field(..., pattern="^(low_trust|suspicious_activity|verification_failure|system_health)$")
+    severity: str = Field(..., pattern="^(low|medium|high|critical)$")
     title: str
     description: str
     user_id: Optional[UUID] = None
@@ -407,7 +407,7 @@ class VettingAlert(BaseModel):
 
 class VettingReport(BaseModel):
     """Comprehensive vetting system report."""
-    report_type: str = Field(..., regex="^(daily|weekly|monthly|custom)$")
+    report_type: str = Field(..., pattern="^(daily|weekly|monthly|custom)$")
     date_range: Dict[str, datetime]
 
     # Summary metrics

@@ -18,7 +18,7 @@ export function OnboardingRedirectIfComplete({ children }: { children: ReactNode
       try {
         const user = await api.users.getMe(token)
         const profileComplete = user?.profile_status && user.profile_status !== "incomplete"
-        if (user?.behavior_agreement_accepted_at || profileComplete) {
+        if (profileComplete) {
           router.replace("/dashboard")
         }
       } catch {

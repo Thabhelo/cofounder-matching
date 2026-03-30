@@ -5,6 +5,7 @@ import { useAuth } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { api } from "@/lib/api"
+import { PageLoader } from "@/components/ui/loader"
 import type { User } from "@/lib/types"
 import { useFormValidation } from "@/hooks/useFormValidation"
 import { profileUpdateSchema } from "@/lib/validations/profileSchema"
@@ -26,7 +27,7 @@ import {
   GENDERS,
 } from "@/lib/constants/enums"
 import { TOPICS_OF_INTEREST } from "@/lib/constants/topics"
-import { parseValidationErrors, type ValidationErrors } from "@/lib/validation"
+import { parseValidationErrors, validateForm, validators, type ValidationErrors } from "@/lib/validation"
 
 type Tab = "basics" | "you" | "preferences"
 
@@ -67,15 +68,26 @@ export default function ProfilePage() {
   }, [getToken, router])
 
   const handleSave = async () => {
-    // Validate form before saving
-    const isValid = validation.validateAll(formData)
+    // Validate required fields before saving
+    const fieldValidators = {
+      name: [(value: string) => validators.required(value, 'Name')],
+      linkedin_url: [validators.linkedinUrl],
+      location: [(value: string) => validators.required(value, 'Location')],
+      introduction: [(value: string) => validators.minLength(value, 50, 'Introduction')],
+    }
 
-    if (!isValid) {
+    const validationResult = validateForm(formData as Record<string, any>, fieldValidators)
+
+    if (Object.keys(validationResult).length > 0) {
+      setErrors(validationResult)
       // Scroll to first error
-      const firstErrorElement = document.querySelector('[aria-invalid="true"]')
-      if (firstErrorElement) {
-        firstErrorElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        ;(firstErrorElement as HTMLElement).focus()
+      const firstErrorField = Object.keys(validationResult)[0]
+      if (firstErrorField) {
+        const element = document.querySelector(`[name="${firstErrorField}"]`)
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          ;(element as HTMLElement).focus()
+        }
       }
       return
     }
@@ -131,9 +143,7 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-900" />
-      </div>
+      <PageLoader label="Loading profile..." />
     )
   }
 
@@ -162,7 +172,7 @@ export default function ProfilePage() {
         <div className="bg-white rounded-lg shadow-xs">
           <div className="p-6 border-b flex justify-between items-center flex-wrap gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Your Profile</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Your Profile</h1>
               <p className="text-gray-600 mt-1">Manage your information and preferences</p>
 
               {/* Show validation error summary */}
@@ -198,7 +208,7 @@ export default function ProfilePage() {
           </div>
 
           <div className="border-b">
-            <nav className="flex gap-4 px-6">
+            <nav className="flex gap-2 sm:gap-4 px-3 sm:px-6 overflow-x-auto">
               {tabs.map((t) => (
                 <button
                   key={t.id}

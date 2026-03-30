@@ -13,7 +13,7 @@ from enum import Enum
 
 from sqlalchemy import select, and_, or_
 
-from app.database import get_database_session
+from app.database import SessionLocal
 from app.models import User, UserTrustScore, UserVerification
 from app.services.trust_score import recalculate_all_trust_scores, recalculate_user_trust_score
 from app.services.quality_metrics import update_all_quality_metrics
@@ -201,19 +201,15 @@ class BackgroundJobManager:
         error_count = 0
 
         try:
-            await recalculate_all_trust_scores()
+            recalculate_all_trust_scores()
 
-            # Count processed users
-            async for session in get_database_session():
-                try:
-                    result = await session.execute(
-                        select(User.id).where(
-                            and_(User.is_active, ~User.is_banned)
-                        )
-                    )
-                    processed_count = len(result.scalars().all())
-                finally:
-                    await session.close()
+            session = SessionLocal()
+            try:
+                processed_count = session.query(User).filter(
+                    and_(User.is_active, ~User.is_banned)
+                ).count()
+            finally:
+                session.close()
 
         except Exception as e:
             error_count = 1
@@ -231,19 +227,15 @@ class BackgroundJobManager:
         error_count = 0
 
         try:
-            await update_all_quality_metrics()
+            update_all_quality_metrics()
 
-            # Count processed users
-            async for session in get_database_session():
-                try:
-                    result = await session.execute(
-                        select(User.id).where(
-                            and_(User.is_active, ~User.is_banned)
-                        )
-                    )
-                    processed_count = len(result.scalars().all())
-                finally:
-                    await session.close()
+            session = SessionLocal()
+            try:
+                processed_count = session.query(User).filter(
+                    and_(User.is_active, ~User.is_banned)
+                ).count()
+            finally:
+                session.close()
 
         except Exception as e:
             error_count = 1
@@ -259,38 +251,33 @@ class BackgroundJobManager:
         """Background job to clean up expired verifications."""
         processed_count = 0
         error_count = 0
+        session = SessionLocal()
 
-        async for session in get_database_session():
-            try:
-                # Find expired verifications
-                expired_verifications = await session.execute(
-                    select(UserVerification).where(
-                        and_(
-                            UserVerification.expires_at < datetime.utcnow(),
-                            UserVerification.status == "verified"
-                        )
-                    )
+        try:
+            verifications = session.query(UserVerification).filter(
+                and_(
+                    UserVerification.expires_at < datetime.utcnow(),
+                    UserVerification.status == "verified"
                 )
+            ).all()
 
-                verifications = expired_verifications.scalars().all()
-                processed_count = len(verifications)
+            processed_count = len(verifications)
 
-                # Update status to expired
-                for verification in verifications:
-                    verification.status = "expired"
-                    verification.updated_at = datetime.utcnow()
+            for verification in verifications:
+                verification.status = "expired"
+                verification.updated_at = datetime.utcnow()
 
-                await session.commit()
+            session.commit()
 
-                logger.info(f"Marked {processed_count} verifications as expired")
+            logger.info(f"Marked {processed_count} verifications as expired")
 
-            except Exception as e:
-                error_count += 1
-                await session.rollback()
-                logger.error(f"Error cleaning up expired verifications: {str(e)}")
-                raise
-            finally:
-                await session.close()
+        except Exception as e:
+            error_count += 1
+            session.rollback()
+            logger.error(f"Error cleaning up expired verifications: {str(e)}")
+            raise
+        finally:
+            session.close()
 
         return {
             'processed_count': processed_count,
@@ -301,56 +288,46 @@ class BackgroundJobManager:
         """Update trust scores for recently active users."""
         processed_count = 0
         error_count = 0
+        session = SessionLocal()
 
-        async for session in get_database_session():
-            try:
-                # Find users active in the last 24 hours
-                cutoff_time = datetime.utcnow() - timedelta(hours=24)
+        try:
+            cutoff_time = datetime.utcnow() - timedelta(hours=24)
 
-                active_users = await session.execute(
-                    select(User).where(
-                        and_(
-                            User.is_active,
-                            ~User.is_banned,
-                            or_(
-                                User.updated_at > cutoff_time,
-                                # Users without recent trust score calculation
-                                ~User.id.in_(
-                                    select(UserTrustScore.user_id).where(
-                                        UserTrustScore.last_calculated > cutoff_time
-                                    )
-                                )
+            users = session.query(User).filter(
+                and_(
+                    User.is_active,
+                    ~User.is_banned,
+                    or_(
+                        User.updated_at > cutoff_time,
+                        ~User.id.in_(
+                            select(UserTrustScore.user_id).where(
+                                UserTrustScore.last_calculated > cutoff_time
                             )
                         )
                     )
                 )
+            ).all()
 
-                users = active_users.scalars().all()
+            for user in users:
+                try:
+                    recalculate_user_trust_score(str(user.id))
+                    processed_count += 1
+                except Exception as e:
+                    error_count += 1
+                    logger.error(
+                        f"Error updating trust score for user {user.id}: {str(e)}"
+                    )
 
-                for user in users:
-                    try:
-                        await recalculate_user_trust_score(str(user.id))
-                        processed_count += 1
+            logger.info(
+                f"Updated trust scores for {processed_count} active users, "
+                f"{error_count} errors"
+            )
 
-                        # Small delay to avoid overwhelming the system
-                        await asyncio.sleep(0.1)
-
-                    except Exception as e:
-                        error_count += 1
-                        logger.error(
-                            f"Error updating trust score for user {user.id}: {str(e)}"
-                        )
-
-                logger.info(
-                    f"Updated trust scores for {processed_count} active users, "
-                    f"{error_count} errors"
-                )
-
-            except Exception as e:
-                logger.error(f"Error in active user score update job: {str(e)}")
-                raise
-            finally:
-                await session.close()
+        except Exception as e:
+            logger.error(f"Error in active user score update job: {str(e)}")
+            raise
+        finally:
+            session.close()
 
         return {
             'processed_count': processed_count,
@@ -420,7 +397,7 @@ async def trigger_quality_metrics_update():
 async def trigger_user_trust_score_update(user_id: str):
     """Manually trigger trust score update for a specific user."""
     async def update_single_user():
-        result = await recalculate_user_trust_score(user_id)
+        result = recalculate_user_trust_score(user_id)
         return {
             'processed_count': 1 if result else 0,
             'error_count': 0 if result else 1
