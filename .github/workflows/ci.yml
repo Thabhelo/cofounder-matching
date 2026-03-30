@@ -1,0 +1,206 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '20'
+
+jobs:
+  backend-lint-and-test:
+    name: Backend Lint & Test
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          # User must match DATABASE_URL below (do not use "root" - Postgres image creates only POSTGRES_USER)
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        working-directory: ./backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Wait for PostgreSQL to be ready
+        run: |
+          until pg_isready -h localhost -p 5432 -U test_user; do
+            echo "Waiting for PostgreSQL..."
+            sleep 2
+          done
+          echo "PostgreSQL is ready!"
+
+      - name: Run type checking with mypy
+        working-directory: ./backend
+        run: |
+          pip install mypy types-requests
+          mypy app/ --ignore-missing-imports || echo "Type checking completed with warnings"
+
+      - name: Run linting with ruff
+        working-directory: ./backend
+        run: |
+          pip install ruff
+          ruff check . --output-format=github
+
+      - name: Run Bandit SAST
+        working-directory: ./backend
+        run: |
+          pip install bandit
+          bandit -r app/ -ll -x app/tests/
+
+      - name: Run tests with pytest
+        working-directory: ./backend
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          CLERK_PUBLISHABLE_KEY: ${{ secrets.CLERK_PUBLISHABLE_KEY }}
+          CLERK_FRONTEND_API: https://api.clerk.test
+          ENVIRONMENT: test
+          PYTHONPATH: .
+        run: |
+          pytest --cov=app --cov-report=xml --cov-report=term -v
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          file: ./backend/coverage.xml
+          flags: backend
+          name: backend-coverage
+
+  frontend-lint-and-test:
+    name: Frontend Lint & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: ./frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Run type checking
+        working-directory: ./frontend
+        run: npm run typecheck
+
+      - name: Run linting
+        working-directory: ./frontend
+        run: npm run lint
+
+      - name: Run tests
+        working-directory: ./frontend
+        run: npm run test:coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          file: ./frontend/coverage/coverage-final.json
+          flags: frontend
+          name: frontend-coverage
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Run Trivy vulnerability scanner
+        id: trivy-scan
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1  # v0.35.0 - safe commit SHA after supply chain attack
+        continue-on-error: true
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: sarif
+          output: trivy-results.sarif
+          trivyignores: ./.trivyignore
+          exit-code: '0'  # Don't fail job on vulnerabilities until pygments patch available
+
+      - name: Check if SARIF file exists
+        id: check-sarif
+        if: always()
+        run: |
+          if [ -s "trivy-results.sarif" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        if: always() && steps.check-sarif.outputs.exists == 'true'
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results.sarif
+
+      - name: Set up Python for pip-audit
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Run pip-audit (Python dependency scan)
+        working-directory: ./backend
+        run: |
+          pip install pip-audit
+          # Temporary: pip-audit fails on pygments 2.19.2 (CVE-2026-4539) which is pulled
+          # transitively by tooling deps and does not yet have an available fixed release on PyPI.
+          pip-audit -r requirements.txt --ignore-vuln CVE-2026-4539
+
+      - name: Set up Node.js for npm audit
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+
+      - name: Run npm audit (JS dependency scan)
+        working-directory: ./frontend
+        # HIGH vulns in next@14.x (GHSA-9g9p-9gw9-jx7f, GHSA-h25m-26qc-wcjf) require
+        # next@15.6+ which is not yet stable (only canary); tracked for separate upgrade PR.
+        # HIGH vulns in eslint-config-next and jest-environment-jsdom are dev/build tooling
+        # only and are not present in the production runtime.
+        run: npm audit --audit-level=critical

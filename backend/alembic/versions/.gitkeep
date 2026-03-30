@@ -1,0 +1,2 @@
+# Migrations will be auto-generated here
+# Run: alembic revision --autogenerate -m "Initial schema"

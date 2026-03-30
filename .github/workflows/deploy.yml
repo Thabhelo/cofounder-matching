@@ -1,0 +1,65 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  smoke-test:
+    name: Smoke test Render deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check RENDER_API_URL is configured
+        run: |
+          if [ -z "${{ vars.RENDER_API_URL }}" ]; then
+            echo "RENDER_API_URL repository variable is not set."
+            echo "Go to: GitHub repo -> Settings -> Variables -> Actions -> New repository variable"
+            echo "Name: RENDER_API_URL, Value: https://cofounder-api.onrender.com"
+            exit 1
+          fi
+
+      - name: Wait for Render deploy (poll until healthy or timeout)
+        run: |
+          API="${{ vars.RENDER_API_URL }}"
+          TIMEOUT=600   # 10 minutes max
+          INTERVAL=15   # check every 15s
+          ELAPSED=0
+
+          echo "Polling $API/health until deploy is live (timeout ${TIMEOUT}s)..."
+          while [ $ELAPSED -lt $TIMEOUT ]; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$API/health" || echo "000")
+            if [ "$STATUS" = "200" ]; then
+              echo "Backend healthy after ${ELAPSED}s (HTTP 200)"
+              exit 0
+            fi
+            echo "  ${ELAPSED}s: HTTP $STATUS - waiting..."
+            sleep $INTERVAL
+            ELAPSED=$((ELAPSED + INTERVAL))
+          done
+
+          echo "Timed out after ${TIMEOUT}s - backend never became healthy"
+          exit 1
+
+      - name: Verify public API endpoint
+        run: |
+          API="${{ vars.RENDER_API_URL }}"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$API/api/v1/organizations")
+          echo "GET /api/v1/organizations -> HTTP $STATUS"
+          [ "$STATUS" = "200" ] || exit 1
+
+      - name: Verify auth-protected endpoint returns 4xx (not 500)
+        run: |
+          API="${{ vars.RENDER_API_URL }}"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$API/api/v1/users/me")
+          echo "GET /api/v1/users/me (no token) -> HTTP $STATUS"
+          [[ "$STATUS" =~ ^4 ]] || { echo "Expected 4xx, got $STATUS"; exit 1; }
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Smoke test result: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Commit: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- API: ${{ vars.RENDER_API_URL }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Time: $(date -u)" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,734 @@
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
+from sqlalchemy.orm import Session
+from sqlalchemy import or_
+from typing import List, Optional, cast
+from datetime import datetime, timedelta, timezone
+from uuid import UUID
+import uuid
+
+from app.database import get_db
+from app.models.user import User
+from app.models.match import Match
+from app.models.message import Message
+# analytics hooks can be re-added when used
+from app.schemas.match import (
+    IntroRequest,
+    IntroResponse,
+    MatchStatusUpdate,
+    MatchResponse,
+    MatchWithUserResponse,
+)
+from app.schemas.user import UserPublicResponse, ProfileDiscoverResponse
+from app.api.deps import get_current_user
+from app.services.matching import score_match, MIN_MATCH_SCORE
+from app.services.email import send_intro_request_notification, send_new_match_notification, send_intro_accepted_notification
+
+# Active statuses: exclude from discover/recommendations. Dismissed/unmatched can reappear (matched_before).
+ACTIVE_MATCH_STATUSES = ("saved", "viewed", "intro_requested", "connected")
+PRIOR_MATCH_STATUSES = ("dismissed", "unmatched")
+
+router = APIRouter()
+
+
+@router.post("/invite/{profile_id}", status_code=status.HTTP_201_CREATED)
+async def send_invite_to_profile(
+    profile_id: str,
+    intro_request: IntroRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Send invitation directly to a profile - creates match and sends intro in one step
+
+    This is used from the discover page to invite someone to connect.
+    Rate limited to 20 invites per week (like YC).
+    """
+    try:
+        target_user_id = uuid.UUID(profile_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid profile ID"
+        )
+
+    if target_user_id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot invite yourself"
+        )
+
+    target_user = db.query(User).filter(
+        User.id == target_user_id,
+        User.is_active
+    ).first()
+
+    if not target_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Profile not found"
+        )
+
+    # Check if match already exists (current user → target user)
+    existing_match = db.query(Match).filter(
+        Match.user_id == current_user.id,
+        Match.target_user_id == target_user_id
+    ).first()
+
+    if existing_match:
+        # Allow re-inviting if previously unmatched or dismissed
+        if existing_match.status in ("unmatched", "dismissed"):
+            # Reset the match record for a fresh invite
+            existing_match.status = None  # type: ignore[assignment]
+            existing_match.intro_requested_at = None  # type: ignore[assignment]
+            existing_match.intro_accepted_at = None  # type: ignore[assignment]
+            existing_match.match_score = 0  # type: ignore[assignment]
+        elif existing_match.intro_requested_at:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="You already sent an invitation to this person"
+            )
+        elif existing_match.intro_accepted_at:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Already connected with this person"
+            )
+
+    # Check for reciprocal match (target user → current user)
+    reciprocal_match = db.query(Match).filter(
+        Match.user_id == target_user_id,
+        Match.target_user_id == current_user.id,
+        Match.intro_requested_at.isnot(None)
+    ).first()
+
+    # Rate limit check - max 20 intro requests per week
+    one_week_ago = datetime.now(timezone.utc) - timedelta(weeks=1)
+    recent_intros = db.query(Match).filter(
+        Match.user_id == current_user.id,
+        Match.intro_requested_at.isnot(None),
+        Match.intro_requested_at >= one_week_ago
+    ).count()
+
+    if recent_intros >= 20:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Maximum of 20 invitations per week. You have {20 - recent_intros} invites left."
+        )
+
+    # If reciprocal match exists, auto-connect both matches
+    if reciprocal_match:
+        if existing_match:
+            match = existing_match
+            match.status = "connected"  # type: ignore[assignment]
+            match.intro_requested_at = datetime.now(timezone.utc)  # type: ignore[assignment]
+            match.intro_accepted_at = datetime.now(timezone.utc)  # type: ignore[assignment]
+            match.updated_at = datetime.now(timezone.utc)  # type: ignore[assignment]
+            if match.match_score == 0:
+                inv_result = score_match(current_user, target_user)
+                match.match_score = inv_result["match_score"]
+                match.match_explanation = inv_result["match_explanation"]
+                match.complementarity_score = inv_result["complementarity_score"]
+                match.commitment_alignment_score = inv_result["commitment_alignment_score"]
+                match.location_fit_score = inv_result["location_fit_score"]
+                match.intent_score = inv_result["intent_score"]
+                match.interest_overlap_score = inv_result["interest_overlap_score"]
+                match.preference_alignment_score = inv_result["preference_alignment_score"]
+        else:
+            inv_result = score_match(current_user, target_user)
+            match = Match(
+                user_id=current_user.id,
+                target_user_id=target_user_id,
+                match_score=inv_result["match_score"],
+                match_explanation=inv_result["match_explanation"],
+                complementarity_score=inv_result["complementarity_score"],
+                commitment_alignment_score=inv_result["commitment_alignment_score"],
+                location_fit_score=inv_result["location_fit_score"],
+                intent_score=inv_result["intent_score"],
+                interest_overlap_score=inv_result["interest_overlap_score"],
+                preference_alignment_score=inv_result["preference_alignment_score"],
+                status="connected",
+                intro_requested_at=datetime.now(timezone.utc),
+                intro_accepted_at=datetime.now(timezone.utc)
+            )
+            db.add(match)
+            db.flush()
+
+        if reciprocal_match.match_score == 0:
+            rec_result = score_match(target_user, current_user)
+            reciprocal_match.match_score = rec_result["match_score"]
+            reciprocal_match.match_explanation = rec_result["match_explanation"]
+            reciprocal_match.complementarity_score = rec_result["complementarity_score"]
+            reciprocal_match.commitment_alignment_score = rec_result["commitment_alignment_score"]
+            reciprocal_match.location_fit_score = rec_result["location_fit_score"]
+            reciprocal_match.intent_score = rec_result["intent_score"]
+            reciprocal_match.interest_overlap_score = rec_result["interest_overlap_score"]
+            reciprocal_match.preference_alignment_score = rec_result["preference_alignment_score"]
+        reciprocal_match.status = "connected"  # type: ignore[assignment]
+        reciprocal_match.intro_accepted_at = datetime.now(timezone.utc)  # type: ignore[assignment]
+        reciprocal_match.updated_at = datetime.now(timezone.utc)  # type: ignore[assignment]
+
+        intro_message = Message(
+            match_id=match.id,
+            sender_id=current_user.id,
+            recipient_id=target_user_id,
+            content=intro_request.message,
+            message_type="intro_request"
+        )
+        db.add(intro_message)
+        db.commit()
+        db.refresh(match)
+
+        await send_new_match_notification(target_user, current_user)
+
+        return {
+            "message": "You're now connected! Check your inbox to start chatting.",
+            "match_id": str(match.id),
+            "invites_remaining": max(0, 20 - recent_intros - 1),
+            "auto_connected": True
+        }
+
+    # No reciprocal match - create normal intro request
+    if existing_match:
+        match = existing_match
+        match.status = "intro_requested"  # type: ignore[assignment]
+        match.intro_requested_at = datetime.now(timezone.utc)  # type: ignore[assignment]
+        match.updated_at = datetime.now(timezone.utc)  # type: ignore[assignment]
+        if match.match_score == 0:
+            inv_result = score_match(current_user, target_user)
+            match.match_score = inv_result["match_score"]
+            match.match_explanation = inv_result["match_explanation"]
+            match.complementarity_score = inv_result["complementarity_score"]
+            match.commitment_alignment_score = inv_result["commitment_alignment_score"]
+            match.location_fit_score = inv_result["location_fit_score"]
+            match.intent_score = inv_result["intent_score"]
+            match.interest_overlap_score = inv_result["interest_overlap_score"]
+            match.preference_alignment_score = inv_result["preference_alignment_score"]
+    else:
+        inv_result = score_match(current_user, target_user)
+        match = Match(
+            user_id=current_user.id,
+            target_user_id=target_user_id,
+            match_score=inv_result["match_score"],
+            match_explanation=inv_result["match_explanation"],
+            complementarity_score=inv_result["complementarity_score"],
+            commitment_alignment_score=inv_result["commitment_alignment_score"],
+            location_fit_score=inv_result["location_fit_score"],
+            intent_score=inv_result["intent_score"],
+            interest_overlap_score=inv_result["interest_overlap_score"],
+            preference_alignment_score=inv_result["preference_alignment_score"],
+            status="intro_requested",
+            intro_requested_at=datetime.now(timezone.utc)
+        )
+        db.add(match)
+        db.flush()
+
+    intro_message = Message(
+        match_id=match.id,
+        sender_id=current_user.id,
+        recipient_id=target_user_id,
+        content=intro_request.message,
+        message_type="intro_request"
+    )
+    db.add(intro_message)
+    db.commit()
+    db.refresh(match)
+
+    await send_intro_request_notification(target_user, current_user)
+
+    return {
+        "message": "Invitation sent successfully",
+        "match_id": str(match.id),
+        "invites_remaining": max(0, 20 - recent_intros - 1),
+        "auto_connected": False
+    }
+
+
+@router.get("", response_model=List[MatchWithUserResponse])
+async def get_matches(
+    status_filter: Optional[str] = Query(None, description="Filter by match status"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get user's matches - both sent and received intro requests"""
+    query = db.query(Match).filter(
+        or_(
+            Match.user_id == current_user.id,
+            Match.target_user_id == current_user.id
+        )
+    )
+
+    if status_filter:
+        query = query.filter(Match.status == status_filter)
+
+    matches = query.order_by(Match.created_at.desc()).offset(skip).limit(limit).all()
+
+    # Batch-load all target users in a single query
+    target_id_map = {
+        match.id: (match.target_user_id if match.user_id == current_user.id else match.user_id)
+        for match in matches
+    }
+    target_ids = list(target_id_map.values())
+    users_map = {
+        u.id: u for u in db.query(User).filter(
+            User.id.in_(target_ids),
+            User.is_active,
+            ~User.is_banned,
+        ).all()
+    }
+
+    result = []
+    for match in matches:
+        target_user_id = target_id_map[match.id]
+        target_user = users_map.get(target_user_id)
+
+        if target_user:
+            result.append(MatchWithUserResponse(
+                id=cast(UUID, match.id),
+                user_id=cast(UUID, match.user_id),
+                target_user_id=cast(UUID, match.target_user_id),
+                match_score=cast(int, match.match_score or 0),
+                match_explanation=cast(Optional[str], match.match_explanation),
+                complementarity_score=cast(Optional[int], match.complementarity_score),
+                commitment_alignment_score=cast(Optional[int], match.commitment_alignment_score),
+                location_fit_score=cast(Optional[int], match.location_fit_score),
+                intent_score=cast(Optional[int], match.intent_score),
+                interest_overlap_score=cast(Optional[int], match.interest_overlap_score),
+                preference_alignment_score=cast(Optional[int], match.preference_alignment_score),
+                status=cast(str, match.status),
+                intro_requested_at=cast(Optional[datetime], match.intro_requested_at),
+                intro_accepted_at=cast(Optional[datetime], match.intro_accepted_at),
+                created_at=cast(datetime, match.created_at),
+                updated_at=cast(datetime, match.updated_at),
+                target_user=UserPublicResponse.model_validate(target_user),
+            ))
+
+    return result
+
+
+@router.get("/recommendations", response_model=List[ProfileDiscoverResponse])
+async def get_match_recommendations(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=50),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get match recommendations - scored and ordered by match quality. Excludes only active matches; dismissed/unmatched can reappear with matched_before."""
+    interacted_matches = db.query(Match.target_user_id).filter(
+        Match.user_id == current_user.id,
+        Match.status.in_(ACTIVE_MATCH_STATUSES)
+    ).all()
+    interacted_ids = [match[0] for match in interacted_matches]
+
+    query = db.query(User).filter(
+        User.is_active,
+        ~User.is_banned,
+        User.id != current_user.id
+    )
+    if interacted_ids:
+        query = query.filter(~User.id.in_(interacted_ids))
+
+    CANDIDATE_POOL_SIZE = 500
+    candidates = query.order_by(User.created_at.desc()).limit(CANDIDATE_POOL_SIZE).all()
+    scored: List[tuple[User, int]] = []
+    for other in candidates:
+        result = score_match(current_user, other)
+        if result["match_score"] >= MIN_MATCH_SCORE:
+            scored.append((other, result["match_score"]))
+    scored.sort(key=lambda x: x[1], reverse=True)
+    page = [u for u, _ in scored[skip : skip + limit]]
+    if not page:
+        return []
+
+    # Users we had a prior (ended) match with - show "matched before"
+    prior = db.query(Match.target_user_id).filter(
+        Match.user_id == current_user.id,
+        Match.target_user_id.in_([u.id for u in page]),
+        Match.status.in_(PRIOR_MATCH_STATUSES)
+    ).all()
+    prior_ids = {m[0] for m in prior}
+    rec = db.query(Match.user_id).filter(
+        Match.target_user_id == current_user.id,
+        Match.user_id.in_([u.id for u in page]),
+        Match.status.in_(PRIOR_MATCH_STATUSES)
+    ).all()
+    prior_ids |= {m[0] for m in rec}
+
+    return [
+        ProfileDiscoverResponse(profile=UserPublicResponse.model_validate(u), matched_before=(u.id in prior_ids))
+        for u in page
+    ]
+
+
+@router.get("/{match_id}", response_model=MatchWithUserResponse)
+async def get_match(
+    match_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get specific match details"""
+    try:
+        match_uuid = uuid.UUID(match_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid match ID"
+        )
+
+    match = db.query(Match).filter(Match.id == match_uuid).first()
+
+    if not match:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Match not found"
+        )
+
+    # Verify user is part of this match
+    if match.user_id != current_user.id and match.target_user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to view this match"
+        )
+
+    # Determine target user
+    if match.user_id == current_user.id:
+        target_user_id = match.target_user_id
+    else:
+        target_user_id = match.user_id
+
+    target_user = db.query(User).filter(
+        User.id == target_user_id,
+        User.is_active,
+        ~User.is_banned
+    ).first()
+
+    if not target_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Target user not found"
+        )
+
+    return MatchWithUserResponse(
+        id=cast(UUID, match.id),
+        user_id=cast(UUID, match.user_id),
+        target_user_id=cast(UUID, match.target_user_id),
+        match_score=cast(int, match.match_score or 0),
+        match_explanation=cast(Optional[str], match.match_explanation),
+        complementarity_score=cast(Optional[int], match.complementarity_score),
+        commitment_alignment_score=cast(Optional[int], match.commitment_alignment_score),
+        location_fit_score=cast(Optional[int], match.location_fit_score),
+        intent_score=cast(Optional[int], match.intent_score),
+        interest_overlap_score=cast(Optional[int], match.interest_overlap_score),
+        preference_alignment_score=cast(Optional[int], match.preference_alignment_score),
+        status=cast(str, match.status),
+        intro_requested_at=cast(Optional[datetime], match.intro_requested_at),
+        intro_accepted_at=cast(Optional[datetime], match.intro_accepted_at),
+        created_at=cast(datetime, match.created_at),
+        updated_at=cast(datetime, match.updated_at),
+        target_user=UserPublicResponse.model_validate(target_user),
+    )
+
+
+@router.post("/{match_id}/unmatch", status_code=status.HTTP_200_OK)
+async def unmatch(
+    match_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Unmatch a connected user - sets both sides to 'unmatched' so they can reappear in discover."""
+    try:
+        match_uuid = uuid.UUID(match_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid match ID"
+        )
+
+    match = db.query(Match).filter(Match.id == match_uuid).first()
+    if not match:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Match not found"
+        )
+    if match.user_id != current_user.id and match.target_user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to unmatch this connection"
+        )
+    if match.status != "connected":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only connected matches can be unmatched"
+        )
+
+    other_id = match.target_user_id if match.user_id == current_user.id else match.user_id
+
+    # Require both directions to exist so we never leave one side connected
+    forward = db.query(Match).filter(
+        Match.user_id == current_user.id,
+        Match.target_user_id == other_id
+    ).first()
+    reciprocal = db.query(Match).filter(
+        Match.user_id == other_id,
+        Match.target_user_id == current_user.id
+    ).first()
+    # Update all existing match records between the two users
+    for m in (forward, reciprocal):
+        if m:
+            m.status = "unmatched"  # type: ignore[assignment]
+            m.updated_at = datetime.now(timezone.utc)  # type: ignore[assignment]
+    db.commit()
+    return {"message": "Unmatched successfully", "match_id": match_id}
+
+
+@router.post("/{match_id}/intro", status_code=status.HTTP_201_CREATED)
+async def request_introduction(
+    match_id: str,
+    intro_request: IntroRequest,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Request introduction to a matched user - max 20 requests per day"""
+    try:
+        match_uuid = uuid.UUID(match_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid match ID"
+        )
+
+    match = db.query(Match).filter(Match.id == match_uuid).first()
+
+    if not match:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Match not found"
+        )
+
+    # Verify user is the requester (not the target)
+    if match.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only request introductions for your own matches"
+        )
+
+    # Check if already connected or requested
+    if match.intro_requested_at:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Introduction already requested for this match"
+        )
+
+    if match.intro_accepted_at:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Already connected with this user"
+        )
+
+    # Rate limit check - max 20 intro requests per week (like YC)
+    one_week_ago = datetime.now(timezone.utc) - timedelta(weeks=1)
+    recent_intros = db.query(Match).filter(
+        Match.user_id == current_user.id,
+        Match.intro_requested_at.isnot(None),
+        Match.intro_requested_at >= one_week_ago
+    ).count()
+
+    if recent_intros >= 20:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Maximum of 20 introduction requests per week. Please try again next week."
+        )
+
+    # Update match status and timestamp
+    match.status = "intro_requested"  # type: ignore[assignment]
+    match.intro_requested_at = datetime.now(timezone.utc)  # type: ignore[assignment]
+    match.updated_at = datetime.now(timezone.utc)  # type: ignore[assignment]
+
+    # Create intro request message
+    intro_message = Message(
+        match_id=match.id,
+        sender_id=current_user.id,
+        recipient_id=match.target_user_id,
+        content=intro_request.message,
+        message_type="intro_request"
+    )
+    db.add(intro_message)
+    db.commit()
+    db.refresh(match)
+
+    return {
+        "message": "Introduction request sent successfully",
+        "match_id": str(match.id),
+        "intro_requested_at": match.intro_requested_at
+    }
+
+
+@router.post("/{match_id}/intro/respond", status_code=status.HTTP_200_OK)
+async def respond_to_introduction(
+    match_id: str,
+    response: IntroResponse,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Accept or decline an introduction request"""
+    try:
+        match_uuid = uuid.UUID(match_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid match ID"
+        )
+
+    match = db.query(Match).filter(Match.id == match_uuid).first()
+
+    if not match:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Match not found"
+        )
+
+    # Verify user is the target (recipient of intro request)
+    if match.target_user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only respond to introduction requests sent to you"
+        )
+
+    if not match.intro_requested_at:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No introduction request found for this match"
+        )
+
+    if match.intro_accepted_at:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Introduction already accepted"
+        )
+
+    if response.accept:
+        # Accept the introduction
+        match.status = "connected"  # type: ignore[assignment]
+        match.intro_accepted_at = datetime.now(timezone.utc)  # type: ignore[assignment]
+        match.updated_at = datetime.now(timezone.utc)  # type: ignore[assignment]
+
+        # Create reciprocal match record (B→A) so unmatch works for both sides
+        reciprocal = db.query(Match).filter(
+            Match.user_id == current_user.id,
+            Match.target_user_id == match.user_id
+        ).first()
+        if not reciprocal:
+            reciprocal = Match(
+                user_id=current_user.id,
+                target_user_id=match.user_id,
+                match_score=match.match_score,
+                match_explanation=match.match_explanation,
+                complementarity_score=match.complementarity_score,
+                commitment_alignment_score=match.commitment_alignment_score,
+                location_fit_score=match.location_fit_score,
+                intent_score=match.intent_score,
+                interest_overlap_score=match.interest_overlap_score,
+                preference_alignment_score=match.preference_alignment_score,
+                status="connected",
+                intro_requested_at=datetime.now(timezone.utc),
+                intro_accepted_at=datetime.now(timezone.utc)
+            )
+            db.add(reciprocal)
+        else:
+            reciprocal.status = "connected"  # type: ignore[assignment]
+            reciprocal.intro_accepted_at = datetime.now(timezone.utc)  # type: ignore[assignment]
+            reciprocal.updated_at = datetime.now(timezone.utc)  # type: ignore[assignment]
+
+        # Create acceptance message if response message provided
+        if response.message:
+            acceptance_message = Message(
+                match_id=match.id,
+                sender_id=current_user.id,
+                recipient_id=match.user_id,
+                content=response.message,
+                message_type="intro_response"
+            )
+            db.add(acceptance_message)
+    else:
+        # Decline the introduction
+        match.status = "dismissed"  # type: ignore[assignment]
+        match.updated_at = datetime.now(timezone.utc)  # type: ignore[assignment]
+
+        # Create decline message if response message provided
+        if response.message:
+            decline_message = Message(
+                match_id=match.id,
+                sender_id=current_user.id,
+                recipient_id=match.user_id,
+                content=response.message,
+                message_type="intro_response"
+            )
+            db.add(decline_message)
+
+    db.commit()
+    db.refresh(match)
+
+    if response.accept:
+        requester = db.query(User).filter(User.id == match.user_id).first()
+        if requester:
+            await send_intro_accepted_notification(requester, current_user)
+
+    return {
+        "message": "Introduction request responded to successfully",
+        "match_id": str(match.id),
+        "accepted": response.accept,
+        "status": match.status
+    }
+
+
+@router.put("/{match_id}/status", response_model=MatchResponse)
+async def update_match_status(
+    match_id: str,
+    status_update: MatchStatusUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Update match status (viewed, saved, dismissed)"""
+    try:
+        match_uuid = uuid.UUID(match_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid match ID"
+        )
+
+    allowed_statuses = ["viewed", "saved", "dismissed"]
+    if status_update.status not in allowed_statuses:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Status must be one of: {', '.join(allowed_statuses)}"
+        )
+
+    match = db.query(Match).filter(Match.id == match_uuid).first()
+
+    if not match:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Match not found"
+        )
+
+    # Verify user is part of this match
+    if match.user_id != current_user.id and match.target_user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to update this match"
+        )
+
+    # Don't allow status changes if intro already requested/accepted
+    if match.intro_requested_at and status_update.status in ["saved", "dismissed"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot change status after introduction request has been sent"
+        )
+
+    match.status = status_update.status  # type: ignore[assignment]
+    match.updated_at = datetime.now(timezone.utc)  # type: ignore[assignment]
+    db.commit()
+    db.refresh(match)
+
+    return match

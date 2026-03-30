@@ -1,0 +1,38 @@
+services:
+  - type: web
+    name: cofounder-api
+    runtime: python
+    region: oregon
+    plan: starter
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: cofounder-db
+          property: connectionString
+      - key: ENVIRONMENT
+        value: production
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: CLERK_SECRET_KEY
+        sync: false
+      - key: CLERK_PUBLISHABLE_KEY
+        sync: false
+      - key: CLERK_FRONTEND_API
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: ADMIN_CLERK_IDS
+        sync: false
+      - key: CLERK_WEBHOOK_SECRET
+        sync: false
+
+databases:
+  - name: cofounder-db
+    plan: basic-256mb
+    region: oregon
+    postgresMajorVersion: 16

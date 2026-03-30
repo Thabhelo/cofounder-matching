@@ -1,0 +1,93 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+*.egg-info/
+dist/
+build/
+
+# Node.js
+node_modules/
+.next/
+out/
+.turbo/
+*.tsbuildinfo
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Internal docs (not for client repo)
+WORK_LOG.md
+fixes.md
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+postgres-data/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+*.pid
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+.pytest_cache/
+coverage/
+.coverage
+htmlcov/
+playwright-report/
+test-results/
+
+# Build outputs
+*.pyc
+dist/
+build/
+
+# Markdown: do not track except README, docs, and LICENSE
+*.md
+!README.md
+!docs/DOCUMENTATION.md
+!docs/DEPLOYMENT.md
+!docs/API_REFERENCE.md
+!LICENSE
+!LICENSE.md
+
+# Coverage (XML from pytest --cov-report=xml)
+coverage.xml
+
+# Cursor IDE (optional; project state)
+.cursor/
+
+# Linter/formatter caches
+.ruff_cache/
+.mypy_cache/
+
+# Claude-specific files
+docs/CLAUDE.md
+.claude/
+.claudeignore
+.gitattributes

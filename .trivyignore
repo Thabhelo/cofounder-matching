@@ -1,0 +1,5 @@
+# Temporary ignore for pygments CVE until patched version is released
+# CVE-2026-4539: pygments 2.19.2 vulnerability
+# Reasoning: Version 2.20.0+ not yet available, this is transitive dependency from pytest
+# TODO: Remove this ignore once pygments 2.20.0+ is released and update requirements.txt
+CVE-2026-4539
