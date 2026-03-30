@@ -1,0 +1,290 @@
+"use client"
+
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
+import { FormField, FormInput, FormTextarea, FormSelect } from "@/components/forms/FormField"
+import { ImportanceSelector } from "@/components/forms/ImportanceSelector"
+import { MultiSelect } from "@/components/forms/MultiSelect"
+import { RichTextArea } from "@/components/forms/RichTextArea"
+import { AREAS_OF_OWNERSHIP, PREF_IDEA_STATUSES, PREF_LOCATION_TYPES } from "@/lib/constants/enums"
+import { getDraft, setDraft } from "@/hooks/useOnboardingDraft"
+import { validateForm, validators, type ValidationErrors } from "@/lib/validation"
+
+export default function PreferencesPage() {
+  const router = useRouter()
+  const [errors, setErrors] = useState<ValidationErrors>({})
+
+  const [form, setForm] = useState({
+    looking_for_description: "",
+    pref_idea_status: "",
+    pref_idea_importance: "" as string,
+    pref_technical: null as boolean | null,
+    pref_technical_importance: "" as string,
+    pref_match_timing: false,
+    pref_timing_importance: "" as string,
+    pref_location_type: "",
+    pref_location_distance_miles: "" as string,
+    pref_location_importance: "" as string,
+    pref_age_min: "" as string,
+    pref_age_max: "" as string,
+    pref_age_importance: "" as string,
+    pref_cofounder_areas: [] as string[],
+    pref_areas_importance: "" as string,
+    pref_shared_interests: false,
+    pref_interests_importance: "" as string,
+    alert_on_new_matches: false,
+  })
+
+  useEffect(() => {
+    const draft = getDraft() as Record<string, unknown>
+    setForm((prev) => ({
+      ...prev,
+      looking_for_description: (draft.looking_for_description as string) ?? "",
+      pref_idea_status: (draft.pref_idea_status as string) ?? "",
+      pref_idea_importance: (draft.pref_idea_importance as string) ?? "",
+      pref_technical: draft.pref_technical as boolean | null ?? null,
+      pref_technical_importance: (draft.pref_technical_importance as string) ?? "",
+      pref_match_timing: (draft.pref_match_timing as boolean) ?? false,
+      pref_timing_importance: (draft.pref_timing_importance as string) ?? "",
+      pref_location_type: (draft.pref_location_type as string) ?? "",
+      pref_location_distance_miles: String(draft.pref_location_distance_miles ?? ""),
+      pref_location_importance: (draft.pref_location_importance as string) ?? "",
+      pref_age_min: String(draft.pref_age_min ?? ""),
+      pref_age_max: String(draft.pref_age_max ?? ""),
+      pref_age_importance: (draft.pref_age_importance as string) ?? "",
+      pref_cofounder_areas: (draft.pref_cofounder_areas as string[]) ?? [],
+      pref_areas_importance: (draft.pref_areas_importance as string) ?? "",
+      pref_shared_interests: (draft.pref_shared_interests as boolean) ?? false,
+      pref_interests_importance: (draft.pref_interests_importance as string) ?? "",
+      alert_on_new_matches: (draft.alert_on_new_matches as boolean) ?? false,
+    }))
+  }, [])
+
+  const update = (key: string, value: unknown) => {
+    setForm((prev) => ({ ...prev, [key]: value }))
+    setDraft({ [key]: value })
+
+    // Clear field error when user starts typing
+    if (errors[key]) {
+      setErrors((prev) => ({ ...prev, [key]: '' }))
+    }
+  }
+
+  const validatePreferencesForm = (): boolean => {
+    const fieldValidators = {
+      looking_for_description: [(value: string) => validators.minLength(value, 50, 'Looking for description')],
+      pref_age_min: [(value: string) => {
+        if (value && form.pref_age_max && Number(value) > Number(form.pref_age_max)) {
+          return "Minimum age cannot be greater than maximum age"
+        }
+        return null
+      }],
+      pref_age_max: [(value: string) => {
+        if (value && form.pref_age_min && Number(value) < Number(form.pref_age_min)) {
+          return "Maximum age cannot be less than minimum age"
+        }
+        return null
+      }]
+    }
+
+    const validationErrors = validateForm(form, fieldValidators)
+    setErrors(validationErrors)
+
+    return Object.keys(validationErrors).length === 0
+  }
+
+  const handleNext = () => {
+    if (validatePreferencesForm()) {
+      setDraft(form)
+      router.push("/onboarding/preview")
+    } else {
+      // Scroll to first error
+      const firstErrorField = Object.keys(errors)[0]
+      if (firstErrorField) {
+        const element = document.querySelector(`[name="${firstErrorField}"]`)
+        element?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-lg shadow-xs border border-gray-200 p-6">
+      <h1 className="text-2xl font-bold text-zinc-900 mb-6">Co-founder preferences</h1>
+
+      {Object.keys(errors).length > 0 && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            <h4 className="text-sm font-medium text-red-800">Please fix the following errors:</h4>
+          </div>
+          <ul className="mt-2 list-disc list-inside text-sm text-red-700">
+            {Object.entries(errors)
+              .filter(([, message]) => message)
+              .map(([field, message]) => (
+                <li key={field}>{message}</li>
+              ))}
+          </ul>
+        </div>
+      )}
+
+      <div className="space-y-6">
+        <RichTextArea
+          label="What are you looking for?"
+          value={form.looking_for_description}
+          onChange={(v: string) => update("looking_for_description", v)}
+          minLength={50}
+          maxLength={1000}
+          required
+          error={errors.looking_for_description}
+        />
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Idea preference</label>
+          <select
+            value={form.pref_idea_status}
+            onChange={(e) => update("pref_idea_status", e.target.value)}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-2"
+          >
+            <option value="">No preference</option>
+            {PREF_IDEA_STATUSES.map((p) => (
+              <option key={p.value} value={p.value}>{p.label}</option>
+            ))}
+          </select>
+          <ImportanceSelector
+            value={form.pref_idea_importance}
+            onChange={(v) => update("pref_idea_importance", v)}
+          />
+        </div>
+
+        <fieldset>
+          <legend className="text-sm font-medium text-gray-700 mb-2">Want a technical co-founder?</legend>
+          <div className="flex gap-4 mb-2">
+            <label className="flex items-center gap-2">
+              <input type="radio" name="pref_technical" checked={form.pref_technical === true} onChange={() => update("pref_technical", true)} className="rounded border-gray-300" />
+              Yes
+            </label>
+            <label className="flex items-center gap-2">
+              <input type="radio" name="pref_technical" checked={form.pref_technical === false} onChange={() => update("pref_technical", false)} className="rounded border-gray-300" />
+              No
+            </label>
+            <label className="flex items-center gap-2">
+              <input type="radio" name="pref_technical" checked={form.pref_technical === null} onChange={() => update("pref_technical", null)} className="rounded border-gray-300" />
+              No preference
+            </label>
+          </div>
+          <ImportanceSelector value={form.pref_technical_importance} onChange={(v) => update("pref_technical_importance", v)} />
+        </fieldset>
+
+        <fieldset>
+          <legend className="text-sm font-medium text-gray-700 mb-1">Timing preference</legend>
+          <label className="flex items-center gap-2 mb-1">
+            <input type="checkbox" checked={form.pref_match_timing} onChange={(e) => update("pref_match_timing", e.target.checked)} className="rounded border-gray-300" />
+            <span className="text-sm text-gray-700">Want co-founder who matches my timing</span>
+          </label>
+          {form.pref_match_timing && (
+            <div className="ml-6 mt-2">
+              <span className="block text-xs text-gray-500 mb-1">How important?</span>
+              <ImportanceSelector value={form.pref_timing_importance} onChange={(v) => update("pref_timing_importance", v)} />
+            </div>
+          )}
+        </fieldset>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Location preference</label>
+          <select
+            value={form.pref_location_type}
+            onChange={(e) => update("pref_location_type", e.target.value)}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-2"
+          >
+            <option value="">No preference</option>
+            {PREF_LOCATION_TYPES.map((p) => (
+              <option key={p.value} value={p.value}>{p.label}</option>
+            ))}
+          </select>
+          {form.pref_location_type === "within_distance" && (
+            <div className="mb-2">
+              <input
+                type="number"
+                min={1}
+                max={5000}
+                value={form.pref_location_distance_miles}
+                onChange={(e) => update("pref_location_distance_miles", e.target.value)}
+                placeholder="Miles"
+                className="w-32 px-4 py-2 border border-gray-300 rounded-lg"
+              />
+              <span className="ml-2 text-sm text-gray-600">miles</span>
+            </div>
+          )}
+          <ImportanceSelector value={form.pref_location_importance} onChange={(v) => update("pref_location_importance", v)} />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Age range</label>
+          <div className="flex gap-2 items-center mb-2">
+            <div className="w-full sm:w-24">
+              <FormInput
+                name="pref_age_min"
+                type="number"
+                value={form.pref_age_min}
+                onChange={(e) => update("pref_age_min", e.target.value)}
+                placeholder="Min"
+                error={errors.pref_age_min}
+              />
+            </div>
+            <span>-</span>
+            <div className="w-full sm:w-24">
+              <FormInput
+                name="pref_age_max"
+                type="number"
+                value={form.pref_age_max}
+                onChange={(e) => update("pref_age_max", e.target.value)}
+                placeholder="Max"
+                error={errors.pref_age_max}
+              />
+            </div>
+          </div>
+          <ImportanceSelector value={form.pref_age_importance} onChange={(v: string) => update("pref_age_importance", v)} />
+        </div>
+
+        <MultiSelect
+          options={AREAS_OF_OWNERSHIP}
+          value={form.pref_cofounder_areas}
+          onChange={(v) => update("pref_cofounder_areas", v)}
+          label="Areas co-founder should handle"
+        />
+        <ImportanceSelector value={form.pref_areas_importance} onChange={(v) => update("pref_areas_importance", v)} />
+
+        <fieldset>
+          <legend className="text-sm font-medium text-gray-700 mb-1">Shared interests</legend>
+          <label className="flex items-center gap-2 mb-1">
+            <input type="checkbox" checked={form.pref_shared_interests} onChange={(e) => update("pref_shared_interests", e.target.checked)} className="rounded border-gray-300" />
+            <span className="text-sm text-gray-700">Match only with shared topics</span>
+          </label>
+          {form.pref_shared_interests && (
+            <div className="ml-6 mt-2">
+              <span className="block text-xs text-gray-500 mb-1">How important?</span>
+              <ImportanceSelector value={form.pref_interests_importance} onChange={(v) => update("pref_interests_importance", v)} />
+            </div>
+          )}
+        </fieldset>
+
+        <label className="flex items-center gap-2">
+          <input type="checkbox" checked={form.alert_on_new_matches} onChange={(e) => update("alert_on_new_matches", e.target.checked)} className="rounded border-gray-300" />
+          <span className="text-sm font-medium text-gray-700">Alert me when new profiles match my preferences</span>
+        </label>
+      </div>
+
+      <div className="flex gap-3 mt-8">
+        <Link href="/onboarding/you" className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+          Back
+        </Link>
+        <button type="button" onClick={handleNext} className="px-6 py-2 bg-zinc-900 text-white rounded-lg hover:bg-zinc-800">
+          Save & Continue
+        </button>
+      </div>
+    </div>
+  )
+}
