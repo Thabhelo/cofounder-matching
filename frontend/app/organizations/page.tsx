@@ -5,6 +5,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { api } from "@/lib/api"
 import type { Organization, OrgType } from "@/lib/types"
+import { Loader } from "@/components/ui/loader"
 
 export default function OrganizationsPage() {
   const [organizations, setOrganizations] = useState<Organization[]>([])
@@ -77,7 +78,7 @@ export default function OrganizationsPage() {
 
         {loading ? (
           <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-900"></div>
+            <Loader size="md" />
           </div>
         ) : organizations.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-lg">

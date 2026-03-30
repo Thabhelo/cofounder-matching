@@ -163,35 +163,15 @@ async def get_current_user(
                     or ("duplicate key" in err_lower and "email" in err_lower)
                 )
                 if is_email_duplicate:
-                    # In production, keep strict 409 behavior to avoid potential account takeover.
-                    if settings.ENVIRONMENT == "production":
-                        raise HTTPException(
-                            status_code=status.HTTP_409_CONFLICT,
-                            detail=(
-                                "An account with this email already exists. "
-                                "Sign in with your existing account, or contact support if you no longer have access."
-                            ),
-                        )
-
-                    # In non-production environments, attach the new Clerk identity to the existing user
-                    # to avoid 409 loops when developing locally with stale rows or multiple Clerk identities.
-                    existing_by_email = (
-                        db.query(User).filter(User.email == clerk_info["email"]).first()
+                    # Always return 409 regardless of environment to prevent
+                    # silent account takeover via clerk_id reassignment.
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail=(
+                            "An account with this email already exists. "
+                            "Sign in with your existing account, or contact support if you no longer have access."
+                        ),
                     )
-                    if not existing_by_email:
-                        raise HTTPException(
-                            status_code=status.HTTP_409_CONFLICT,
-                            detail=(
-                                "An account with this email already exists, but it could not be loaded. "
-                                "Please contact support."
-                            ),
-                        )
-
-                    existing_by_email.clerk_id = clerk_id
-                    db.add(existing_by_email)
-                    db.commit()
-                    db.refresh(existing_by_email)
-                    user = existing_by_email
                 else:
                     raise
 

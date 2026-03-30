@@ -238,7 +238,7 @@ export default function BasicsPage() {
             error={errors.employment_history}
           />
         </FormField>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Experience (years)</label>
             <input
@@ -271,15 +271,6 @@ export default function BasicsPage() {
             error={errors.github_url}
           />
         </FormField>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Portfolio URL</label>
-          <input
-            type="url"
-            value={form.portfolio_url}
-            onChange={(e) => update("portfolio_url", e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-          />
-        </div>
         <FormField label="Portfolio URL" error={errors.portfolio_url}>
           <FormInput
             name="portfolio_url"

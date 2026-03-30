@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
 from typing import List, Optional, cast
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 import uuid
 
@@ -147,6 +147,44 @@ async def get_conversations(
     return conversations[skip:skip + limit]
 
 
+@router.get("/unread/count", response_model=UnreadCountResponse)
+async def get_unread_count(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get total unread message count and per-conversation counts"""
+    # Get all matches where user is connected
+    matches = db.query(Match).filter(
+        or_(
+            and_(Match.user_id == current_user.id, Match.status == "connected"),
+            and_(Match.target_user_id == current_user.id, Match.status == "connected")
+        )
+    ).all()
+
+    match_ids = [m.id for m in matches]
+    unread_rows = (
+        db.query(Message.match_id, func.count().label("cnt"))
+        .filter(
+            Message.match_id.in_(match_ids),
+            Message.recipient_id == current_user.id,
+            ~Message.is_read,
+        )
+        .group_by(Message.match_id)
+        .all()
+    )
+
+    total_unread = 0
+    conversations = {}
+    for row in unread_rows:
+        total_unread += row.cnt
+        conversations[str(row.match_id)] = row.cnt
+
+    return UnreadCountResponse(
+        total_unread=total_unread,
+        conversations=conversations,
+    )
+
+
 @router.get("/{match_id}", response_model=List[MessageResponse])
 async def get_messages(
     match_id: str,
@@ -250,7 +288,7 @@ async def send_message(
         recipient_id = match.user_id
 
     # Rate limiting - max 50 messages per day
-    yesterday = datetime.utcnow() - timedelta(days=1)
+    yesterday = datetime.now(timezone.utc) - timedelta(days=1)
     recent_messages = db.query(Message).filter(
         Message.sender_id == current_user.id,
         Message.message_type == "message",  # Only count regular messages, not intro requests
@@ -274,7 +312,7 @@ async def send_message(
     db.add(message)
 
     # Update match updated_at
-    match.updated_at = datetime.utcnow()  # type: ignore[assignment]
+    match.updated_at = datetime.now(timezone.utc)  # type: ignore[assignment]
     db.commit()
     db.refresh(message)
 
@@ -327,7 +365,7 @@ async def mark_message_read(
     # Mark as read
     if not message.is_read:
         message.is_read = True  # type: ignore[assignment]
-        message.read_at = datetime.utcnow()  # type: ignore[assignment]
+        message.read_at = datetime.now(timezone.utc)  # type: ignore[assignment]
         db.commit()
         db.refresh(message)
 
@@ -374,7 +412,7 @@ async def mark_all_messages_read(
         ~Message.is_read
     ).all()
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     for msg in unread_messages:
         msg.is_read = True  # type: ignore[assignment]
         msg.read_at = now  # type: ignore[assignment]
@@ -385,41 +423,3 @@ async def mark_all_messages_read(
         "message": f"Marked {len(unread_messages)} messages as read",
         "match_id": match_id
     }
-
-
-@router.get("/unread/count", response_model=UnreadCountResponse)
-async def get_unread_count(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Get total unread message count and per-conversation counts"""
-    # Get all matches where user is connected
-    matches = db.query(Match).filter(
-        or_(
-            and_(Match.user_id == current_user.id, Match.status == "connected"),
-            and_(Match.target_user_id == current_user.id, Match.status == "connected")
-        )
-    ).all()
-
-    match_ids = [m.id for m in matches]
-    unread_rows = (
-        db.query(Message.match_id, func.count().label("cnt"))
-        .filter(
-            Message.match_id.in_(match_ids),
-            Message.recipient_id == current_user.id,
-            ~Message.is_read,
-        )
-        .group_by(Message.match_id)
-        .all()
-    )
-
-    total_unread = 0
-    conversations = {}
-    for row in unread_rows:
-        total_unread += row.cnt
-        conversations[str(row.match_id)] = row.cnt
-
-    return UnreadCountResponse(
-        total_unread=total_unread,
-        conversations=conversations,
-    )

@@ -7,6 +7,7 @@ import Link from "next/link"
 import { AppShell } from "@/components/layout/AppShell"
 import { api } from "@/lib/api"
 import type { ReportListItem, User, Organization, Resource, Event, AuditLogEntry } from "@/lib/types"
+import { PageLoader } from "@/components/ui/loader"
 
 type AdminTab = "overview" | "reports" | "users" | "organizations" | "analytics" | "resources" | "events" | "audit" | "notifications"
 
@@ -635,9 +636,7 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-900" />
-      </div>
+      <PageLoader label="Loading..." />
     )
   }
 

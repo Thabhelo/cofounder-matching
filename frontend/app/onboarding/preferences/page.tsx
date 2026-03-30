@@ -224,7 +224,7 @@ export default function PreferencesPage() {
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Age range</label>
           <div className="flex gap-2 items-center mb-2">
-            <div className="w-24">
+            <div className="w-full sm:w-24">
               <FormInput
                 name="pref_age_min"
                 type="number"
@@ -235,7 +235,7 @@ export default function PreferencesPage() {
               />
             </div>
             <span>-</span>
-            <div className="w-24">
+            <div className="w-full sm:w-24">
               <FormInput
                 name="pref_age_max"
                 type="number"
