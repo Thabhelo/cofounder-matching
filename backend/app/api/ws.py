@@ -223,7 +223,7 @@ async def websocket_chat(websocket: WebSocket, match_id: str):
                     db.query(Message).filter(
                         Message.match_id == uuid.UUID(match_id),
                         Message.recipient_id == uuid.UUID(user_id),
-                        Message.is_read == False,
+                        Message.is_read.is_(False),
                     ).update({
                         "is_read": True,
                         "read_at": datetime.now(timezone.utc),

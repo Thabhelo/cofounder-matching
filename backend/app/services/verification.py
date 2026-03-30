@@ -18,7 +18,7 @@ from typing import Dict, List, Optional
 from dataclasses import dataclass
 
 import httpx
-from sqlalchemy import select, and_
+from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
 from app.models import (
