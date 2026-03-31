@@ -6,6 +6,8 @@ import Link from "next/link"
 import Image from "next/image"
 import { api } from "@/lib/api"
 import type { Organization } from "@/lib/types"
+import { safeHref } from "@/lib/utils"
+import { PageLoader } from "@/components/ui/loader"
 
 export default function OrganizationDetailPage() {
   const params = useParams()
@@ -29,9 +31,7 @@ export default function OrganizationDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-900"></div>
-      </div>
+      <PageLoader label="Loading organization..." />
     )
   }
 
@@ -122,7 +122,7 @@ export default function OrganizationDetailPage() {
               <div>
                 <h3 className="text-sm font-medium text-gray-700 mb-2">Website</h3>
                 <a
-                  href={organization.website_url}
+                  href={safeHref(organization.website_url)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-zinc-900 hover:underline"
@@ -173,7 +173,7 @@ export default function OrganizationDetailPage() {
           {organization.website_url && (
             <div className="border-t pt-6 mt-6">
               <a
-                href={organization.website_url}
+                href={safeHref(organization.website_url)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-block px-6 py-3 bg-zinc-900 text-white font-medium rounded-lg hover:bg-black transition-colors"

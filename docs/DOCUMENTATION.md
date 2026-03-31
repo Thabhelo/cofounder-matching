@@ -435,10 +435,8 @@ This section logs major changes shipped to the project. Only significant changes
 - Settings page wrapped in `AppShell` so sidebar navigation is present (was missing entirely)
 
 ### 2026-01-18 00:43 - [d254671] Initial Setup
-- Created project documentation structure (CLAUDE.md, IMPLEMENTATION_PLAN.md)
-- Set up repository configuration (.gitignore, .gitattributes, .claudeignore)
+- Created project documentation structure
+- Set up repository configuration (.gitignore, .gitattributes)
 - Renamed repository to cofounder-matching
 - Updated README.md with TechStars for Cofounders context
-- Installed Exa MCP server for enhanced search capabilities
-- Removed unnecessary .claude directory (keeping setup minimal)
 

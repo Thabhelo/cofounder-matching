@@ -6,15 +6,14 @@ and trust score calculations. These metrics focus on profile completeness,
 activity patterns, and engagement indicators.
 """
 
-import asyncio
 from datetime import datetime, timedelta
 from typing import Dict, Optional
 from dataclasses import dataclass
 
 from sqlalchemy import select, func, and_, or_
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 
-from app.database import get_database_session
+from app.database import SessionLocal
 from app.models import (
     User, UserQualityMetrics, Match, Message, Report,
     UserEventRSVP, UserSavedResource
@@ -52,27 +51,27 @@ class QualityMetricsCalculator:
             'looking_for_description', 'areas_of_ownership'
         ]
 
-    async def calculate_user_quality_metrics(
+    def calculate_user_quality_metrics(
         self,
         user: User,
-        session: AsyncSession
+        session: Session
     ) -> UserQualityMetrics:
         """
         Calculate comprehensive quality metrics for a user.
         """
         try:
             # Calculate profile completeness
-            completeness = await self._calculate_profile_completeness(user)
+            completeness = self._calculate_profile_completeness(user)
 
             # Calculate activity metrics
-            activity_score = await self._calculate_activity_score(user, session)
-            login_frequency = await self._calculate_login_frequency_score(user, session)
-            update_recency = await self._calculate_profile_update_recency(user)
+            activity_score = self._calculate_activity_score(user, session)
+            login_frequency = self._calculate_login_frequency_score(user, session)
+            update_recency = self._calculate_profile_update_recency(user)
 
             # Calculate engagement metrics
-            message_response_rate = await self._calculate_message_response_rate(user, session)
-            intro_acceptance_rate = await self._calculate_intro_acceptance_rate(user, session)
-            interaction_score = await self._calculate_platform_interaction_score(user, session)
+            message_response_rate = self._calculate_message_response_rate(user, session)
+            intro_acceptance_rate = self._calculate_intro_acceptance_rate(user, session)
+            interaction_score = self._calculate_platform_interaction_score(user, session)
 
             # Check quality indicators
             has_portfolio = bool(user.portfolio_url)
@@ -81,11 +80,11 @@ class QualityMetricsCalculator:
             has_video_intro = bool(user.video_intro_url)
 
             # Get social proof metrics (if available from verifications)
-            social_metrics = await self._get_social_proof_metrics(user, session)
+            social_metrics = self._get_social_proof_metrics(user, session)
 
             # Calculate risk indicators
-            report_count = await self._get_report_count(user, session)
-            suspicious_flags = await self._calculate_suspicious_activity_flags(user, session)
+            report_count = self._get_report_count(user, session)
+            suspicious_flags = self._calculate_suspicious_activity_flags(user, session)
 
             # Determine if required fields are complete
             required_complete = self._check_required_fields_complete(user)
@@ -160,7 +159,7 @@ class QualityMetricsCalculator:
                 calculation_version="1.0"
             )
 
-    async def _calculate_profile_completeness(self, user: User) -> ProfileCompletenessScore:
+    def _calculate_profile_completeness(self, user: User) -> ProfileCompletenessScore:
         """Calculate detailed profile completeness breakdown."""
         score = ProfileCompletenessScore()
 
@@ -214,12 +213,11 @@ class QualityMetricsCalculator:
 
         return score
 
-    async def _calculate_activity_score(self, user: User, session: AsyncSession) -> int:
+    def _calculate_activity_score(self, user: User, session: Session) -> int:
         """Calculate general activity score based on platform usage."""
         score = 0
 
         try:
-            # Account age (0-30 points)
             if user.created_at:
                 account_age = datetime.utcnow() - user.created_at
                 days = account_age.days
@@ -237,23 +235,19 @@ class QualityMetricsCalculator:
                 else:
                     score += 5
 
-            # Profile status (0-20 points)
             if user.profile_status == "complete":
                 score += 20
             elif user.profile_status == "partial":
                 score += 10
 
-            # Settings configuration (0-10 points)
             if user.settings:
                 score += 5
             if user.behavior_agreement_accepted_at:
                 score += 5
 
-            # Recent activity (0-40 points)
             now = datetime.utcnow()
 
-            # Check for recent matches
-            recent_matches = await session.execute(
+            recent_matches = session.execute(
                 select(func.count(Match.id)).where(
                     and_(
                         or_(Match.requester_id == user.id, Match.recipient_id == user.id),
@@ -264,8 +258,7 @@ class QualityMetricsCalculator:
             match_count = recent_matches.scalar() or 0
             score += min(15, match_count * 2)
 
-            # Check for recent messages
-            recent_messages = await session.execute(
+            recent_messages = session.execute(
                 select(func.count(Message.id)).where(
                     and_(
                         Message.sender_id == user.id,
@@ -276,8 +269,7 @@ class QualityMetricsCalculator:
             message_count = recent_messages.scalar() or 0
             score += min(15, message_count)
 
-            # Check for resource interactions
-            recent_resources = await session.execute(
+            recent_resources = session.execute(
                 select(func.count(UserSavedResource.id)).where(
                     and_(
                         UserSavedResource.user_id == user.id,
@@ -293,7 +285,7 @@ class QualityMetricsCalculator:
 
         return min(100, score)
 
-    async def _calculate_login_frequency_score(self, user: User, session: AsyncSession) -> int:
+    def _calculate_login_frequency_score(self, user: User, session: Session) -> int:
         """Calculate login frequency score based on recent activity patterns."""
         try:
             if not user.updated_at:
@@ -318,7 +310,7 @@ class QualityMetricsCalculator:
             logger.error(f"Error calculating login frequency: {str(e)}")
             return 0
 
-    async def _calculate_profile_update_recency(self, user: User) -> int:
+    def _calculate_profile_update_recency(self, user: User) -> int:
         """Calculate score based on how recently profile was updated."""
         try:
             if not user.updated_at:
@@ -343,11 +335,10 @@ class QualityMetricsCalculator:
             logger.error(f"Error calculating profile update recency: {str(e)}")
             return 0
 
-    async def _calculate_message_response_rate(self, user: User, session: AsyncSession) -> float:
+    def _calculate_message_response_rate(self, user: User, session: Session) -> float:
         """Calculate message response rate."""
         try:
-            # Count messages received (as recipient in matches)
-            messages_received = await session.execute(
+            messages_received = session.execute(
                 select(func.count(Message.id)).where(
                     and_(
                         Message.recipient_id == user.id,
@@ -360,9 +351,7 @@ class QualityMetricsCalculator:
             if received_count == 0:
                 return 0.0
 
-            # Count messages sent as responses (within 24 hours of receiving)
-            # This is a simplified calculation - in practice you'd want more sophisticated logic
-            messages_sent = await session.execute(
+            messages_sent = session.execute(
                 select(func.count(Message.id)).where(
                     and_(
                         Message.sender_id == user.id,
@@ -372,18 +361,16 @@ class QualityMetricsCalculator:
             )
             sent_count = messages_sent.scalar() or 0
 
-            # Simplified response rate calculation
             return min(1.0, sent_count / received_count)
 
         except Exception as e:
             logger.error(f"Error calculating message response rate: {str(e)}")
             return 0.0
 
-    async def _calculate_intro_acceptance_rate(self, user: User, session: AsyncSession) -> float:
+    def _calculate_intro_acceptance_rate(self, user: User, session: Session) -> float:
         """Calculate introduction request acceptance rate."""
         try:
-            # Count intro requests received by this user
-            intros_received = await session.execute(
+            intros_received = session.execute(
                 select(func.count(Match.id)).where(
                     and_(
                         Match.recipient_id == user.id,
@@ -394,10 +381,9 @@ class QualityMetricsCalculator:
             received_count = intros_received.scalar() or 0
 
             if received_count == 0:
-                return 0.5  # Neutral for new users
+                return 0.5
 
-            # Count accepted intros
-            intros_accepted = await session.execute(
+            intros_accepted = session.execute(
                 select(func.count(Match.id)).where(
                     and_(
                         Match.recipient_id == user.id,
@@ -413,13 +399,12 @@ class QualityMetricsCalculator:
             logger.error(f"Error calculating intro acceptance rate: {str(e)}")
             return 0.0
 
-    async def _calculate_platform_interaction_score(self, user: User, session: AsyncSession) -> int:
+    def _calculate_platform_interaction_score(self, user: User, session: Session) -> int:
         """Calculate overall platform interaction score."""
         score = 0
 
         try:
-            # Event participation
-            event_rsvps = await session.execute(
+            event_rsvps = session.execute(
                 select(func.count(UserEventRSVP.id)).where(
                     UserEventRSVP.user_id == user.id
                 )
@@ -427,8 +412,7 @@ class QualityMetricsCalculator:
             event_count = event_rsvps.scalar() or 0
             score += min(20, event_count * 5)
 
-            # Resource saving/engagement
-            saved_resources = await session.execute(
+            saved_resources = session.execute(
                 select(func.count(UserSavedResource.id)).where(
                     UserSavedResource.user_id == user.id
                 )
@@ -436,8 +420,7 @@ class QualityMetricsCalculator:
             resource_count = saved_resources.scalar() or 0
             score += min(20, resource_count * 2)
 
-            # Match activity (both sent and received)
-            total_matches = await session.execute(
+            total_matches = session.execute(
                 select(func.count(Match.id)).where(
                     or_(Match.requester_id == user.id, Match.recipient_id == user.id)
                 )
@@ -445,8 +428,7 @@ class QualityMetricsCalculator:
             match_count = total_matches.scalar() or 0
             score += min(30, match_count * 3)
 
-            # Message activity
-            total_messages = await session.execute(
+            total_messages = session.execute(
                 select(func.count(Message.id)).where(
                     Message.sender_id == user.id
                 )
@@ -459,7 +441,7 @@ class QualityMetricsCalculator:
 
         return min(100, score)
 
-    async def _get_social_proof_metrics(self, user: User, session: AsyncSession) -> Dict:
+    def _get_social_proof_metrics(self, user: User, session: Session) -> Dict:
         """Get social proof metrics from verification data."""
         metrics = {}
 
@@ -472,10 +454,10 @@ class QualityMetricsCalculator:
 
         return metrics
 
-    async def _get_report_count(self, user: User, session: AsyncSession) -> int:
+    def _get_report_count(self, user: User, session: Session) -> int:
         """Get count of reports against this user."""
         try:
-            reports = await session.execute(
+            reports = session.execute(
                 select(func.count(Report.id)).where(Report.reported_user_id == user.id)
             )
             return reports.scalar() or 0
@@ -483,20 +465,18 @@ class QualityMetricsCalculator:
             logger.error(f"Error getting report count: {str(e)}")
             return 0
 
-    async def _calculate_suspicious_activity_flags(self, user: User, session: AsyncSession) -> int:
+    def _calculate_suspicious_activity_flags(self, user: User, session: Session) -> int:
         """Calculate number of suspicious activity flags."""
         flags = 0
 
         try:
-            # Profile created very recently but claiming extensive experience
             if user.created_at and user.experience_years:
                 account_age = (datetime.utcnow() - user.created_at).days
                 if account_age < 1 and user.experience_years > 10:
                     flags += 1
 
-            # Incomplete profile but requesting many matches
             if user.profile_status == "incomplete":
-                recent_matches = await session.execute(
+                recent_matches = session.execute(
                     select(func.count(Match.id)).where(
                         and_(
                             Match.requester_id == user.id,
@@ -507,8 +487,7 @@ class QualityMetricsCalculator:
                 if (recent_matches.scalar() or 0) > 10:
                     flags += 1
 
-            # Multiple reports
-            report_count = await self._get_report_count(user, session)
+            report_count = self._get_report_count(user, session)
             if report_count > 2:
                 flags += 1
 
@@ -525,104 +504,86 @@ class QualityMetricsCalculator:
                 return False
         return True
 
-    async def save_quality_metrics(
+    def save_quality_metrics(
         self,
         metrics: UserQualityMetrics,
-        session: AsyncSession
+        session: Session
     ) -> UserQualityMetrics:
         """Save quality metrics to database."""
         try:
-            # Check if record exists
-            existing_metrics = await session.execute(
-                select(UserQualityMetrics).where(
-                    UserQualityMetrics.user_id == metrics.user_id
-                )
-            )
-            existing_record = existing_metrics.scalar_one_or_none()
+            existing_record = session.query(UserQualityMetrics).filter(
+                UserQualityMetrics.user_id == metrics.user_id
+            ).first()
 
             if existing_record:
-                # Update existing record
                 for attr, value in metrics.__dict__.items():
                     if not attr.startswith('_') and attr != 'id':
                         setattr(existing_record, attr, value)
                 existing_record.updated_at = datetime.utcnow()
                 result = existing_record
             else:
-                # Create new record
                 session.add(metrics)
                 result = metrics
 
-            await session.commit()
-            await session.refresh(result)
+            session.commit()
+            session.refresh(result)
             return result
 
         except Exception as e:
-            await session.rollback()
+            session.rollback()
             logger.error(f"Error saving quality metrics: {str(e)}")
             raise
 
 
 # Background job functions
-async def update_all_quality_metrics():
+def update_all_quality_metrics():
     """Update quality metrics for all active users."""
     calculator = QualityMetricsCalculator()
+    session = SessionLocal()
 
-    async for session in get_database_session():
-        try:
-            # Get all active users
-            users_result = await session.execute(
-                select(User).where(
-                    and_(User.is_active, ~User.is_banned)
+    try:
+        users = session.query(User).filter(
+            and_(User.is_active, ~User.is_banned)
+        ).all()
+
+        logger.info(f"Starting quality metrics update for {len(users)} users")
+
+        for user in users:
+            try:
+                metrics = calculator.calculate_user_quality_metrics(user, session)
+                calculator.save_quality_metrics(metrics, session)
+            except Exception as e:
+                logger.error(
+                    f"Error updating quality metrics for user {user.id}: {str(e)}"
                 )
-            )
-            users = users_result.scalars().all()
+                continue
 
-            logger.info(f"Starting quality metrics update for {len(users)} users")
+        logger.info("Completed quality metrics update for all users")
 
-            for user in users:
-                try:
-                    metrics = await calculator.calculate_user_quality_metrics(user, session)
-                    await calculator.save_quality_metrics(metrics, session)
-
-                    # Small delay to avoid overwhelming the system
-                    await asyncio.sleep(0.05)
-
-                except Exception as e:
-                    logger.error(
-                        f"Error updating quality metrics for user {user.id}: {str(e)}"
-                    )
-                    continue
-
-            logger.info("Completed quality metrics update for all users")
-
-        except Exception as e:
-            logger.error(f"Error in quality metrics update job: {str(e)}")
-            raise
-        finally:
-            await session.close()
+    except Exception as e:
+        logger.error(f"Error in quality metrics update job: {str(e)}")
+        raise
+    finally:
+        session.close()
 
 
-async def update_user_quality_metrics(user_id: str) -> Optional[UserQualityMetrics]:
+def update_user_quality_metrics(user_id: str) -> Optional[UserQualityMetrics]:
     """Update quality metrics for a specific user."""
     calculator = QualityMetricsCalculator()
+    session = SessionLocal()
 
-    async for session in get_database_session():
-        try:
-            # Get user
-            user_result = await session.execute(
-                select(User).where(User.id == user_id)
-            )
-            user = user_result.scalar_one_or_none()
+    try:
+        user = session.query(User).filter(User.id == user_id).first()
 
-            if not user:
-                logger.warning(f"User not found: {user_id}")
-                return None
-
-            metrics = await calculator.calculate_user_quality_metrics(user, session)
-            return await calculator.save_quality_metrics(metrics, session)
-
-        except Exception as e:
-            logger.error(f"Error updating quality metrics for user {user_id}: {str(e)}")
+        if not user:
+            logger.warning(f"User not found: {user_id}")
             return None
-        finally:
-            await session.close()
+
+        metrics = calculator.calculate_user_quality_metrics(user, session)
+        return calculator.save_quality_metrics(metrics, session)
+
+    except Exception as e:
+        logger.error(f"Error updating quality metrics for user {user_id}: {str(e)}")
+        return None
+    finally:
+        session.close()

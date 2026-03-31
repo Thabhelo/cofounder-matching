@@ -10,7 +10,7 @@ export function RedirectSignedInToDashboard({ children }: { children: ReactNode 
 
   useEffect(() => {
     if (isLoaded && isSignedIn) {
-      router.replace("/onboarding")
+      router.replace("/dashboard")
     }
   }, [isLoaded, isSignedIn, router])
 
@@ -19,7 +19,7 @@ export function RedirectSignedInToDashboard({ children }: { children: ReactNode 
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-900 mx-auto" />
-          <p className="mt-4 text-gray-600">Taking you to onboarding...</p>
+          <p className="mt-4 text-gray-600">Taking you to dashboard...</p>
         </div>
       </div>
     )

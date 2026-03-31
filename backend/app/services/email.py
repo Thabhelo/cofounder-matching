@@ -11,6 +11,20 @@ from app.services.feature_flags import get_flag
 logger = logging.getLogger(__name__)
 
 
+def _should_send_notification(recipient: User, notification_key: str) -> bool:
+    """Check if a user wants to receive a specific notification type.
+
+    Checks the granular settings JSONB first (e.g. settings.notifications.email_intro_request),
+    then falls back to the legacy alert_on_new_matches boolean.
+    """
+    if recipient.settings and isinstance(recipient.settings, dict):
+        notifications = recipient.settings.get("notifications", {})
+        if notification_key in notifications:
+            return bool(notifications[notification_key])
+    # Fallback to legacy field
+    return bool(recipient.alert_on_new_matches)
+
+
 def _unsubscribe_footer(frontend_url: str) -> Tuple[str, str]:
     """Return (plain_text_footer, html_footer) with unsubscribe link."""
     url = f"{frontend_url}/profile#preferences"
@@ -107,9 +121,9 @@ async def send_new_match_notification(
     """
     Notify a user that someone saved or invited them as a potential co-founder.
 
-    This respects the recipient's alert_on_new_matches flag.
+    This respects the recipient's notification preferences.
     """
-    if not recipient.alert_on_new_matches:
+    if not _should_send_notification(recipient, "email_new_match"):
         return
 
     plain_footer, html_footer = _unsubscribe_footer(settings.FRONTEND_URL)
@@ -138,9 +152,9 @@ async def send_intro_request_notification(
     """
     Notify a user that they received a new introduction request for an existing match.
 
-    This also respects alert_on_new_matches since it is closely related to match activity.
+    This respects the recipient's notification preferences.
     """
-    if not recipient.alert_on_new_matches:
+    if not _should_send_notification(recipient, "email_intro_request"):
         return
 
     plain_footer, html_footer = _unsubscribe_footer(settings.FRONTEND_URL)
@@ -169,11 +183,11 @@ async def send_intro_accepted_notification(
     """
     Notify the original requester that their introduction request was accepted.
 
-    Gated by the intro_accepted_notification feature flag and alert_on_new_matches.
+    Gated by the intro_accepted_notification feature flag and notification preferences.
     """
     if not get_flag("intro_accepted_notification"):
         return
-    if not recipient.alert_on_new_matches:
+    if not _should_send_notification(recipient, "email_new_match"):
         return
 
     plain_footer, html_footer = _unsubscribe_footer(settings.FRONTEND_URL)

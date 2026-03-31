@@ -8,6 +8,7 @@ import Image from "next/image"
 import { AppShell } from "@/components/layout/AppShell"
 import { api } from "@/lib/api"
 import type { UserPublic } from "@/lib/types"
+import { PageLoader } from "@/components/ui/loader"
 
 const REPORT_TYPES = [
   { value: "spam", label: "Spam" },
@@ -44,6 +45,16 @@ export default function ProfileDetailPage() {
 
         const data = await api.users.getById(profileId)
         setProfile(data)
+
+        // Check if this profile is already saved
+        try {
+          const savedProfiles = await api.profiles.getSaved({ limit: 100 }, token)
+          if (savedProfiles.some((p: UserPublic) => p.id === profileId)) {
+            setIsSaved(true)
+          }
+        } catch {
+          // Ignore - non-critical
+        }
       } catch (error) {
         console.error("Failed to load profile:", error)
       } finally {
@@ -68,6 +79,23 @@ export default function ProfileDetailPage() {
     } catch (error) {
       console.error("Failed to save profile:", error)
       alert("Failed to save profile. Please try again.")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleUnsave = async () => {
+    if (!profile) return
+    try {
+      const token = await getToken()
+      if (!token) return
+
+      setSaving(true)
+      await api.profiles.unsave(profile.id, token)
+      setIsSaved(false)
+    } catch (error) {
+      console.error("Failed to unsave profile:", error)
+      alert("Failed to unsave profile. Please try again.")
     } finally {
       setSaving(false)
     }
@@ -113,13 +141,7 @@ export default function ProfileDetailPage() {
   if (loading) {
     return (
       <AppShell>
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center" role="status">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-900 mx-auto"></div>
-            <span className="sr-only">Loading...</span>
-            <p className="mt-4 text-gray-600">Loading profile...</p>
-          </div>
-        </div>
+        <PageLoader label="Loading profile..." />
       </AppShell>
     )
   }
@@ -240,29 +262,44 @@ export default function ProfileDetailPage() {
             )}
 
             <div className="flex items-center gap-4 pt-6 border-t border-zinc-200">
-              <button
-                onClick={handleSkip}
-                disabled={skipping}
-                className="flex-1 px-6 py-3 border-2 border-zinc-300 text-zinc-700 font-medium rounded-lg hover:border-zinc-400 hover:bg-zinc-50 transition-colors disabled:opacity-50"
-              >
-                {skipping ? "Skipping..." : "Skip"}
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={saving || isSaved}
-                className="flex-1 px-6 py-3 bg-zinc-900 text-white font-medium rounded-lg hover:bg-zinc-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {isSaved ? (
-                  <svg aria-hidden="true" className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                  </svg>
-                ) : (
-                  <svg aria-hidden="true" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 20 20">
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                  </svg>
-                )}
-                {saving ? "Saving..." : isSaved ? "Saved" : "Save for Later"}
-              </button>
+              {isSaved ? (
+                <>
+                  <button
+                    onClick={handleUnsave}
+                    disabled={saving}
+                    className="flex-1 px-6 py-3 border-2 border-zinc-300 text-zinc-700 font-medium rounded-lg hover:border-zinc-400 hover:bg-zinc-50 transition-colors disabled:opacity-50"
+                  >
+                    {saving ? "Removing..." : "Remove from Saved"}
+                  </button>
+                  <button
+                    onClick={handleSkip}
+                    disabled={skipping}
+                    className="flex-1 px-6 py-3 border-2 border-zinc-300 text-zinc-700 font-medium rounded-lg hover:border-zinc-400 hover:bg-zinc-50 transition-colors disabled:opacity-50"
+                  >
+                    {skipping ? "Skipping..." : "Skip"}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={handleSkip}
+                    disabled={skipping}
+                    className="flex-1 px-6 py-3 border-2 border-zinc-300 text-zinc-700 font-medium rounded-lg hover:border-zinc-400 hover:bg-zinc-50 transition-colors disabled:opacity-50"
+                  >
+                    {skipping ? "Skipping..." : "Skip"}
+                  </button>
+                  <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="flex-1 px-6 py-3 bg-zinc-900 text-white font-medium rounded-lg hover:bg-zinc-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    <svg aria-hidden="true" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                    {saving ? "Saving..." : "Save for Later"}
+                  </button>
+                </>
+              )}
             </div>
             <div className="pt-4 text-center">
               <button

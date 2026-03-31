@@ -7,6 +7,26 @@ import Link from "next/link"
 import { AppShell } from "@/components/layout/AppShell"
 import { api } from "@/lib/api"
 import type { User } from "@/lib/types"
+import { PageLoader } from "@/components/ui/loader"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Button, buttonVariants } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
+import {
+  Search,
+  Star,
+  Users,
+  ArrowRight,
+  MessageSquare,
+  Sparkles,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  X,
+  SlidersHorizontal,
+  ShieldCheck,
+} from "lucide-react"
+import { cn } from "@/lib/utils"
 
 type ProfileCounts = {
   discover_count: number
@@ -55,13 +75,7 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center" role="status" aria-label="Loading">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-900 mx-auto"></div>
-          <span className="sr-only">Loading...</span>
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
-      </div>
+      <PageLoader label="Loading..." />
     )
   }
 
@@ -82,213 +96,295 @@ export default function DashboardPage() {
     return parts.length > 0 ? parts.join(", ") : "No filters set"
   }
 
+  const statusBadge = (status: string | undefined) => {
+    switch (status) {
+      case "pending_review":
+        return <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-800">Pending Review</Badge>
+      case "approved":
+        return <Badge variant="outline" className="border-emerald-300 bg-emerald-50 text-emerald-800">Approved</Badge>
+      case "rejected":
+        return <Badge variant="destructive">Rejected</Badge>
+      default:
+        return null
+    }
+  }
+
   return (
     <AppShell>
       <main className="flex-1 p-4 md:p-8">
         <div className="max-w-6xl mx-auto">
-            <h1 className="text-3xl font-semibold text-zinc-900 mb-8">Dashboard</h1>
+          {/* Header */}
+          <div className="flex items-center justify-between mb-8 md:mb-10">
+            <div className="flex items-center gap-3">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight text-zinc-900">
+                Dashboard
+              </h1>
+              {statusBadge(user?.profile_status)}
+            </div>
+          </div>
 
-            {user?.profile_status === "pending_review" && (
-              <div role="alert" className="mb-8 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          {/* Alert Banners */}
+          {user?.profile_status === "pending_review" && (
+            <div role="alert" className="mb-8 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+              <div>
                 <p className="font-medium">Your profile is pending review.</p>
-                <p className="mt-1">
+                <p className="mt-1 text-amber-800">
                   We&apos;ll let you know once it&apos;s approved. In the meantime you can still review your profile and preferences on the{" "}
-                  <Link href="/profile" className="underline">
+                  <Link href="/profile" className="font-medium underline underline-offset-2 hover:text-amber-950">
                     Profile
                   </Link>{" "}
                   page.
                 </p>
               </div>
-            )}
+            </div>
+          )}
 
-            {user?.profile_status === "approved" && !approvedBannerDismissed && (
-              <div role="status" className="mb-8 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="font-medium">Your profile has been approved.</p>
-                    <p className="mt-1">
-                      You&apos;re now visible to other founders in the matching pool. Head to{" "}
-                      <Link href="/discover" className="underline">
-                        Discover
-                      </Link>{" "}
-                      to start meeting potential co-founders.
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setApprovedBannerDismissed(true)}
-                    className="shrink-0 text-emerald-600 hover:text-emerald-900"
-                    aria-label="Dismiss"
-                  >
-                    ✕
-                  </button>
-                </div>
+          {user?.profile_status === "approved" && !approvedBannerDismissed && (
+            <div role="status" className="mb-8 flex items-start gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+              <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+              <div className="flex-1">
+                <p className="font-medium">Your profile has been approved.</p>
+                <p className="mt-1 text-emerald-800">
+                  You&apos;re now visible to other founders in the matching pool. Head to{" "}
+                  <Link href="/discover" className="font-medium underline underline-offset-2 hover:text-emerald-950">
+                    Discover
+                  </Link>{" "}
+                  to start meeting potential co-founders.
+                </p>
               </div>
-            )}
+              <button
+                onClick={() => setApprovedBannerDismissed(true)}
+                className="shrink-0 rounded-md p-0.5 text-emerald-600 hover:bg-emerald-100 hover:text-emerald-900 transition-colors"
+                aria-label="Dismiss"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
 
-            {user?.profile_status === "rejected" && (
-              <div role="alert" className="mb-8 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+          {user?.profile_status === "rejected" && (
+            <div role="alert" className="mb-8 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+              <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
+              <div>
                 <p className="font-medium">Your profile was not approved yet.</p>
-                <p className="mt-1">
+                <p className="mt-1 text-red-800">
                   Please review and update your profile on the{" "}
-                  <Link href="/profile" className="underline">
+                  <Link href="/profile" className="font-medium underline underline-offset-2 hover:text-red-950">
                     Profile
                   </Link>{" "}
                   page, then resubmit so we can take another look.
                 </p>
               </div>
-            )}
-
-            {/* Summary Cards */}
-            <div className="grid md:grid-cols-3 gap-6 mb-8">
-              <div className="bg-white border border-zinc-200 rounded-lg p-6">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-zinc-100 rounded-lg flex items-center justify-center shrink-0">
-                    <svg aria-hidden="true" className="w-6 h-6 text-zinc-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-zinc-900 font-medium mb-2">
-                      {counts?.discover_count || 0} founders in your queue meet your requirements!
-                    </p>
-                    <Link
-                      href="/discover"
-                      className="inline-block mt-2 px-4 py-2 bg-zinc-900 text-white text-sm font-medium rounded-lg hover:bg-zinc-800 transition-colors"
-                    >
-                      View Profiles
-                    </Link>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white border border-zinc-200 rounded-lg p-6">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-zinc-100 rounded-lg flex items-center justify-center shrink-0">
-                    <svg aria-hidden="true" className="w-6 h-6 text-zinc-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-zinc-900 font-medium mb-2">
-                      You have {counts?.saved_count || 0} saved profile{counts?.saved_count !== 1 ? "s" : ""} awaiting an invite!
-                    </p>
-                    <Link
-                      href="/revisit?tab=saved"
-                      className="inline-block mt-2 px-4 py-2 bg-zinc-900 text-white text-sm font-medium rounded-lg hover:bg-zinc-800 transition-colors"
-                    >
-                      View Saved Profiles
-                    </Link>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white border border-zinc-200 rounded-lg p-6">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-zinc-100 rounded-lg flex items-center justify-center shrink-0">
-                    <svg aria-hidden="true" className="w-6 h-6 text-zinc-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-zinc-900 font-medium mb-2">
-                      You have {counts?.matches_count || 0} match{counts?.matches_count !== 1 ? "es" : ""} that you haven&apos;t met yet.
-                    </p>
-                    <p className="text-sm text-zinc-600 mt-1">
-                      Keep the search moving fast! Most successful teams set up an initial meeting within a week of matching.
-                    </p>
-                  </div>
-                </div>
-              </div>
             </div>
+          )}
 
-            <div className="grid md:grid-cols-3 gap-8">
-              {/* Left Column - Main Content */}
-              <div className="md:col-span-2 space-y-6">
-                {/* How It Works */}
-                <div className="bg-white border border-zinc-200 rounded-lg p-6">
-                  <h2 className="text-lg font-semibold text-zinc-900 mb-4">How It Works</h2>
-                  <ul className="space-y-3 text-zinc-700">
-                    <li className="flex gap-3">
-                      <span className="text-zinc-900 font-medium">1.</span>
-                      <span>When you go to the candidates page, you will be shown one profile at a time.</span>
-                    </li>
-                    <li className="flex gap-3">
-                      <span className="text-zinc-900 font-medium">2.</span>
-                      <span>If you choose to send a message request to someone, they will receive an email with your profile.</span>
-                    </li>
-                    <li className="flex gap-3">
-                      <span className="text-zinc-900 font-medium">3.</span>
-                      <span>If they accept your request, we&apos;ll match the two of you!</span>
-                    </li>
-                    <li className="flex gap-3">
-                      <span className="text-zinc-900 font-medium">4.</span>
-                      <span>To ensure that founders have a good experience on this platform, you are limited to sending 20 invites per week.</span>
-                    </li>
-                  </ul>
+          {/* Summary Cards */}
+          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 md:gap-6 mb-8 md:mb-10">
+            <Card className="transition-shadow hover:shadow-soft">
+              <CardContent className="pt-2">
+                <div className="flex flex-col items-center text-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-zinc-100">
+                    <Search className="h-5 w-5 text-zinc-900" aria-hidden="true" />
+                  </div>
+                  <div>
+                    <p className="text-3xl font-semibold tracking-tight text-zinc-900">
+                      {counts?.discover_count || 0}
+                    </p>
+                    <p className="mt-1 text-sm text-zinc-500">
+                      founders in your queue
+                    </p>
+                  </div>
+                  <Link
+                    href="/discover"
+                    className={cn(buttonVariants({ variant: "default", size: "sm" }), "mt-1 gap-1.5")}
+                  >
+                    View Profiles
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
                 </div>
+              </CardContent>
+            </Card>
 
-                {/* Your Matches */}
-                <div className="bg-white border border-zinc-200 rounded-lg p-6">
-                  <h2 className="text-lg font-semibold text-zinc-900 mb-4">Your Matches</h2>
+            <Card className="transition-shadow hover:shadow-soft">
+              <CardContent className="pt-2">
+                <div className="flex flex-col items-center text-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-zinc-100">
+                    <Star className="h-5 w-5 text-zinc-900" aria-hidden="true" />
+                  </div>
+                  <div>
+                    <p className="text-3xl font-semibold tracking-tight text-zinc-900">
+                      {counts?.saved_count || 0}
+                    </p>
+                    <p className="mt-1 text-sm text-zinc-500">
+                      saved profile{counts?.saved_count !== 1 ? "s" : ""} awaiting invite
+                    </p>
+                  </div>
+                  <Link
+                    href="/revisit?tab=saved"
+                    className={cn(buttonVariants({ variant: "default", size: "sm" }), "mt-1 gap-1.5")}
+                  >
+                    View Saved
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="transition-shadow hover:shadow-soft">
+              <CardContent className="pt-2">
+                <div className="flex flex-col items-center text-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-zinc-100">
+                    <Users className="h-5 w-5 text-zinc-900" aria-hidden="true" />
+                  </div>
+                  <div>
+                    <p className="text-3xl font-semibold tracking-tight text-zinc-900">
+                      {counts?.matches_count || 0}
+                    </p>
+                    <p className="mt-1 text-sm text-zinc-500">
+                      match{counts?.matches_count !== 1 ? "es" : ""} to meet
+                    </p>
+                  </div>
+                  <p className="mt-1 text-xs text-zinc-400 leading-relaxed max-w-[220px]">
+                    Most successful teams meet within a week of matching.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Separator className="mb-8 md:mb-10" />
+
+          {/* Main Grid */}
+          <div className="grid md:grid-cols-3 gap-4 md:gap-8">
+            {/* Left Column */}
+            <div className="md:col-span-2 space-y-6">
+              {/* How It Works */}
+              <Card className="transition-shadow hover:shadow-soft">
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold tracking-tight">
+                    <span className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-zinc-500" />
+                      How It Works
+                    </span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ol className="space-y-4">
+                    {[
+                      "When you go to the candidates page, you will be shown one profile at a time.",
+                      "If you choose to send a message request to someone, they will receive an email with your profile.",
+                      "If they accept your request, we\u2019ll match the two of you!",
+                      "To ensure that founders have a good experience on this platform, you are limited to sending 20 invites per week.",
+                    ].map((step, i) => (
+                      <li key={i} className="flex gap-4 text-sm text-zinc-700">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-zinc-200 bg-zinc-50 text-xs font-semibold text-zinc-900">
+                          {i + 1}
+                        </span>
+                        <span className="pt-0.5 leading-relaxed border-l border-zinc-100 pl-4">
+                          {step}
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                </CardContent>
+              </Card>
+
+              {/* Your Matches */}
+              <Card className="transition-shadow hover:shadow-soft">
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold tracking-tight">
+                    <span className="flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4 text-zinc-500" />
+                      Your Matches
+                    </span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
                   {counts && counts.matches_count > 0 ? (
-                    <>
-                      <p className="text-zinc-700 mb-4">
+                    <div className="space-y-4">
+                      <p className="text-sm text-zinc-700 leading-relaxed">
                         You have {counts.matches_count} active match{counts.matches_count !== 1 ? "es" : ""}! Go to your inbox to review them and set up meetings.
                       </p>
                       <Link
                         href="/inbox"
-                        className="inline-block px-6 py-2 bg-zinc-900 text-white font-medium rounded-lg hover:bg-zinc-800 transition-colors"
+                        className={cn(buttonVariants({ variant: "default", size: "default" }), "gap-1.5")}
                       >
                         View your matches
+                        <ArrowRight className="h-3.5 w-3.5" />
                       </Link>
-                    </>
+                    </div>
                   ) : (
-                    <p className="text-zinc-600">You don&apos;t have any active matches yet. Start browsing profiles to find your co-founder!</p>
+                    <p className="text-sm text-zinc-500 leading-relaxed">
+                      You don&apos;t have any active matches yet. Start browsing profiles to find your co-founder!
+                    </p>
                   )}
-                </div>
-              </div>
+                </CardContent>
+              </Card>
+            </div>
 
-              {/* Right Column - Sidebar */}
-              <div className="space-y-6">
-                {/* Your Filters */}
-                <div className="bg-white border border-zinc-200 rounded-lg p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-semibold text-zinc-900">Your filters</h2>
+            {/* Right Column - Sidebar */}
+            <div className="space-y-6">
+              {/* Your Filters */}
+              <Card className="transition-shadow hover:shadow-soft">
+                <CardHeader>
+                  <div className="flex items-center justify-between w-full">
+                    <CardTitle className="text-lg font-semibold tracking-tight">
+                      <span className="flex items-center gap-2">
+                        <SlidersHorizontal className="h-4 w-4 text-zinc-500" />
+                        Your filters
+                      </span>
+                    </CardTitle>
                     <Link
                       href="/profile"
-                      className="text-sm text-zinc-600 hover:text-zinc-900 font-medium"
+                      className={cn(buttonVariants({ variant: "outline", size: "xs" }))}
                     >
                       Edit
                     </Link>
                   </div>
-                  <p className="text-zinc-700 text-sm leading-relaxed">
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-zinc-700 leading-relaxed">
                     {formatFilters()}
                   </p>
                   {user?.areas_of_ownership && user.areas_of_ownership.length > 0 && (
-                    <p className="text-zinc-700 text-sm mt-3">
-                      Areas I want a co-founder to handle:{" "}
-                      <span className="font-medium">
-                        {user.areas_of_ownership.join(", ")}
-                      </span>
-                    </p>
+                    <>
+                      <Separator className="my-3" />
+                      <p className="text-sm text-zinc-700">
+                        Areas I want a co-founder to handle:{" "}
+                        <span className="font-medium text-zinc-900">
+                          {user.areas_of_ownership.join(", ")}
+                        </span>
+                      </p>
+                    </>
                   )}
-                </div>
+                </CardContent>
+              </Card>
 
-                {/* Community Trust */}
-                <div className="bg-white border border-zinc-200 rounded-lg p-6">
-                  <h2 className="text-lg font-semibold text-zinc-900 mb-3">Community Trust</h2>
+              {/* Community Trust */}
+              <Card className="transition-shadow hover:shadow-soft">
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold tracking-tight">
+                    <span className="flex items-center gap-2">
+                      <ShieldCheck className="h-4 w-4 text-zinc-500" />
+                      Community Trust
+                    </span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
                   <p className="text-sm text-zinc-700 leading-relaxed mb-3">
                     Community trust is very important to us. If anyone harasses you, uses the co-founder matching platform to sell services or do anything other than find a co-founder, or contacts you without consent outside of Startup School, please report it to us.
                   </p>
                   <p className="text-sm text-zinc-700">
                     We&apos;re always trying to improve your experience. If you have any feedback,{" "}
-                    <a href="mailto:support@cofoundermatch.com" className="text-zinc-900 font-medium hover:underline">
+                    <a href="mailto:support@cofoundermatch.com" className="font-medium text-zinc-900 underline underline-offset-2 hover:text-zinc-700">
                       let us know!
                     </a>
                   </p>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             </div>
+          </div>
         </div>
       </main>
     </AppShell>

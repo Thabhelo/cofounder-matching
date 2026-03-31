@@ -10,7 +10,7 @@ from typing import Dict, List, Optional
 from dataclasses import dataclass
 
 from app.utils.logging import get_logger
-from app.core.config import settings
+from app.config import settings
 
 logger = get_logger(__name__)
 

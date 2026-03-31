@@ -93,7 +93,7 @@ function SaveBar({
 }) {
   if (!dirty) return null
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-zinc-200 px-6 py-3 flex items-center justify-end gap-3">
+    <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-zinc-200 px-4 sm:px-6 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] flex items-center justify-end gap-3">
       <button
         type="button"
         onClick={onDiscard}
@@ -259,7 +259,7 @@ export default function SettingsPage() {
     <AppShell>
     <div className="max-w-2xl mx-auto px-4 py-8 pb-24 space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-zinc-900">Settings</h1>
+        <h1 className="text-xl sm:text-2xl font-semibold text-zinc-900">Settings</h1>
         <p className="text-sm text-zinc-500 mt-1">Manage your notifications, privacy, and account preferences.</p>
       </div>
 
@@ -449,26 +449,26 @@ export default function SettingsPage() {
 
       {/* Account Settings */}
       <Section title="Account">
-        <div className="py-3 flex items-center justify-between">
+        <div className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <p className="text-sm font-medium text-zinc-900">Signed in as</p>
             <p className="text-xs text-zinc-500 mt-0.5">{clerkUser?.primaryEmailAddress?.emailAddress}</p>
           </div>
         </div>
-        <div className="py-3 flex items-center justify-between">
+        <div className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
-            <p className="text-sm font-medium text-zinc-900">Password, 2FA, and connected accounts</p>
-            <p className="text-xs text-zinc-500 mt-0.5">Managed through Clerk</p>
+            <p className="text-sm font-medium text-zinc-900">Password, 2FA & connected accounts</p>
+            <p className="text-xs text-zinc-500 mt-0.5">Manage your security settings</p>
           </div>
           <button
             type="button"
             onClick={() => openUserProfile()}
-            className="text-sm text-zinc-700 underline hover:text-zinc-900"
+            className="px-4 py-2 text-sm font-medium text-zinc-900 bg-zinc-100 rounded-lg hover:bg-zinc-200 transition-colors"
           >
             Manage
           </button>
         </div>
-        <div className="py-3 flex items-center justify-between">
+        <div className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <p className="text-sm font-medium text-zinc-900">Edit profile</p>
             <p className="text-xs text-zinc-500 mt-0.5">Update your co-founder profile information</p>

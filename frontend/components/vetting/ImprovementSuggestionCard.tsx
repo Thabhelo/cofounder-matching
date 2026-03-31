@@ -232,7 +232,7 @@ const ImprovementSuggestionCard: React.FC<ImprovementSuggestionCardProps> = ({
             <div className="flex items-center gap-2">
               <TooltipProvider>
                 <Tooltip>
-                  <TooltipTrigger asChild>
+                  <TooltipTrigger >
                     <Badge className={cn('text-sm font-semibold', impactConfig.badge)}>
                       +{suggestion.estimated_points}
                     </Badge>

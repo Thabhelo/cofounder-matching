@@ -5,6 +5,7 @@ import Link from "next/link"
 import { api } from "@/lib/api"
 import type { Event, EventType, LocationType } from "@/lib/types"
 import { formatDateTime } from "@/lib/utils"
+import { Loader } from "@/components/ui/loader"
 
 export default function EventsPage() {
   const [events, setEvents] = useState<Event[]>([])
@@ -79,7 +80,7 @@ export default function EventsPage() {
 
         {loading ? (
           <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-900"></div>
+            <Loader size="md" />
           </div>
         ) : events.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-lg">

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from typing import List, Optional, cast
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 import uuid
 
@@ -74,12 +74,19 @@ async def send_invite_to_profile(
     ).first()
 
     if existing_match:
-        if existing_match.intro_requested_at:
+        # Allow re-inviting if previously unmatched or dismissed
+        if existing_match.status in ("unmatched", "dismissed"):
+            # Reset the match record for a fresh invite
+            existing_match.status = None  # type: ignore[assignment]
+            existing_match.intro_requested_at = None  # type: ignore[assignment]
+            existing_match.intro_accepted_at = None  # type: ignore[assignment]
+            existing_match.match_score = 0  # type: ignore[assignment]
+        elif existing_match.intro_requested_at:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="You already sent an invitation to this person"
             )
-        if existing_match.intro_accepted_at:
+        elif existing_match.intro_accepted_at:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Already connected with this person"
@@ -93,7 +100,7 @@ async def send_invite_to_profile(
     ).first()
 
     # Rate limit check - max 20 intro requests per week
-    one_week_ago = datetime.utcnow() - timedelta(weeks=1)
+    one_week_ago = datetime.now(timezone.utc) - timedelta(weeks=1)
     recent_intros = db.query(Match).filter(
         Match.user_id == current_user.id,
         Match.intro_requested_at.isnot(None),
@@ -111,9 +118,9 @@ async def send_invite_to_profile(
         if existing_match:
             match = existing_match
             match.status = "connected"  # type: ignore[assignment]
-            match.intro_requested_at = datetime.utcnow()  # type: ignore[assignment]
-            match.intro_accepted_at = datetime.utcnow()  # type: ignore[assignment]
-            match.updated_at = datetime.utcnow()  # type: ignore[assignment]
+            match.intro_requested_at = datetime.now(timezone.utc)  # type: ignore[assignment]
+            match.intro_accepted_at = datetime.now(timezone.utc)  # type: ignore[assignment]
+            match.updated_at = datetime.now(timezone.utc)  # type: ignore[assignment]
             if match.match_score == 0:
                 inv_result = score_match(current_user, target_user)
                 match.match_score = inv_result["match_score"]
@@ -138,8 +145,8 @@ async def send_invite_to_profile(
                 interest_overlap_score=inv_result["interest_overlap_score"],
                 preference_alignment_score=inv_result["preference_alignment_score"],
                 status="connected",
-                intro_requested_at=datetime.utcnow(),
-                intro_accepted_at=datetime.utcnow()
+                intro_requested_at=datetime.now(timezone.utc),
+                intro_accepted_at=datetime.now(timezone.utc)
             )
             db.add(match)
             db.flush()
@@ -155,8 +162,8 @@ async def send_invite_to_profile(
             reciprocal_match.interest_overlap_score = rec_result["interest_overlap_score"]
             reciprocal_match.preference_alignment_score = rec_result["preference_alignment_score"]
         reciprocal_match.status = "connected"  # type: ignore[assignment]
-        reciprocal_match.intro_accepted_at = datetime.utcnow()  # type: ignore[assignment]
-        reciprocal_match.updated_at = datetime.utcnow()  # type: ignore[assignment]
+        reciprocal_match.intro_accepted_at = datetime.now(timezone.utc)  # type: ignore[assignment]
+        reciprocal_match.updated_at = datetime.now(timezone.utc)  # type: ignore[assignment]
 
         intro_message = Message(
             match_id=match.id,
@@ -169,8 +176,7 @@ async def send_invite_to_profile(
         db.commit()
         db.refresh(match)
 
-        if target_user.alert_on_new_matches:
-            await send_new_match_notification(target_user, current_user)
+        await send_new_match_notification(target_user, current_user)
 
         return {
             "message": "You're now connected! Check your inbox to start chatting.",
@@ -183,8 +189,8 @@ async def send_invite_to_profile(
     if existing_match:
         match = existing_match
         match.status = "intro_requested"  # type: ignore[assignment]
-        match.intro_requested_at = datetime.utcnow()  # type: ignore[assignment]
-        match.updated_at = datetime.utcnow()  # type: ignore[assignment]
+        match.intro_requested_at = datetime.now(timezone.utc)  # type: ignore[assignment]
+        match.updated_at = datetime.now(timezone.utc)  # type: ignore[assignment]
         if match.match_score == 0:
             inv_result = score_match(current_user, target_user)
             match.match_score = inv_result["match_score"]
@@ -209,7 +215,7 @@ async def send_invite_to_profile(
             interest_overlap_score=inv_result["interest_overlap_score"],
             preference_alignment_score=inv_result["preference_alignment_score"],
             status="intro_requested",
-            intro_requested_at=datetime.utcnow()
+            intro_requested_at=datetime.now(timezone.utc)
         )
         db.add(match)
         db.flush()
@@ -225,8 +231,7 @@ async def send_invite_to_profile(
     db.commit()
     db.refresh(match)
 
-    if target_user.alert_on_new_matches:
-        await send_intro_request_notification(target_user, current_user)
+    await send_intro_request_notification(target_user, current_user)
 
     return {
         "message": "Invitation sent successfully",
@@ -466,15 +471,11 @@ async def unmatch(
         Match.user_id == other_id,
         Match.target_user_id == current_user.id
     ).first()
-    if not forward or not reciprocal:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Cannot unmatch: reciprocal match record not found. Please contact support.",
-        )
-
+    # Update all existing match records between the two users
     for m in (forward, reciprocal):
-        m.status = "unmatched"  # type: ignore[assignment]
-        m.updated_at = datetime.utcnow()  # type: ignore[assignment]
+        if m:
+            m.status = "unmatched"  # type: ignore[assignment]
+            m.updated_at = datetime.now(timezone.utc)  # type: ignore[assignment]
     db.commit()
     return {"message": "Unmatched successfully", "match_id": match_id}
 
@@ -525,7 +526,7 @@ async def request_introduction(
         )
 
     # Rate limit check - max 20 intro requests per week (like YC)
-    one_week_ago = datetime.utcnow() - timedelta(weeks=1)
+    one_week_ago = datetime.now(timezone.utc) - timedelta(weeks=1)
     recent_intros = db.query(Match).filter(
         Match.user_id == current_user.id,
         Match.intro_requested_at.isnot(None),
@@ -540,8 +541,8 @@ async def request_introduction(
 
     # Update match status and timestamp
     match.status = "intro_requested"  # type: ignore[assignment]
-    match.intro_requested_at = datetime.utcnow()  # type: ignore[assignment]
-    match.updated_at = datetime.utcnow()  # type: ignore[assignment]
+    match.intro_requested_at = datetime.now(timezone.utc)  # type: ignore[assignment]
+    match.updated_at = datetime.now(timezone.utc)  # type: ignore[assignment]
 
     # Create intro request message
     intro_message = Message(
@@ -608,8 +609,35 @@ async def respond_to_introduction(
     if response.accept:
         # Accept the introduction
         match.status = "connected"  # type: ignore[assignment]
-        match.intro_accepted_at = datetime.utcnow()  # type: ignore[assignment]
-        match.updated_at = datetime.utcnow()  # type: ignore[assignment]
+        match.intro_accepted_at = datetime.now(timezone.utc)  # type: ignore[assignment]
+        match.updated_at = datetime.now(timezone.utc)  # type: ignore[assignment]
+
+        # Create reciprocal match record (B→A) so unmatch works for both sides
+        reciprocal = db.query(Match).filter(
+            Match.user_id == current_user.id,
+            Match.target_user_id == match.user_id
+        ).first()
+        if not reciprocal:
+            reciprocal = Match(
+                user_id=current_user.id,
+                target_user_id=match.user_id,
+                match_score=match.match_score,
+                match_explanation=match.match_explanation,
+                complementarity_score=match.complementarity_score,
+                commitment_alignment_score=match.commitment_alignment_score,
+                location_fit_score=match.location_fit_score,
+                intent_score=match.intent_score,
+                interest_overlap_score=match.interest_overlap_score,
+                preference_alignment_score=match.preference_alignment_score,
+                status="connected",
+                intro_requested_at=datetime.now(timezone.utc),
+                intro_accepted_at=datetime.now(timezone.utc)
+            )
+            db.add(reciprocal)
+        else:
+            reciprocal.status = "connected"  # type: ignore[assignment]
+            reciprocal.intro_accepted_at = datetime.now(timezone.utc)  # type: ignore[assignment]
+            reciprocal.updated_at = datetime.now(timezone.utc)  # type: ignore[assignment]
 
         # Create acceptance message if response message provided
         if response.message:
@@ -624,7 +652,7 @@ async def respond_to_introduction(
     else:
         # Decline the introduction
         match.status = "dismissed"  # type: ignore[assignment]
-        match.updated_at = datetime.utcnow()  # type: ignore[assignment]
+        match.updated_at = datetime.now(timezone.utc)  # type: ignore[assignment]
 
         # Create decline message if response message provided
         if response.message:
@@ -699,7 +727,7 @@ async def update_match_status(
         )
 
     match.status = status_update.status  # type: ignore[assignment]
-    match.updated_at = datetime.utcnow()  # type: ignore[assignment]
+    match.updated_at = datetime.now(timezone.utc)  # type: ignore[assignment]
     db.commit()
     db.refresh(match)
 

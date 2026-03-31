@@ -69,7 +69,7 @@ class TestOnboardingAuth:
 class TestUserAuthentication:
     """Test user authentication checks"""
     
-    def test_banned_user_cannot_access(self, client, db, test_user_data):
+    def test_banned_user_cannot_access(self, client_no_auth, db, test_user_data):
         """Test that banned users are rejected"""
         # Create banned user in database
         user = User(**test_user_data, clerk_id="clerk_banned_user", is_banned=True)
@@ -78,10 +78,10 @@ class TestUserAuthentication:
         
         with patch('app.api.deps.verify_clerk_token') as mock_verify:
             mock_verify.return_value = {"sub": "clerk_banned_user"}
-            response = client.get("/api/v1/users/me", headers={"Authorization": "Bearer fake_token"})
+            response = client_no_auth.get("/api/v1/users/me", headers={"Authorization": "Bearer fake_token"})
             assert response.status_code == 403
-    
-    def test_inactive_user_cannot_access(self, client, db, test_user_data):
+
+    def test_inactive_user_cannot_access(self, client_no_auth, db, test_user_data):
         """Test that inactive users are rejected"""
         user = User(**test_user_data, clerk_id="clerk_inactive_user", is_active=False)
         db.add(user)
@@ -89,5 +89,5 @@ class TestUserAuthentication:
         
         with patch('app.api.deps.verify_clerk_token') as mock_verify:
             mock_verify.return_value = {"sub": "clerk_inactive_user"}
-            response = client.get("/api/v1/users/me", headers={"Authorization": "Bearer fake_token"})
+            response = client_no_auth.get("/api/v1/users/me", headers={"Authorization": "Bearer fake_token"})
             assert response.status_code == 403

@@ -79,7 +79,7 @@ const ProfileQualityIndicator: React.FC<ProfileQualityIndicatorProps> = ({
     return (
       <TooltipProvider>
         <Tooltip>
-          <TooltipTrigger asChild>
+          <TooltipTrigger >
             <div className={cn('inline-flex items-center gap-1', className)}>
               <QualityShield
                 level={qualityLevel}
@@ -108,7 +108,7 @@ const ProfileQualityIndicator: React.FC<ProfileQualityIndicatorProps> = ({
     return (
       <TooltipProvider>
         <Tooltip>
-          <TooltipTrigger asChild>
+          <TooltipTrigger >
             <Badge
               variant={qualityLevel.badgeVariant as any}
               className={cn('text-xs', qualityLevel.badgeStyle, className)}

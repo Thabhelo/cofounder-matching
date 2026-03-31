@@ -532,7 +532,7 @@ const SuggestionItem: React.FC<{
           {suggestion.description}
         </p>
         {suggestion.action_url && (
-          <Button size="sm" asChild>
+          <Button size="sm">
             <a href={suggestion.action_url}>
               Take Action
               <ArrowRight className="w-3 h-3 ml-1" />

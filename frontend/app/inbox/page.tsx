@@ -7,6 +7,23 @@ import Link from "next/link"
 import Image from "next/image"
 import { AppShell } from "@/components/layout/AppShell"
 import { api } from "@/lib/api"
+import { cn } from "@/lib/utils"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { PageLoader } from "@/components/ui/loader"
+import { Card, CardContent } from "@/components/ui/card"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import { Button, buttonVariants } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
+import {
+  Mail,
+  Send,
+  MessageSquare,
+  Clock,
+  Check,
+  ArrowRight,
+  Inbox,
+} from "lucide-react"
 
 type Conversation = {
   match_id: string
@@ -99,13 +116,7 @@ export default function InboxPage() {
   if (loading) {
     return (
       <AppShell>
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center" role="status" aria-label="Loading">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-900 mx-auto"></div>
-            <span className="sr-only">Loading...</span>
-            <p className="mt-4 text-gray-600">Loading...</p>
-          </div>
-        </div>
+        <PageLoader label="Loading..." />
       </AppShell>
     )
   }
@@ -130,6 +141,13 @@ export default function InboxPage() {
 
   const hasAnyContent = conversations.length > 0 || pendingInvites.length > 0 || sentInvites.length > 0
 
+  // Determine default tab
+  const defaultTab = pendingInvites.length > 0
+    ? "pending"
+    : conversations.length > 0
+      ? "conversations"
+      : "pending"
+
   return (
     <AppShell>
       <div className="flex-1 p-4 md:p-8">
@@ -137,169 +155,211 @@ export default function InboxPage() {
           <h1 className="text-3xl font-semibold text-zinc-900 mb-6">Inbox</h1>
 
           {!hasAnyContent ? (
-            <div className="bg-white border border-zinc-200 rounded-lg p-12 text-center">
-              <svg
-                aria-hidden="true"
-                className="w-16 h-16 text-zinc-400 mx-auto mb-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                />
-              </svg>
-              <h2 className="text-xl font-semibold text-zinc-900 mb-2">No conversations yet</h2>
-              <p className="text-zinc-600 mb-6">
-                When you connect with someone, your conversation will appear here.
-              </p>
-              <Link
-                href="/discover"
-                className="inline-block px-6 py-2 bg-zinc-900 text-white font-medium rounded-lg hover:bg-zinc-800 transition-colors"
-              >
-                Discover Profiles
-              </Link>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {/* Pending Invites Received */}
-              {pendingInvites.length > 0 && (
-                <div>
-                  <h2 className="text-lg font-semibold text-zinc-900 mb-3">Pending Invites ({pendingInvites.length})</h2>
-                  <div className="bg-white border border-zinc-200 rounded-lg divide-y divide-zinc-200">
-                    {pendingInvites.map((match) => (
-                      <div key={match.id} className="flex items-center gap-4 p-4">
-                        {match.target_user.avatar_url ? (
-                          <Image
-                            src={match.target_user.avatar_url}
-                            alt={match.target_user.name}
-                            width={48}
-                            height={48}
-                            className="w-12 h-12 rounded-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-12 h-12 rounded-full bg-zinc-200 flex items-center justify-center">
-                            <span className="text-lg font-semibold text-zinc-600">
-                              {match.target_user.name.charAt(0).toUpperCase()}
-                            </span>
-                          </div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-zinc-900">{match.target_user.name}</h3>
-                          <p className="text-sm text-zinc-600 truncate">
-                            {match.target_user.bio || "Wants to connect with you"}
-                          </p>
-                        </div>
-                        <div className="flex gap-2">
-                          <Link
-                            href={`/profile/${match.target_user.id}`}
-                            className="px-4 py-2 border border-zinc-300 text-zinc-900 text-sm font-medium rounded-lg hover:bg-zinc-50 transition-colors"
-                          >
-                            View Profile
-                          </Link>
-                          <button
-                            onClick={() => handleAccept(match.id)}
-                            disabled={accepting === match.id}
-                            className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
-                          >
-                            {accepting === match.id ? "Accepting..." : "Accept"}
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+            <Card className="border-zinc-200">
+              <CardContent className="flex flex-col items-center justify-center py-16 px-6 text-center">
+                <div className="rounded-full bg-zinc-100 p-4 mb-4">
+                  <Inbox className="h-10 w-10 text-zinc-400" />
                 </div>
-              )}
+                <h2 className="text-xl font-semibold text-zinc-900 mb-2">No conversations yet</h2>
+                <p className="text-zinc-600 mb-6 max-w-sm">
+                  When you connect with someone, your conversation will appear here.
+                </p>
+                <Link href="/discover" className={cn(buttonVariants())}>
+                  Discover Profiles
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </CardContent>
+            </Card>
+          ) : (
+            <Tabs defaultValue={defaultTab} className="w-full">
+              <TabsList className="w-full grid grid-cols-3 mb-4">
+                <TabsTrigger value="pending" className="gap-1.5">
+                  <Mail className="h-4 w-4" />
+                  <span className="hidden sm:inline">Pending</span>
+                  {pendingInvites.length > 0 && (
+                    <Badge variant="destructive" className="ml-1 h-5 min-w-[20px] px-1.5 text-xs">
+                      {pendingInvites.length}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="sent" className="gap-1.5">
+                  <Send className="h-4 w-4" />
+                  <span className="hidden sm:inline">Sent</span>
+                  {sentInvites.length > 0 && (
+                    <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] px-1.5 text-xs">
+                      {sentInvites.length}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="conversations" className="gap-1.5">
+                  <MessageSquare className="h-4 w-4" />
+                  <span className="hidden sm:inline">Messages</span>
+                  {conversations.some((c) => c.unread_count > 0) && (
+                    <Badge variant="destructive" className="ml-1 h-5 min-w-[20px] px-1.5 text-xs">
+                      {conversations.reduce((sum, c) => sum + c.unread_count, 0)}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Pending Invites */}
+              <TabsContent value="pending">
+                {pendingInvites.length === 0 ? (
+                  <Card className="border-zinc-200">
+                    <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                      <Mail className="h-8 w-8 text-zinc-300 mb-3" />
+                      <p className="text-sm text-zinc-500">No pending invites</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Card className="border-zinc-200">
+                    <CardContent className="p-0">
+                      {pendingInvites.map((match, index) => {
+                        const sender = match.target_user
+                        return (
+                          <div key={match.id}>
+                            {index > 0 && <Separator />}
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-4">
+                              <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                                <Avatar className="h-10 w-10 sm:h-12 sm:w-12 shrink-0">
+                                  {sender.avatar_url ? (
+                                    <AvatarImage src={sender.avatar_url} alt={sender.name} />
+                                  ) : null}
+                                  <AvatarFallback className="bg-zinc-200 text-zinc-600 font-semibold">
+                                    {sender.name.charAt(0).toUpperCase()}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1 min-w-0">
+                                  <h3 className="font-semibold text-zinc-900">{sender.name}</h3>
+                                  <p className="text-sm text-zinc-600 truncate">
+                                    {sender.bio || "Wants to connect with you"}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex gap-2 ml-13 sm:ml-0">
+                                <Link href={`/profile/${sender.id}`} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+                                  View
+                                  <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                                </Link>
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleAccept(match.id)}
+                                  disabled={accepting === match.id}
+                                  className="bg-green-600 hover:bg-green-700"
+                                >
+                                  <Check className="mr-1.5 h-3.5 w-3.5" />
+                                  {accepting === match.id ? "..." : "Accept"}
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
 
               {/* Sent Invites */}
-              {sentInvites.length > 0 && (
-                <div>
-                  <h2 className="text-lg font-semibold text-zinc-900 mb-3">Sent Invites ({sentInvites.length})</h2>
-                  <div className="bg-white border border-zinc-200 rounded-lg divide-y divide-zinc-200">
-                    {sentInvites.map((match) => (
-                      <div key={match.id} className="flex items-center gap-4 p-4">
-                        {match.target_user.avatar_url ? (
-                          <Image
-                            src={match.target_user.avatar_url}
-                            alt={match.target_user.name}
-                            width={48}
-                            height={48}
-                            className="w-12 h-12 rounded-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-12 h-12 rounded-full bg-zinc-200 flex items-center justify-center">
-                            <span className="text-lg font-semibold text-zinc-600">
-                              {match.target_user.name.charAt(0).toUpperCase()}
-                            </span>
+              <TabsContent value="sent">
+                {sentInvites.length === 0 ? (
+                  <Card className="border-zinc-200">
+                    <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                      <Send className="h-8 w-8 text-zinc-300 mb-3" />
+                      <p className="text-sm text-zinc-500">No sent invites</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Card className="border-zinc-200">
+                    <CardContent className="p-0">
+                      {sentInvites.map((match, index) => (
+                        <div key={match.id}>
+                          {index > 0 && <Separator />}
+                          <div className="flex items-center gap-4 p-4">
+                            <Avatar className="h-12 w-12 shrink-0">
+                              {match.target_user.avatar_url ? (
+                                <AvatarImage src={match.target_user.avatar_url} alt={match.target_user.name} />
+                              ) : null}
+                              <AvatarFallback className="bg-zinc-200 text-zinc-600 font-semibold">
+                                {match.target_user.name.charAt(0).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-semibold text-zinc-900">{match.target_user.name}</h3>
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                <Clock className="h-3.5 w-3.5 text-zinc-400" />
+                                <p className="text-sm text-zinc-500">Waiting for response...</p>
+                              </div>
+                            </div>
+                            <Badge variant="outline" className="text-xs text-zinc-500 shrink-0">
+                              {new Date(match.intro_requested_at!).toLocaleDateString()}
+                            </Badge>
                           </div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-zinc-900">{match.target_user.name}</h3>
-                          <p className="text-sm text-zinc-500">Waiting for response...</p>
                         </div>
-                        <span className="text-xs text-zinc-500">
-                          {new Date(match.intro_requested_at!).toLocaleDateString()}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+                      ))}
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
 
-              {/* Active Conversations */}
-              {conversations.length > 0 && (
-                <div>
-                  <h2 className="text-lg font-semibold text-zinc-900 mb-3">Conversations ({conversations.length})</h2>
-                  <div className="bg-white border border-zinc-200 rounded-lg divide-y divide-zinc-200">
-                    {conversations.map((conv) => (
-                      <Link
-                        key={conv.match_id}
-                        href={`/inbox/${conv.match_id}`}
-                        className="flex items-center gap-4 p-4 hover:bg-zinc-50 transition-colors"
-                      >
-                        {conv.other_user.avatar_url ? (
-                          <Image
-                            src={conv.other_user.avatar_url}
-                            alt={conv.other_user.name}
-                            width={48}
-                            height={48}
-                            className="w-12 h-12 rounded-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-12 h-12 rounded-full bg-zinc-200 flex items-center justify-center">
-                            <span className="text-lg font-semibold text-zinc-600">
-                              {conv.other_user.name.charAt(0).toUpperCase()}
-                            </span>
-                          </div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-semibold text-zinc-900">{conv.other_user.name}</h3>
-                            {conv.unread_count > 0 && (
-                              <span
-                                aria-label={`${conv.unread_count} unread message${conv.unread_count !== 1 ? "s" : ""}`}
-                                className="px-2 py-0.5 bg-green-600 text-white text-xs font-medium rounded-full"
-                              >
-                                {conv.unread_count}
+              {/* Conversations */}
+              <TabsContent value="conversations">
+                {conversations.length === 0 ? (
+                  <Card className="border-zinc-200">
+                    <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                      <MessageSquare className="h-8 w-8 text-zinc-300 mb-3" />
+                      <p className="text-sm text-zinc-500">No conversations yet</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Card className="border-zinc-200">
+                    <CardContent className="p-0">
+                      {conversations.map((conv, index) => (
+                        <div key={conv.match_id}>
+                          {index > 0 && <Separator />}
+                          <Link
+                            href={`/inbox/${conv.match_id}`}
+                            className="flex items-center gap-4 p-4 hover:bg-zinc-50 transition-colors"
+                          >
+                            <Avatar className="h-12 w-12 shrink-0">
+                              {conv.other_user.avatar_url ? (
+                                <AvatarImage src={conv.other_user.avatar_url} alt={conv.other_user.name} />
+                              ) : null}
+                              <AvatarFallback className="bg-zinc-200 text-zinc-600 font-semibold">
+                                {conv.other_user.name.charAt(0).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <h3 className="font-semibold text-zinc-900">{conv.other_user.name}</h3>
+                                {conv.unread_count > 0 && (
+                                  <Badge
+                                    variant="destructive"
+                                    className="h-5 min-w-[20px] px-1.5 text-xs"
+                                    aria-label={`${conv.unread_count} unread message${conv.unread_count !== 1 ? "s" : ""}`}
+                                  >
+                                    {conv.unread_count}
+                                  </Badge>
+                                )}
+                              </div>
+                              {conv.last_message && (
+                                <p className="text-sm text-zinc-600 truncate mt-0.5">{conv.last_message.content}</p>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="text-xs text-zinc-500">
+                                {new Date(conv.updated_at).toLocaleDateString()}
                               </span>
-                            )}
-                          </div>
-                          {conv.last_message && (
-                            <p className="text-sm text-zinc-600 truncate">{conv.last_message.content}</p>
-                          )}
+                              <ArrowRight className="h-4 w-4 text-zinc-400" />
+                            </div>
+                          </Link>
                         </div>
-                        <div className="text-xs text-zinc-500">
-                          {new Date(conv.updated_at).toLocaleDateString()}
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
+            </Tabs>
           )}
         </div>
       </div>

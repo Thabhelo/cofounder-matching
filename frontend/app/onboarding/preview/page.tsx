@@ -7,6 +7,13 @@ import Link from "next/link"
 import { api } from "@/lib/api"
 import { DRAFT_KEY, getDraft } from "@/hooks/useOnboardingDraft"
 import { validateForm, validators, type ValidationErrors } from "@/lib/validation"
+import { IDEA_STATUSES, READY_TO_START, AREAS_OF_OWNERSHIP, COMMITMENT_LEVELS, WORK_LOCATION_PREFERENCES } from "@/lib/constants/enums"
+
+function enumLabel(enums: readonly { value: string; label: string }[], value: unknown): string {
+  if (!value) return "Not provided"
+  const found = enums.find((e) => e.value === value)
+  return found ? found.label : String(value)
+}
 
 function buildPayload(draft: Record<string, unknown>) {
   const num = (v: unknown) => (v === "" || v === undefined ? undefined : Number(v))
@@ -185,43 +192,9 @@ export default function PreviewPage() {
 
       router.push("/dashboard")
     } catch (e: unknown) {
-      // Handle backend validation errors
+      // Handle backend errors
       if (e instanceof Error) {
-        try {
-          const errorData = JSON.parse(e.message)
-
-          // Parse backend validation errors
-          const backendErrors: ValidationErrors = {}
-          if (errorData?.detail && Array.isArray(errorData.detail)) {
-            errorData.detail.forEach((err: any) => {
-              const field = err.loc?.slice(-1)[0] // Get the field name from location
-              const message = err.msg
-              if (field && message) {
-                backendErrors[field] = message
-              }
-            })
-          }
-
-          const backendErrorsList = Object.entries(backendErrors).map(([field, message]) => {
-            const displayName = getFieldDisplayName(field)
-            const fieldPage = getFieldPage(field)
-            return {
-              field: displayName,
-              message: message,
-              page: fieldPage.page,
-              path: fieldPage.path,
-            }
-          })
-
-          if (backendErrorsList.length > 0) {
-            setValidationErrors(backendErrorsList)
-            setError("Please fix the following issues and try again.")
-          } else {
-            setError(e.message)
-          }
-        } catch {
-          setError(e.message)
-        }
+        setError(e.message)
       } else {
         setError("Failed to submit onboarding. Please try again.")
       }
@@ -261,9 +234,10 @@ export default function PreviewPage() {
         <p><strong>Name:</strong> {String(draft.name || "Not provided")}</p>
         <p><strong>Location:</strong> {String(draft.location || "Not provided")}</p>
         <p><strong>Introduction:</strong> {(draft.introduction as string)?.slice(0, 200) || "Not provided"}...</p>
-        <p><strong>Idea status:</strong> {String(draft.idea_status || "Not provided")}</p>
+        <p><strong>Idea status:</strong> {enumLabel(IDEA_STATUSES, draft.idea_status)}</p>
+        <p><strong>Ready to start:</strong> {enumLabel(READY_TO_START, draft.ready_to_start)}</p>
         <p><strong>Technical:</strong> {draft.is_technical !== undefined ? (draft.is_technical ? "Yes" : "No") : "Not provided"}</p>
-        <p><strong>Areas of ownership:</strong> {(draft.areas_of_ownership as string[])?.join(", ") || "Not provided"}</p>
+        <p><strong>Areas of ownership:</strong> {(draft.areas_of_ownership as string[])?.map((v) => enumLabel(AREAS_OF_OWNERSHIP, v)).join(", ") || "Not provided"}</p>
         <p><strong>Topics of interest:</strong> {(draft.topics_of_interest as string[])?.join(", ") || "Not provided"}</p>
         <p><strong>Equity expectations:</strong> {String(draft.equity_expectation || "Not provided")}</p>
         <p><strong>Looking for:</strong> {String(draft.looking_for_description || "Not provided")}</p>
