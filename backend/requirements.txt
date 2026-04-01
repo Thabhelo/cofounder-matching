@@ -10,7 +10,7 @@ python-dotenv==1.2.2
 httpx==0.26.0
 apscheduler==3.11.2
 pyjwt==2.12.0
-cryptography==46.0.5
+cryptography>=46.0.6
 svix==1.85.0
 python-multipart==0.0.22
 pgvector==0.3.2
@@ -19,11 +19,14 @@ posthog==3.7.4
 
 # Testing
 pytest>=8.2,<10
-pytest-asyncio==1.3.0
-pytest-cov==7.0.0
+pytest-asyncio>=0.24,<1
+pytest-cov>=6.0,<7
 faker==40.8.0
 
 # Production
 slowapi==0.1.9  # Rate limiting
 python-json-logger==2.0.7  # Structured logging
 prometheus-fastapi-instrumentator==6.1.0  # Metrics
+
+# Security patches
+# pygments 2.19.3+ not yet available - using .trivyignore to temporarily ignore CVE-2026-4539

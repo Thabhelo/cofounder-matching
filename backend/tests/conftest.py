@@ -12,6 +12,7 @@ from sqlalchemy.pool import NullPool
 # Import all models so they register with Base before table creation
 import app.models  # noqa: F401
 from app.database import Base, get_db
+from app.api.deps import get_current_user
 
 # Import app after models to ensure proper initialization
 from app.main import app as fastapi_app
@@ -71,6 +72,36 @@ def client(db):
         finally:
             pass
     
+    # Create a test user for auth-required endpoints
+    from app.models.user import User as UserModel
+    test_auth_user = db.query(UserModel).filter(UserModel.clerk_id == "clerk_test_fixture").first()
+    if not test_auth_user:
+        test_auth_user = UserModel(
+            email="fixture@test.com", name="Test Fixture User",
+            clerk_id="clerk_test_fixture", idea_status="building_specific_idea"
+        )
+        db.add(test_auth_user)
+        db.flush()
+
+    def override_get_current_user():
+        return test_auth_user
+
+    fastapi_app.dependency_overrides[get_db] = override_get_db
+    fastapi_app.dependency_overrides[get_current_user] = override_get_current_user
+    with TestClient(fastapi_app) as test_client:
+        yield test_client
+    fastapi_app.dependency_overrides.clear()
+
+
+@pytest.fixture(scope="function")
+def client_no_auth(db):
+    """Test client WITHOUT auth override — for testing auth behavior itself."""
+    def override_get_db():
+        try:
+            yield db
+        finally:
+            pass
+
     fastapi_app.dependency_overrides[get_db] = override_get_db
     with TestClient(fastapi_app) as test_client:
         yield test_client

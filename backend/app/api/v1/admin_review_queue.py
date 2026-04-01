@@ -22,7 +22,7 @@ from app.models import (
     User, AdminReviewQueue, UserVerification, Report, AdminAuditLog,
     ReviewReason, ReviewStatus, VerificationStatus
 )
-from app.api.deps_admin import get_current_admin_user
+from app.api.deps import get_current_admin_user
 from app.schemas.admin import (
     AdminReviewQueueResponse,
     AdminReviewQueueListResponse,
@@ -99,7 +99,7 @@ async def get_review_queue(
                 assigned_admin = db.query(User).filter(User.id == item.assigned_admin_id).first()
 
             # Get user quality summary
-            quality_summary = await matching_quality_filter.get_user_quality_summary(
+            quality_summary = matching_quality_filter.get_user_quality_summary(
                 user, db, update_metrics=False
             ) if user else {}
 
@@ -181,12 +181,12 @@ async def get_review_item(
         assigned_admin = db.query(User).filter(User.id == item.assigned_admin_id).first()
 
     # Get comprehensive user quality summary
-    quality_summary = await matching_quality_filter.get_user_quality_summary(
+    quality_summary = matching_quality_filter.get_user_quality_summary(
         user, db, update_metrics=True
     )
 
     # Get user's verification history
-    verifications = await verification_service.get_user_verifications(str(user.id), db)
+    verifications = verification_service.get_user_verifications(str(user.id), db)
 
     # Get user's reports
     reports = db.query(Report).filter(Report.reported_user_id == user.id).all()
@@ -348,7 +348,7 @@ async def take_review_action(
 
             # If this was a manual verification request, complete it
             if item.reason == ReviewReason.MANUAL_VERIFICATION_REQUEST.value:
-                verification_result = await verification_service.complete_verification(
+                verification_result = verification_service.complete_verification(
                     str(item.user_id),  # This would need to be the verification ID
                     db,
                     admin_id=str(current_admin.id),
@@ -403,8 +403,8 @@ async def take_review_action(
 
         elif action_request.action == "recalculate_metrics":
             # Trigger recalculation of trust score and quality metrics
-            await recalculate_user_trust_score(str(user.id))
-            await update_user_quality_metrics(str(user.id))
+            recalculate_user_trust_score(str(user.id))
+            update_user_quality_metrics(str(user.id))
             item.status = ReviewStatus.APPROVED.value
             actions_taken.append("metrics_recalculated")
 
@@ -676,7 +676,7 @@ async def admin_user_quality_check(
         )
 
     # Get comprehensive quality summary
-    quality_summary = await matching_quality_filter.get_user_quality_summary(
+    quality_summary = matching_quality_filter.get_user_quality_summary(
         user, db, update_metrics=recalculate
     )
 

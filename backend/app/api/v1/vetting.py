@@ -17,8 +17,7 @@ from app.models import (
     User, UserTrustScore, UserVerification, UserQualityMetrics,
     VerificationType, VerificationStatus
 )
-from app.api.deps import get_current_user
-from app.api.deps_admin import get_current_admin_user
+from app.api.deps import get_current_user, get_current_admin_user
 from app.schemas.vetting import (
     TrustScoreResponse, TrustScoreBreakdown,
     VerificationResponse, VerificationStatusResponse,
@@ -57,18 +56,18 @@ async def get_my_vetting_status(
     """
     try:
         # Get comprehensive quality summary
-        quality_summary = await matching_quality_filter.get_user_quality_summary(
+        quality_summary = matching_quality_filter.get_user_quality_summary(
             current_user, db, update_metrics=True
         )
 
         # Get verification status
         # Get verification badges
-        verification_badges = await verification_service.get_verification_badge_info(
+        verification_badges = verification_service.get_verification_badge_info(
             str(current_user.id), db
         )
 
         # Generate improvement suggestions
-        suggestions = await _generate_improvement_suggestions(
+        suggestions = _generate_improvement_suggestions(
             current_user, quality_summary, verification_badges, db
         )
 
@@ -125,7 +124,7 @@ async def get_my_trust_score(
     try:
         if recalculate:
             # Trigger recalculation in background
-            trust_score_data = await recalculate_user_trust_score(str(current_user.id))
+            trust_score_data = recalculate_user_trust_score(str(current_user.id))
         else:
             # Get existing trust score
             trust_score_data = db.query(UserTrustScore).filter(
@@ -134,7 +133,7 @@ async def get_my_trust_score(
 
         if not trust_score_data:
             # No trust score exists, calculate it
-            trust_score_data = await recalculate_user_trust_score(str(current_user.id))
+            trust_score_data = recalculate_user_trust_score(str(current_user.id))
 
         if not trust_score_data:
             return TrustScoreResponse(
@@ -183,7 +182,7 @@ async def get_my_quality_metrics(
     try:
         if recalculate:
             # Trigger recalculation
-            metrics_data = await update_user_quality_metrics(str(current_user.id))
+            metrics_data = update_user_quality_metrics(str(current_user.id))
         else:
             # Get existing metrics
             metrics_data = db.query(UserQualityMetrics).filter(
@@ -192,7 +191,7 @@ async def get_my_quality_metrics(
 
         if not metrics_data:
             # No metrics exist, calculate them
-            metrics_data = await update_user_quality_metrics(str(current_user.id))
+            metrics_data = update_user_quality_metrics(str(current_user.id))
 
         if not metrics_data:
             raise HTTPException(
@@ -239,7 +238,7 @@ async def start_verification(
 ):
     """Start a verification process for the specified type."""
     try:
-        verification = await verification_service.start_verification(
+        verification = verification_service.start_verification(
             current_user, verification_type, db
         )
 
@@ -270,7 +269,7 @@ async def get_my_verifications(
 ):
     """Get all verification attempts for the current user."""
     try:
-        verifications = await verification_service.get_user_verifications(
+        verifications = verification_service.get_user_verifications(
             str(current_user.id), db
         )
 
@@ -443,15 +442,15 @@ async def get_user_vetting_status(
 
     # Use the same logic as get_my_vetting_status but for the specified user
     # This is a simplified version - in practice you'd refactor the common logic
-    quality_summary = await matching_quality_filter.get_user_quality_summary(
+    quality_summary = matching_quality_filter.get_user_quality_summary(
         user, db, update_metrics=update_metrics
     )
 
-    verification_badges = await verification_service.get_verification_badge_info(
+    verification_badges = verification_service.get_verification_badge_info(
         str(user.id), db
     )
 
-    suggestions = await _generate_improvement_suggestions(
+    suggestions = _generate_improvement_suggestions(
         user, quality_summary, verification_badges, db
     )
 
@@ -617,7 +616,7 @@ async def get_vetting_system_stats(
 
 
 # Helper functions
-async def _generate_improvement_suggestions(
+def _generate_improvement_suggestions(
     user: User,
     quality_summary: Dict[str, Any],
     verification_badges: Dict[str, bool],

@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { MultiSelect } from "@/components/forms/MultiSelect"
+import { FormField, FormInput, FormTextarea, FormSelect } from "@/components/forms/FormField"
 import { TagInput } from "@/components/forms/TagInput"
 import { RichTextArea } from "@/components/forms/RichTextArea"
+import { MultiSelect } from "@/components/forms/MultiSelect"
 import {
   IDEA_STATUSES,
   READY_TO_START,
@@ -17,9 +18,12 @@ import {
 } from "@/lib/constants/enums"
 import { TOPICS_OF_INTEREST } from "@/lib/constants/topics"
 import { getDraft, setDraft } from "@/hooks/useOnboardingDraft"
+import { validateForm, validators, type ValidationErrors } from "@/lib/validation"
 
 export default function YouPage() {
   const router = useRouter()
+  const [errors, setErrors] = useState<ValidationErrors>({})
+
   const [form, setForm] = useState({
     idea_status: "not_set_on_idea",
     is_technical: true,
@@ -63,108 +67,149 @@ export default function YouPage() {
   const update = (key: string, value: unknown) => {
     setForm((prev) => ({ ...prev, [key]: value }))
     setDraft({ [key]: value })
+
+    // Clear field error when user starts typing
+    if (errors[key]) {
+      setErrors((prev) => ({ ...prev, [key]: '' }))
+    }
+  }
+
+  const validateYouForm = (): boolean => {
+    const fieldValidators = {
+      idea_status: [validators.required],
+      is_technical: [(value: boolean) => value === undefined ? "Please select technical background" : null],
+      ready_to_start: [validators.required],
+      areas_of_ownership: [(value: string[]) => value.length === 0 ? "Please select at least one area" : null],
+      topics_of_interest: [(value: string[]) => value.length === 0 ? "Please select at least one topic" : null],
+      equity_expectation: [(value: string) => validators.minLength(value, 10, 'Equity expectations')],
+    }
+
+    const validationErrors = validateForm(form, fieldValidators)
+    setErrors(validationErrors)
+
+    return Object.keys(validationErrors).length === 0
   }
 
   const handleNext = () => {
-    setDraft(form)
-    router.push("/onboarding/preferences")
+    if (validateYouForm()) {
+      setDraft(form)
+      router.push("/onboarding/preferences")
+    } else {
+      // Scroll to first error
+      const firstErrorField = Object.keys(errors)[0]
+      if (firstErrorField) {
+        const element = document.querySelector(`[name="${firstErrorField}"]`)
+        element?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
+    }
   }
 
   return (
     <div className="bg-white rounded-lg shadow-xs border border-gray-200 p-6">
       <h1 className="text-2xl font-bold text-zinc-900 mb-6">You & your startup</h1>
 
+      {Object.keys(errors).length > 0 && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            <h4 className="text-sm font-medium text-red-800">Please fix the following errors:</h4>
+          </div>
+          <ul className="mt-2 list-disc list-inside text-sm text-red-700">
+            {Object.entries(errors)
+              .filter(([, message]) => message)
+              .map(([field, message]) => (
+                <li key={field}>{message}</li>
+              ))}
+          </ul>
+        </div>
+      )}
+
       <div className="space-y-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Are you working on an idea?</label>
+        <FormField label="Are you working on an idea?" required error={errors.idea_status}>
           <div className="space-y-2">
-            {IDEA_STATUSES.map((opt) => (
-              <label key={opt.value} className="flex items-center gap-2">
+            {IDEA_STATUSES.map((option) => (
+              <label key={option.value} className="flex items-center gap-2">
                 <input
                   type="radio"
                   name="idea_status"
-                  value={opt.value}
-                  checked={form.idea_status === opt.value}
-                  onChange={() => update("idea_status", opt.value)}
-                  className="rounded border-gray-300 text-zinc-900"
+                  value={option.value}
+                  checked={form.idea_status === option.value}
+                  onChange={(e) => update("idea_status", e.target.value)}
+                  className="rounded border-gray-300 text-zinc-900 focus:ring-zinc-900"
                 />
-                <span>{opt.label}</span>
+                <span>{option.label}</span>
               </label>
             ))}
           </div>
-        </div>
+        </FormField>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Can you build the product without outside help? (Technical)</label>
-          <div className="flex gap-4">
+        <FormField label="Can you build the product without outside help? (Technical)" required error={errors.is_technical}>
+          <div className="space-y-2">
             <label className="flex items-center gap-2">
               <input
                 type="radio"
                 name="is_technical"
+                value="true"
                 checked={form.is_technical === true}
                 onChange={() => update("is_technical", true)}
-                className="rounded border-gray-300 text-zinc-900"
+                className="rounded border-gray-300 text-zinc-900 focus:ring-zinc-900"
               />
-              Yes
+              <span>Yes</span>
             </label>
             <label className="flex items-center gap-2">
               <input
                 type="radio"
                 name="is_technical"
+                value="false"
                 checked={form.is_technical === false}
                 onChange={() => update("is_technical", false)}
-                className="rounded border-gray-300 text-zinc-900"
+                className="rounded border-gray-300 text-zinc-900 focus:ring-zinc-900"
               />
-              No
+              <span>No</span>
             </label>
           </div>
-        </div>
+        </FormField>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">When are you ready to go full-time?</label>
+        <FormField label="When are you ready to go full-time?" required error={errors.ready_to_start}>
           <div className="space-y-2">
-            {READY_TO_START.map((opt) => (
-              <label key={opt.value} className="flex items-center gap-2">
+            {READY_TO_START.map((option) => (
+              <label key={option.value} className="flex items-center gap-2">
                 <input
                   type="radio"
                   name="ready_to_start"
-                  value={opt.value}
-                  checked={form.ready_to_start === opt.value}
-                  onChange={() => update("ready_to_start", opt.value)}
-                  className="rounded border-gray-300 text-zinc-900"
+                  value={option.value}
+                  checked={form.ready_to_start === option.value}
+                  onChange={(e) => update("ready_to_start", e.target.value)}
+                  className="rounded border-gray-300 text-zinc-900 focus:ring-zinc-900"
                 />
-                <span>{opt.label}</span>
+                <span>{option.label}</span>
               </label>
             ))}
           </div>
-        </div>
+        </FormField>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Commitment</label>
-          <select
+        <FormField label="Commitment" error={errors.commitment}>
+          <FormSelect
+            name="commitment"
             value={form.commitment}
             onChange={(e) => update("commitment", e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-          >
-            {COMMITMENT_LEVELS.map((c) => (
-              <option key={c.value} value={c.value}>{c.label}</option>
-            ))}
-          </select>
-        </div>
+            options={COMMITMENT_LEVELS}
+            error={errors.commitment}
+          />
+        </FormField>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Work location preference</label>
-          <select
+        <FormField label="Work location preference" error={errors.work_location_preference}>
+          <FormSelect
+            name="work_location_preference"
             value={form.work_location_preference}
             onChange={(e) => update("work_location_preference", e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-          >
-            <option value="">Select</option>
-            {WORK_LOCATION_PREFERENCES.map((w) => (
-              <option key={w.value} value={w.value}>{w.label}</option>
-            ))}
-          </select>
-        </div>
+            options={WORK_LOCATION_PREFERENCES}
+            placeholder="Select"
+            error={errors.work_location_preference}
+          />
+        </FormField>
 
         {(form.idea_status === "building_specific_idea" || form.idea_status === "have_ideas_flexible") && (
           <>
@@ -184,32 +229,26 @@ export default function YouPage() {
               maxLength={2000}
               rows={3}
             />
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Progress</label>
-              <select
+            <FormField label="Progress" error={errors.startup_progress}>
+              <FormSelect
+                name="startup_progress"
                 value={form.startup_progress}
                 onChange={(e) => update("startup_progress", e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-              >
-                <option value="">Select</option>
-                {STARTUP_PROGRESS.map((s) => (
-                  <option key={s.value} value={s.value}>{s.label}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Funding status</label>
-              <select
+                options={STARTUP_PROGRESS}
+                placeholder="Select"
+                error={errors.startup_progress}
+              />
+            </FormField>
+            <FormField label="Funding status" error={errors.startup_funding}>
+              <FormSelect
+                name="startup_funding"
                 value={form.startup_funding}
                 onChange={(e) => update("startup_funding", e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-              >
-                <option value="">Select</option>
-                {STARTUP_FUNDING.map((f) => (
-                  <option key={f.value} value={f.value}>{f.label}</option>
-                ))}
-              </select>
-            </div>
+                options={STARTUP_FUNDING}
+                placeholder="Select"
+                error={errors.startup_funding}
+              />
+            </FormField>
           </>
         )}
 
@@ -219,6 +258,7 @@ export default function YouPage() {
           onChange={(v) => update("areas_of_ownership", v)}
           label="Which areas will you own?"
           minSelection={1}
+          error={errors.areas_of_ownership}
         />
 
         <TagInput
@@ -227,14 +267,17 @@ export default function YouPage() {
           onChange={(v) => update("topics_of_interest", v)}
           label="Topics of interest"
           minSelection={1}
+          error={errors.topics_of_interest}
         />
 
         <RichTextArea
-          label="Equity expectations *"
+          label="Equity expectations"
           value={form.equity_expectation}
           onChange={(v) => update("equity_expectation", v)}
           maxLength={500}
           placeholder="How you prefer to split equity"
+          required
+          error={errors.equity_expectation}
         />
 
         <RichTextArea
@@ -243,13 +286,16 @@ export default function YouPage() {
           onChange={(v) => update("life_story", v)}
           maxLength={2000}
           rows={3}
+          error={errors.life_story}
         />
+
         <RichTextArea
           label="Hobbies"
           value={form.hobbies}
           onChange={(v) => update("hobbies", v)}
           maxLength={1000}
           rows={2}
+          error={errors.hobbies}
         />
       </div>
 

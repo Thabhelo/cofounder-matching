@@ -4,6 +4,9 @@ import { ClerkProvider } from "@clerk/nextjs"
 import { WebVitals } from "@/components/WebVitals"
 import "./globals.css"
 import Script from "next/script"
+import { cn } from "@/lib/utils";
+
+const geist = Inter({subsets:['latin'],variable:'--font-sans'});
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
 
@@ -68,7 +71,7 @@ export default function RootLayout({
         },
       }}
     >
-      <html lang="en" suppressHydrationWarning>
+      <html lang="en" suppressHydrationWarning className={cn("font-sans", geist.variable)}>
         <body className={`${inter.variable} font-sans antialiased bg-white text-zinc-900`}>
           <WebVitals />
           {children}

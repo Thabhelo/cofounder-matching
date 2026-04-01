@@ -12,11 +12,11 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      `script-src 'self' 'unsafe-inline' 'unsafe-eval' ${process.env.NODE_ENV === 'development' ? 'https://clerk.accounts.dev https://*.clerk.accounts.dev' : 'https://*.clerk.accounts.com https://clerk.com'} https://vercel.live`,
+      `script-src 'self' 'unsafe-inline' ${process.env.NODE_ENV === 'development' ? "'unsafe-eval' https://clerk.accounts.dev https://*.clerk.accounts.dev" : "https://*.clerk.accounts.com https://clerk.com"} https://vercel.live`,
       "style-src 'self' 'unsafe-inline'",
       `img-src 'self' data: blob: ${process.env.NODE_ENV === 'development' ? 'https://images.clerk.dev' : 'https://images.clerk.com'} https://img.clerk.com`,
       "font-src 'self'",
-      `connect-src 'self' ${process.env.NODE_ENV === 'development' ? 'https://*.clerk.accounts.dev' : 'https://*.clerk.accounts.com'} https://clerk-telemetry.com https://api.resend.com https://cofounder-api.onrender.com https://venkatmcajj.github.io`,
+      `connect-src 'self' ${process.env.NODE_ENV === 'development' ? 'https://*.clerk.accounts.dev http://localhost:8000 ws://localhost:8000' : 'https://*.clerk.accounts.com https://cofounder-api.onrender.com wss://cofounder-api.onrender.com'} https://clerk-telemetry.com https://api.resend.com https://venkatmcajj.github.io`,
       "worker-src 'self' blob:",
       "frame-src https://vercel.live",
     ].join("; "),
@@ -27,7 +27,11 @@ const nextConfig = {
   reactStrictMode: true,
   output: "standalone",
   images: {
-    domains: ["images.clerk.dev", "img.clerk.com"],
+    remotePatterns: [
+      { protocol: "https", hostname: "images.clerk.dev" },
+      { protocol: "https", hostname: "images.clerk.com" },
+      { protocol: "https", hostname: "img.clerk.com" },
+    ],
   },
   async headers() {
     return [

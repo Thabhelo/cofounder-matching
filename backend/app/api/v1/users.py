@@ -406,6 +406,7 @@ async def delete_account(
 @router.get("/{user_id}", response_model=UserPublicResponse)
 async def get_user_profile(
     user_id: str,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Get public user profile - limited information for privacy"""
@@ -434,7 +435,20 @@ async def get_user_profile(
 
 
 def _apply_privacy(user: User) -> User:
-    """Null-out fields that the user has hidden via privacy settings."""
+    """Null-out fields that the user has hidden via privacy settings.
+
+    The user object is first detached from the SQLAlchemy session so that
+    setting attributes to None is never accidentally flushed to the database.
+    """
+    from sqlalchemy.orm import make_transient
+    from sqlalchemy import inspect as sa_inspect
+
+    # Detach from session to prevent accidental persistence of nulled fields
+    insp = sa_inspect(user)
+    if insp.session is not None:
+        insp.session.expunge(user)
+    make_transient(user)
+
     settings_dict: dict[str, Any] = user.settings or {}
     privacy = settings_dict.get("privacy", {})
     if not privacy.get("show_location", True):
@@ -457,6 +471,7 @@ async def search_users(
     sort_by: str = Query("recent", description="Sort by: recent, experience"),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Search users with filters and full-text search."""

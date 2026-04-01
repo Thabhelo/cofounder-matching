@@ -73,7 +73,7 @@ const TrustScoreIndicator: React.FC<TrustScoreIndicatorProps> = ({
     return (
       <TooltipProvider>
         <Tooltip>
-          <TooltipTrigger asChild>
+          <TooltipTrigger >
             <div
               className={cn(
                 'relative inline-flex items-center justify-center rounded-full border-2 cursor-pointer transition-all hover:scale-105',

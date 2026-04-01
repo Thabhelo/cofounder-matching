@@ -6,7 +6,8 @@ import { useAuth } from "@clerk/nextjs"
 import Link from "next/link"
 import { api } from "@/lib/api"
 import type { Event, RSVPStatus } from "@/lib/types"
-import { formatDateTime } from "@/lib/utils"
+import { formatDateTime, safeHref } from "@/lib/utils"
+import { PageLoader } from "@/components/ui/loader"
 
 export default function EventDetailPage() {
   const params = useParams()
@@ -54,9 +55,7 @@ export default function EventDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-900"></div>
-      </div>
+      <PageLoader label="Loading event..." />
     )
   }
 
@@ -148,7 +147,7 @@ export default function EventDetailPage() {
               <div>
                 <h3 className="text-sm font-medium text-gray-700 mb-1">Virtual Link</h3>
                 <a
-                  href={event.location_url}
+                  href={safeHref(event.location_url)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-zinc-900 hover:underline"
@@ -218,7 +217,7 @@ export default function EventDetailPage() {
 
             {event.registration_url && (
               <a
-                href={event.registration_url}
+                href={safeHref(event.registration_url)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="block text-center mt-3 px-6 py-3 border border-gray-300 font-medium rounded-lg hover:bg-gray-50 transition-colors"

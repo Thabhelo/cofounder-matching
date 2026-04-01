@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from sqlalchemy import select, and_, or_, func
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 
 from app.models import (
     User, UserTrustScore, UserQualityMetrics, UserVerification,
@@ -28,7 +28,7 @@ from app.utils.logging import get_logger
 logger = get_logger(__name__)
 
 
-class FilterResult(str, Enum):
+class FilterResultType(str, Enum):
     """Results of quality filtering."""
     ALLOWED = "allowed"
     BLOCKED = "blocked"
@@ -79,7 +79,7 @@ class QualityFilterConfig:
 class FilterResult:
     """Result of applying quality filters."""
     allowed: bool
-    result_type: FilterResult
+    result_type: FilterResultType
     reason: Optional[FilterReason] = None
     message: Optional[str] = None
     flags: List[str] = None
@@ -95,10 +95,10 @@ class MatchingQualityFilter:
     def __init__(self, config: Optional[QualityFilterConfig] = None):
         self.config = config or QualityFilterConfig()
 
-    async def can_appear_in_matches(
+    def can_appear_in_matches(
         self,
         user: User,
-        session: AsyncSession,
+        session: Session,
         update_metrics: bool = False
     ) -> FilterResult:
         """
@@ -112,7 +112,7 @@ class MatchingQualityFilter:
             if not user.is_active:
                 return FilterResult(
                     allowed=False,
-                    result_type=FilterResult.BLOCKED,
+                    result_type=FilterResultType.BLOCKED,
                     reason=FilterReason.BANNED,
                     message="Account is inactive"
                 )
@@ -120,37 +120,37 @@ class MatchingQualityFilter:
             if user.is_banned:
                 return FilterResult(
                     allowed=False,
-                    result_type=FilterResult.BLOCKED,
+                    result_type=FilterResultType.BLOCKED,
                     reason=FilterReason.BANNED,
                     message="Account is banned"
                 )
 
             # Email verification check (if required)
             if self.config.require_email_verification:
-                email_verified = await self._is_email_verified(user, session)
+                email_verified = self._is_email_verified(user, session)
                 if not email_verified:
                     return FilterResult(
                         allowed=False,
-                        result_type=FilterResult.BLOCKED,
+                        result_type=FilterResultType.BLOCKED,
                         reason=FilterReason.UNVERIFIED_EMAIL,
                         message="Email verification required"
                     )
 
             # Get or calculate quality metrics
-            quality_metrics = await self._get_quality_metrics(user, session, update_metrics)
+            quality_metrics = self._get_quality_metrics(user, session, update_metrics)
 
             # Profile completeness check
             profile_completeness = quality_metrics.profile_completeness if quality_metrics else 0
             if profile_completeness < self.config.min_profile_completeness_to_appear:
                 return FilterResult(
                     allowed=False,
-                    result_type=FilterResult.BLOCKED,
+                    result_type=FilterResultType.BLOCKED,
                     reason=FilterReason.INSUFFICIENT_PROFILE,
                     message=f"Profile must be at least {self.config.min_profile_completeness_to_appear}% complete (currently {profile_completeness}%)"
                 )
 
             # Trust score check
-            trust_score_data = await self._get_trust_score(user, session, update_metrics)
+            trust_score_data = self._get_trust_score(user, session, update_metrics)
             trust_score = trust_score_data.score if trust_score_data else 0
 
             if trust_score < self.config.min_trust_score_to_appear:
@@ -158,11 +158,11 @@ class MatchingQualityFilter:
                 flags.append(f"low_trust_score_{trust_score}")
 
             # Report count check
-            report_count = await self._get_report_count(user, session)
+            report_count = self._get_report_count(user, session)
             if report_count >= self.config.max_reports_before_auto_ban:
                 return FilterResult(
                     allowed=False,
-                    result_type=FilterResult.BANNED,
+                    result_type=FilterResultType.BANNED,
                     reason=FilterReason.AUTO_BAN_THRESHOLD,
                     message="Account automatically suspended due to multiple reports"
                 )
@@ -170,14 +170,14 @@ class MatchingQualityFilter:
                 flags.append(f"multiple_reports_{report_count}")
 
             # Suspicious activity check
-            suspicious_flags = await self._count_suspicious_flags(user, session)
+            suspicious_flags = self._count_suspicious_flags(user, session)
             if suspicious_flags >= self.config.max_suspicious_flags_before_review:
                 flags.append(f"suspicious_activity_{suspicious_flags}")
 
             # Account passes all checks
             return FilterResult(
                 allowed=True,
-                result_type=FilterResult.ALLOWED,
+                result_type=FilterResultType.ALLOWED,
                 flags=flags
             )
 
@@ -185,15 +185,15 @@ class MatchingQualityFilter:
             logger.error(f"Error checking appearance filter for user {user.id}: {str(e)}")
             return FilterResult(
                 allowed=False,
-                result_type=FilterResult.BLOCKED,
+                result_type=FilterResultType.BLOCKED,
                 reason=FilterReason.SUSPICIOUS_ACTIVITY,
                 message="Unable to verify account quality"
             )
 
-    async def can_send_intro_requests(
+    def can_send_intro_requests(
         self,
         user: User,
-        session: AsyncSession,
+        session: Session,
         update_metrics: bool = False
     ) -> FilterResult:
         """
@@ -204,7 +204,7 @@ class MatchingQualityFilter:
 
         try:
             # First check if they can appear in matches (basic requirements)
-            appearance_check = await self.can_appear_in_matches(user, session, update_metrics)
+            appearance_check = self.can_appear_in_matches(user, session, update_metrics)
             if not appearance_check.allowed:
                 return appearance_check
 
@@ -214,38 +214,38 @@ class MatchingQualityFilter:
                 if account_age < self.config.min_account_age_days_for_intros:
                     return FilterResult(
                         allowed=False,
-                        result_type=FilterResult.BLOCKED,
+                        result_type=FilterResultType.BLOCKED,
                         reason=FilterReason.NEW_ACCOUNT,
                         message=f"Account must be at least {self.config.min_account_age_days_for_intros} day(s) old to send introduction requests"
                     )
 
             # Enhanced profile completeness check for sending intros
-            quality_metrics = await self._get_quality_metrics(user, session, False)
+            quality_metrics = self._get_quality_metrics(user, session, False)
             profile_completeness = quality_metrics.profile_completeness if quality_metrics else 0
 
             if profile_completeness < self.config.min_profile_completeness_to_send_intros:
                 return FilterResult(
                     allowed=False,
-                    result_type=FilterResult.BLOCKED,
+                    result_type=FilterResultType.BLOCKED,
                     reason=FilterReason.INSUFFICIENT_PROFILE,
                     message=f"Profile must be at least {self.config.min_profile_completeness_to_send_intros}% complete to send introduction requests (currently {profile_completeness}%)"
                 )
 
             # Trust score check for sending intros
-            trust_score_data = await self._get_trust_score(user, session, False)
+            trust_score_data = self._get_trust_score(user, session, False)
             trust_score = trust_score_data.score if trust_score_data else 0
 
             if trust_score < self.config.min_trust_score_to_send_intros:
                 return FilterResult(
                     allowed=False,
-                    result_type=FilterResult.BLOCKED,
+                    result_type=FilterResultType.BLOCKED,
                     reason=FilterReason.LOW_TRUST_SCORE,
                     message=f"Trust score must be at least {self.config.min_trust_score_to_send_intros} to send introduction requests (currently {trust_score})",
                     flags=[f"trust_score_{trust_score}"]
                 )
 
             # Rate limiting checks
-            rate_limit_result = await self._check_intro_rate_limits(user, session)
+            rate_limit_result = self._check_intro_rate_limits(user, session)
             if not rate_limit_result.allowed:
                 return rate_limit_result
 
@@ -253,7 +253,7 @@ class MatchingQualityFilter:
             if not quality_metrics or not quality_metrics.required_fields_complete:
                 return FilterResult(
                     allowed=False,
-                    result_type=FilterResult.BLOCKED,
+                    result_type=FilterResultType.BLOCKED,
                     reason=FilterReason.INSUFFICIENT_PROFILE,
                     message="All required profile fields must be completed to send introduction requests"
                 )
@@ -261,7 +261,7 @@ class MatchingQualityFilter:
             # All checks passed
             return FilterResult(
                 allowed=True,
-                result_type=FilterResult.ALLOWED,
+                result_type=FilterResultType.ALLOWED,
                 flags=flags + appearance_check.flags
             )
 
@@ -269,15 +269,15 @@ class MatchingQualityFilter:
             logger.error(f"Error checking intro request filter for user {user.id}: {str(e)}")
             return FilterResult(
                 allowed=False,
-                result_type=FilterResult.BLOCKED,
+                result_type=FilterResultType.BLOCKED,
                 reason=FilterReason.SUSPICIOUS_ACTIVITY,
                 message="Unable to verify account eligibility"
             )
 
-    async def check_and_flag_suspicious_activity(
+    def check_and_flag_suspicious_activity(
         self,
         user: User,
-        session: AsyncSession
+        session: Session
     ) -> Tuple[bool, List[str]]:
         """
         Check for suspicious activity patterns and flag for admin review if needed.
@@ -287,15 +287,15 @@ class MatchingQualityFilter:
 
         try:
             # Get user metrics
-            quality_metrics = await self._get_quality_metrics(user, session)
-            trust_score_data = await self._get_trust_score(user, session)
+            quality_metrics = self._get_quality_metrics(user, session)
+            trust_score_data = self._get_trust_score(user, session)
 
             # Pattern 1: Very new account with aggressive activity
             if user.created_at:
                 account_age = (datetime.utcnow() - user.created_at).days
                 if account_age < 2:  # Less than 2 days old
                     # Check recent intro requests
-                    recent_intros = await self._count_recent_intro_requests(
+                    recent_intros = self._count_recent_intro_requests(
                         user, session, days=1
                     )
                     if recent_intros > 10:
@@ -303,7 +303,7 @@ class MatchingQualityFilter:
 
             # Pattern 2: Incomplete profile but many intro requests
             if quality_metrics and quality_metrics.profile_completeness < 30:
-                recent_intros = await self._count_recent_intro_requests(
+                recent_intros = self._count_recent_intro_requests(
                     user, session, days=7
                 )
                 if recent_intros > 15:
@@ -311,19 +311,19 @@ class MatchingQualityFilter:
 
             # Pattern 3: Very low trust score with persistent activity
             if trust_score_data and trust_score_data.score < 10:
-                recent_intros = await self._count_recent_intro_requests(
+                recent_intros = self._count_recent_intro_requests(
                     user, session, days=7
                 )
                 if recent_intros > 5:
                     suspicious_indicators.append("low_trust_persistent_activity")
 
             # Pattern 4: Multiple reports
-            report_count = await self._get_report_count(user, session)
+            report_count = self._get_report_count(user, session)
             if report_count >= self.config.max_reports_before_review:
                 suspicious_indicators.append(f"multiple_reports_{report_count}")
 
             # Pattern 5: Rapid-fire intro requests (potential bot behavior)
-            recent_intros_1h = await self._count_recent_intro_requests(
+            recent_intros_1h = self._count_recent_intro_requests(
                 user, session, hours=1
             )
             if recent_intros_1h > 5:
@@ -345,7 +345,7 @@ class MatchingQualityFilter:
             )
 
             if should_flag:
-                await self._create_admin_review_item(
+                self._create_admin_review_item(
                     user, session, ReviewReason.SUSPICIOUS_ACTIVITY,
                     f"Suspicious activity detected: {', '.join(suspicious_indicators)}"
                 )
@@ -356,10 +356,10 @@ class MatchingQualityFilter:
             logger.error(f"Error checking suspicious activity for user {user.id}: {str(e)}")
             return False, []
 
-    async def apply_auto_moderation(
+    def apply_auto_moderation(
         self,
         user: User,
-        session: AsyncSession
+        session: Session
     ) -> Tuple[bool, str]:
         """
         Apply automatic moderation actions based on user behavior.
@@ -367,19 +367,19 @@ class MatchingQualityFilter:
         """
         try:
             # Check for auto-ban conditions
-            report_count = await self._get_report_count(user, session)
+            report_count = self._get_report_count(user, session)
 
             if report_count >= self.config.max_reports_before_auto_ban:
                 # Auto-ban user
                 user.is_banned = True
                 user.updated_at = datetime.utcnow()
 
-                await self._create_admin_review_item(
+                self._create_admin_review_item(
                     user, session, ReviewReason.MULTIPLE_REPORTS,
                     f"Auto-banned due to {report_count} reports"
                 )
 
-                await session.commit()
+                session.commit()
 
                 logger.warning(
                     f"User {user.id} auto-banned due to {report_count} reports",
@@ -389,7 +389,7 @@ class MatchingQualityFilter:
                 return True, f"Account automatically suspended due to {report_count} reports"
 
             # Check for suspicious activity flagging
-            should_flag, indicators = await self.check_and_flag_suspicious_activity(user, session)
+            should_flag, indicators = self.check_and_flag_suspicious_activity(user, session)
 
             if should_flag:
                 return True, f"Account flagged for admin review: {', '.join(indicators)}"
@@ -400,27 +400,27 @@ class MatchingQualityFilter:
             logger.error(f"Error applying auto-moderation for user {user.id}: {str(e)}")
             return False, "Error during moderation check"
 
-    async def get_user_quality_summary(
+    def get_user_quality_summary(
         self,
         user: User,
-        session: AsyncSession,
+        session: Session,
         update_metrics: bool = False
     ) -> Dict:
         """Get comprehensive quality summary for a user."""
         try:
-            quality_metrics = await self._get_quality_metrics(user, session, update_metrics)
-            trust_score_data = await self._get_trust_score(user, session, update_metrics)
+            quality_metrics = self._get_quality_metrics(user, session, update_metrics)
+            trust_score_data = self._get_trust_score(user, session, update_metrics)
 
             # Check various filters
-            can_appear = await self.can_appear_in_matches(user, session, False)
-            can_send_intros = await self.can_send_intro_requests(user, session, False)
+            can_appear = self.can_appear_in_matches(user, session, False)
+            can_send_intros = self.can_send_intro_requests(user, session, False)
 
             # Get verification status
-            email_verified = await self._is_email_verified(user, session)
+            email_verified = self._is_email_verified(user, session)
 
             # Get report and flag counts
-            report_count = await self._get_report_count(user, session)
-            suspicious_flags = await self._count_suspicious_flags(user, session)
+            report_count = self._get_report_count(user, session)
+            suspicious_flags = self._count_suspicious_flags(user, session)
 
             return {
                 "user_id": str(user.id),
@@ -449,7 +449,7 @@ class MatchingQualityFilter:
                         "flags": can_send_intros.flags
                     }
                 },
-                "verification_badges": await self._get_verification_badges(user, session),
+                "verification_badges": self._get_verification_badges(user, session),
                 "calculated_at": datetime.utcnow().isoformat()
             }
 
@@ -458,15 +458,15 @@ class MatchingQualityFilter:
             return {"error": str(e)}
 
     # Helper methods
-    async def _get_quality_metrics(
+    def _get_quality_metrics(
         self,
         user: User,
-        session: AsyncSession,
+        session: Session,
         update_if_missing: bool = False
     ) -> Optional[UserQualityMetrics]:
         """Get user quality metrics, optionally updating if missing."""
         try:
-            result = await session.execute(
+            result = session.execute(
                 select(UserQualityMetrics).where(UserQualityMetrics.user_id == user.id)
             )
             metrics = result.scalar_one_or_none()
@@ -474,7 +474,7 @@ class MatchingQualityFilter:
             if not metrics and update_if_missing:
                 # Calculate metrics in background
                 try:
-                    metrics = await update_user_quality_metrics(str(user.id))
+                    metrics = update_user_quality_metrics(str(user.id))
                 except Exception as e:
                     logger.error(f"Error updating quality metrics: {str(e)}")
 
@@ -483,15 +483,15 @@ class MatchingQualityFilter:
             logger.error(f"Error getting quality metrics: {str(e)}")
             return None
 
-    async def _get_trust_score(
+    def _get_trust_score(
         self,
         user: User,
-        session: AsyncSession,
+        session: Session,
         update_if_missing: bool = False
     ) -> Optional[UserTrustScore]:
         """Get user trust score, optionally updating if missing."""
         try:
-            result = await session.execute(
+            result = session.execute(
                 select(UserTrustScore).where(UserTrustScore.user_id == user.id)
             )
             trust_score = result.scalar_one_or_none()
@@ -499,7 +499,7 @@ class MatchingQualityFilter:
             if not trust_score and update_if_missing:
                 # Calculate trust score in background
                 try:
-                    trust_score = await recalculate_user_trust_score(str(user.id))
+                    trust_score = recalculate_user_trust_score(str(user.id))
                 except Exception as e:
                     logger.error(f"Error updating trust score: {str(e)}")
 
@@ -508,10 +508,10 @@ class MatchingQualityFilter:
             logger.error(f"Error getting trust score: {str(e)}")
             return None
 
-    async def _is_email_verified(self, user: User, session: AsyncSession) -> bool:
+    def _is_email_verified(self, user: User, session: Session) -> bool:
         """Check if user's email is verified."""
         try:
-            result = await session.execute(
+            result = session.execute(
                 select(UserVerification).where(
                     and_(
                         UserVerification.user_id == user.id,
@@ -533,28 +533,28 @@ class MatchingQualityFilter:
         except Exception:
             return False
 
-    async def _get_report_count(self, user: User, session: AsyncSession) -> int:
+    def _get_report_count(self, user: User, session: Session) -> int:
         """Get count of reports against this user."""
         try:
-            result = await session.execute(
+            result = session.execute(
                 select(func.count(Report.id)).where(Report.reported_user_id == user.id)
             )
             return result.scalar() or 0
         except Exception:
             return 0
 
-    async def _count_suspicious_flags(self, user: User, session: AsyncSession) -> int:
+    def _count_suspicious_flags(self, user: User, session: Session) -> int:
         """Count suspicious activity flags from quality metrics."""
         try:
-            quality_metrics = await self._get_quality_metrics(user, session, False)
+            quality_metrics = self._get_quality_metrics(user, session, False)
             return quality_metrics.suspicious_activity_flags if quality_metrics else 0
         except Exception:
             return 0
 
-    async def _count_recent_intro_requests(
+    def _count_recent_intro_requests(
         self,
         user: User,
-        session: AsyncSession,
+        session: Session,
         days: Optional[int] = None,
         hours: Optional[int] = None
     ) -> int:
@@ -567,7 +567,7 @@ class MatchingQualityFilter:
             else:
                 cutoff = datetime.utcnow() - timedelta(days=7)
 
-            result = await session.execute(
+            result = session.execute(
                 select(func.count(Match.id)).where(
                     and_(
                         Match.user_id == user.id,
@@ -580,36 +580,36 @@ class MatchingQualityFilter:
         except Exception:
             return 0
 
-    async def _check_intro_rate_limits(self, user: User, session: AsyncSession) -> FilterResult:
+    def _check_intro_rate_limits(self, user: User, session: Session) -> FilterResult:
         """Check introduction request rate limits."""
         try:
             # Daily limit
-            daily_count = await self._count_recent_intro_requests(user, session, days=1)
+            daily_count = self._count_recent_intro_requests(user, session, days=1)
             if daily_count >= self.config.max_intro_requests_per_day:
                 return FilterResult(
                     allowed=False,
-                    result_type=FilterResult.BLOCKED,
+                    result_type=FilterResultType.BLOCKED,
                     reason=FilterReason.RATE_LIMIT,
                     message=f"Daily limit of {self.config.max_intro_requests_per_day} introduction requests exceeded. Try again tomorrow."
                 )
 
             # Weekly limit
-            weekly_count = await self._count_recent_intro_requests(user, session, days=7)
+            weekly_count = self._count_recent_intro_requests(user, session, days=7)
             if weekly_count >= self.config.max_intro_requests_per_week:
                 return FilterResult(
                     allowed=False,
-                    result_type=FilterResult.BLOCKED,
+                    result_type=FilterResultType.BLOCKED,
                     reason=FilterReason.RATE_LIMIT,
                     message=f"Weekly limit of {self.config.max_intro_requests_per_week} introduction requests exceeded."
                 )
 
-            return FilterResult(allowed=True, result_type=FilterResult.ALLOWED)
+            return FilterResult(allowed=True, result_type=FilterResultType.ALLOWED)
 
         except Exception as e:
             logger.error(f"Error checking rate limits: {str(e)}")
             return FilterResult(
                 allowed=False,
-                result_type=FilterResult.BLOCKED,
+                result_type=FilterResultType.BLOCKED,
                 reason=FilterReason.RATE_LIMIT,
                 message="Unable to verify rate limits"
             )
@@ -633,17 +633,17 @@ class MatchingQualityFilter:
 
         return any(pattern in content for pattern in suspicious_patterns)
 
-    async def _create_admin_review_item(
+    def _create_admin_review_item(
         self,
         user: User,
-        session: AsyncSession,
+        session: Session,
         reason: ReviewReason,
         description: str
     ) -> Optional[AdminReviewQueue]:
         """Create admin review queue item."""
         try:
             # Check if review item already exists for this reason
-            existing = await session.execute(
+            existing = session.execute(
                 select(AdminReviewQueue).where(
                     and_(
                         AdminReviewQueue.user_id == user.id,
@@ -673,7 +673,7 @@ class MatchingQualityFilter:
             )
 
             session.add(review_item)
-            await session.commit()
+            session.commit()
 
             logger.info(
                 f"Created admin review item for user {user.id}: {reason.value}",
@@ -684,13 +684,13 @@ class MatchingQualityFilter:
 
         except Exception as e:
             logger.error(f"Error creating admin review item: {str(e)}")
-            await session.rollback()
+            session.rollback()
             return None
 
-    async def _get_verification_badges(self, user: User, session: AsyncSession) -> Dict[str, bool]:
+    def _get_verification_badges(self, user: User, session: Session) -> Dict[str, bool]:
         """Get verification badge status for user."""
         try:
-            result = await session.execute(
+            result = session.execute(
                 select(UserVerification).where(
                     and_(
                         UserVerification.user_id == user.id,
@@ -725,9 +725,9 @@ matching_quality_filter = MatchingQualityFilter()
 
 
 # Convenience functions for use in API endpoints
-async def filter_candidates_for_matching(
+def filter_candidates_for_matching(
     candidates: List[User],
-    session: AsyncSession,
+    session: Session,
     update_metrics: bool = False
 ) -> List[User]:
     """Filter candidate users that can appear in matches."""
@@ -735,7 +735,7 @@ async def filter_candidates_for_matching(
 
     for user in candidates:
         try:
-            filter_result = await matching_quality_filter.can_appear_in_matches(
+            filter_result = matching_quality_filter.can_appear_in_matches(
                 user, session, update_metrics
             )
             if filter_result.allowed:
@@ -747,9 +747,9 @@ async def filter_candidates_for_matching(
     return filtered_candidates
 
 
-async def validate_intro_request_eligibility(
+def validate_intro_request_eligibility(
     user: User,
-    session: AsyncSession
+    session: Session
 ) -> FilterResult:
     """Validate if user can send introduction requests."""
-    return await matching_quality_filter.can_send_intro_requests(user, session, True)
+    return matching_quality_filter.can_send_intro_requests(user, session, True)

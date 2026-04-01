@@ -4,13 +4,36 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { UserButton, useAuth } from "@clerk/nextjs"
-import { clsx } from "clsx"
+import {
+  LayoutDashboard,
+  Search,
+  Star,
+  Mail,
+  User,
+  Settings,
+  Shield,
+  Menu,
+  X,
+  ChevronRight,
+} from "lucide-react"
+
+import { cn } from "@/lib/utils"
 import { api } from "@/lib/api"
+import { buttonVariants } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from "@/components/ui/tooltip"
 
 type NavItem = {
   label: string
   href: string
-  icon: React.ReactNode
+  icon: React.ComponentType<{ className?: string }>
   hasSubmenu?: boolean
   adminOnly?: boolean
 }
@@ -19,73 +42,43 @@ const navItems: NavItem[] = [
   {
     label: "Dashboard",
     href: "/dashboard",
-    icon: (
-      <svg aria-hidden="true" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-      </svg>
-    ),
+    icon: LayoutDashboard,
   },
   {
     label: "Discover",
     href: "/discover",
-    icon: (
-      <svg aria-hidden="true" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-      </svg>
-    ),
+    icon: Search,
   },
   {
     label: "Revisit",
     href: "/revisit",
-    icon: (
-      <svg aria-hidden="true" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-      </svg>
-    ),
+    icon: Star,
     hasSubmenu: true,
   },
   {
     label: "Inbox",
     href: "/inbox",
-    icon: (
-      <svg aria-hidden="true" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-      </svg>
-    ),
+    icon: Mail,
   },
   {
     label: "My Account",
     href: "/profile",
-    icon: (
-      <svg aria-hidden="true" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-      </svg>
-    ),
+    icon: User,
     hasSubmenu: true,
   },
   {
     label: "Settings",
     href: "/settings",
-    icon: (
-      <svg aria-hidden="true" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-      </svg>
-    ),
+    icon: Settings,
   },
   {
     label: "Admin",
     href: "/admin",
     adminOnly: true,
-    icon: (
-      <svg aria-hidden="true" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-      </svg>
-    ),
+    icon: Shield,
   },
 ]
 
-// Bottom nav items for mobile (5 key items)
 const BOTTOM_NAV_HREFS = ["/dashboard", "/discover", "/inbox", "/profile", "/settings"]
 
 export function Sidebar() {
@@ -126,38 +119,48 @@ export function Sidebar() {
   const items = navItems.filter((item) => !item.adminOnly || isAdmin)
   const bottomNavItems = navItems.filter((item) => BOTTOM_NAV_HREFS.includes(item.href))
 
+  function isActive(href: string) {
+    return (
+      pathname === href ||
+      (href !== "/dashboard" && href !== "/admin" && pathname?.startsWith(href)) ||
+      (href === "/admin" && pathname?.startsWith("/admin"))
+    )
+  }
+
   const NavLink = ({ item }: { item: NavItem }) => {
-    const isActive =
-      pathname === item.href ||
-      (item.href !== "/dashboard" && item.href !== "/admin" && pathname?.startsWith(item.href)) ||
-      (item.href === "/admin" && pathname?.startsWith("/admin"))
+    const active = isActive(item.href)
+    const Icon = item.icon
 
     return (
       <Link
         href={item.href}
-        className={clsx(
-          "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors group",
-          isActive
-            ? "bg-zinc-900 text-white"
-            : "text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900"
+        className={cn(
+          buttonVariants({ variant: "ghost", size: "lg" }),
+          "w-full justify-start gap-3 px-3 py-2.5 h-auto font-medium transition-all duration-150",
+          active
+            ? "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground"
+            : "text-muted-foreground hover:text-foreground"
         )}
       >
-        <span className={clsx(isActive ? "text-white" : "text-zinc-500 group-hover:text-zinc-700")}>
-          {item.icon}
-        </span>
-        <span className="font-medium">{item.label}</span>
+        <Icon
+          className={cn(
+            "h-[18px] w-[18px] shrink-0 transition-transform duration-150 group-hover:scale-110",
+            active ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground"
+          )}
+        />
+        <span className="truncate">{item.label}</span>
         {item.adminOnly && pendingReview > 0 && (
-          <span
-            aria-label={`${pendingReview} pending reviews`}
-            className="ml-auto min-w-[20px] h-5 px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-semibold"
-          >
+          <Badge variant="destructive" className="ml-auto text-[10px] px-1.5 h-5 min-w-[20px]">
             {pendingReview > 99 ? "99+" : pendingReview}
-          </span>
+          </Badge>
         )}
         {item.hasSubmenu && (
-          <svg aria-hidden="true" className="w-4 h-4 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
+          <ChevronRight
+            className={cn(
+              "ml-auto h-4 w-4 shrink-0",
+              active ? "text-primary-foreground/70" : "text-muted-foreground/50"
+            )}
+          />
         )}
       </Link>
     )
@@ -165,105 +168,152 @@ export function Sidebar() {
 
   return (
     <>
-      {/* ── Desktop sidebar ─────────────────────────────────────── */}
-      <aside className="hidden md:flex w-64 bg-white border-r border-zinc-200 min-h-screen flex-col shrink-0">
-        <div className="p-6 border-b border-zinc-200">
-          <Link href="/dashboard" className="text-xl font-semibold text-zinc-900 hover:text-zinc-700 transition-colors">
+      {/* Desktop sidebar */}
+      <aside className="hidden md:flex w-64 bg-white border-r border-border h-screen flex-col shrink-0 sticky top-0">
+        <div className="px-6 py-5">
+          <Link
+            href="/dashboard"
+            className="text-lg font-bold tracking-tight text-foreground hover:text-foreground/80 transition-colors"
+          >
             CoFounder Match
           </Link>
         </div>
-        <nav className="flex-1 p-4 space-y-1">
+        <Separator />
+        <nav className="flex-1 p-3 space-y-0.5">
           {items.map((item) => (
             <NavLink key={item.href} item={item} />
           ))}
         </nav>
-        <div className="p-4 border-t border-zinc-200">
+        <Separator />
+        <div className="p-4">
           <div className="flex items-center gap-3">
             <UserButton afterSignOutUrl="/" />
           </div>
         </div>
       </aside>
 
-      {/* ── Mobile top header bar ────────────────────────────────── */}
-      <header className="md:hidden fixed top-0 left-0 right-0 z-30 h-14 bg-white border-b border-zinc-200 flex items-center px-4 gap-3">
+      {/* Mobile top header bar */}
+      <header className="md:hidden fixed top-0 left-0 right-0 z-30 h-14 bg-white/95 backdrop-blur-sm border-b border-border flex items-center px-4 gap-3">
         <button
           onClick={() => setMobileOpen(true)}
-          className="p-2 -ml-2 rounded-lg text-zinc-600 hover:bg-zinc-100 touch-manipulation"
+          className={cn(
+            buttonVariants({ variant: "ghost", size: "icon" }),
+            "-ml-1 text-muted-foreground"
+          )}
           aria-label="Open navigation menu"
           aria-expanded={mobileOpen}
           aria-controls="mobile-drawer"
         >
-          <svg aria-hidden="true" className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
+          <Menu className="h-5 w-5" />
         </button>
-        <Link href="/dashboard" className="font-semibold text-zinc-900 flex-1 hover:text-zinc-700 transition-colors">
+        <Link
+          href="/dashboard"
+          className="font-bold tracking-tight text-foreground flex-1"
+        >
           CoFounder Match
         </Link>
         <UserButton afterSignOutUrl="/" />
       </header>
 
-      {/* ── Mobile drawer overlay ────────────────────────────────── */}
-      {mobileOpen && (
-        <div className="md:hidden fixed inset-0 z-50 flex">
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-black/50"
-            onClick={() => setMobileOpen(false)}
-            aria-hidden="true"
-          />
-          {/* Drawer panel */}
-          <aside id="mobile-drawer" className="relative w-72 max-w-[80vw] bg-white flex flex-col h-full shadow-xl">
-            <div className="p-5 border-b border-zinc-200 flex items-center justify-between">
-              <Link href="/dashboard" className="text-xl font-semibold text-zinc-900 hover:text-zinc-700 transition-colors">
-                CoFounder Match
-              </Link>
-              <button
-                onClick={() => setMobileOpen(false)}
-                className="p-2 rounded-lg text-zinc-500 hover:bg-zinc-100 touch-manipulation"
-                aria-label="Close menu"
-              >
-                <svg aria-hidden="true" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+      {/* Mobile drawer overlay */}
+      <div
+        className={cn(
+          "md:hidden fixed inset-0 z-50",
+          mobileOpen ? "pointer-events-auto" : "pointer-events-none"
+        )}
+      >
+        {/* Backdrop */}
+        <div
+          className={cn(
+            "absolute inset-0 bg-black/40 transition-opacity duration-300",
+            mobileOpen ? "opacity-100" : "opacity-0"
+          )}
+          onClick={() => setMobileOpen(false)}
+          aria-hidden="true"
+        />
+        {/* Drawer panel */}
+        <aside
+          id="mobile-drawer"
+          className={cn(
+            "relative w-72 max-w-[80vw] bg-white flex flex-col h-full shadow-xl transition-transform duration-300 ease-out",
+            mobileOpen ? "translate-x-0" : "-translate-x-full"
+          )}
+        >
+          <div className="px-5 py-4 flex items-center justify-between">
+            <Link
+              href="/dashboard"
+              className="text-lg font-bold tracking-tight text-foreground"
+            >
+              CoFounder Match
+            </Link>
+            <button
+              onClick={() => setMobileOpen(false)}
+              className={cn(
+                buttonVariants({ variant: "ghost", size: "icon-sm" }),
+                "text-muted-foreground"
+              )}
+              aria-label="Close menu"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <Separator />
+          <ScrollArea className="flex-1">
+            <nav className="p-3 space-y-0.5">
               {items.map((item) => (
                 <NavLink key={item.href} item={item} />
               ))}
             </nav>
-            <div className="p-4 border-t border-zinc-200">
-              <div className="flex items-center gap-3">
-                <UserButton afterSignOutUrl="/" />
-                <span className="text-sm text-zinc-600">Account</span>
-              </div>
+          </ScrollArea>
+          <Separator />
+          <div className="p-4">
+            <div className="flex items-center gap-3">
+              <UserButton afterSignOutUrl="/" />
+              <span className="text-sm text-muted-foreground">Account</span>
             </div>
-          </aside>
-        </div>
-      )}
+          </div>
+        </aside>
+      </div>
 
-      {/* ── Mobile bottom navigation bar ─────────────────────────── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 h-16 bg-white border-t border-zinc-200 flex items-stretch safe-area-bottom">
-        {bottomNavItems.map((item) => {
-          const isActive =
-            pathname === item.href ||
-            (item.href !== "/dashboard" && pathname?.startsWith(item.href))
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={clsx(
-                "flex-1 flex flex-col items-center justify-center gap-0.5 text-xs font-medium transition-colors touch-manipulation",
-                isActive ? "text-zinc-900" : "text-zinc-400 hover:text-zinc-600"
-              )}
-            >
-              <span className={clsx(isActive && "text-zinc-900")}>{item.icon}</span>
-              <span className="leading-none">{item.label.replace("My Account", "Account")}</span>
-            </Link>
-          )
-        })}
-      </nav>
+      {/* Mobile bottom navigation bar */}
+      <TooltipProvider>
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 h-16 bg-white/95 backdrop-blur-sm border-t border-border flex items-stretch safe-area-bottom">
+          {bottomNavItems.map((item) => {
+            const active = isActive(item.href)
+            const Icon = item.icon
+            return (
+              <Tooltip key={item.href}>
+                <TooltipTrigger
+                  render={
+                    <Link
+                      href={item.href}
+                      className={cn(
+                        "flex-1 flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors touch-manipulation",
+                        active
+                          ? "text-foreground"
+                          : "text-muted-foreground/60 hover:text-muted-foreground"
+                      )}
+                    />
+                  }
+                >
+                  <Icon
+                    className={cn(
+                      "h-6 w-6 transition-transform duration-150",
+                      active && "scale-105"
+                    )}
+                  />
+                  <span className="leading-none">
+                    {item.label.replace("My Account", "Account")}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  {item.label}
+                </TooltipContent>
+              </Tooltip>
+            )
+          })}
+        </nav>
+      </TooltipProvider>
     </>
   )
 }

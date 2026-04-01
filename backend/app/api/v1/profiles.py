@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_
 from typing import List
 import uuid
 
@@ -102,13 +101,10 @@ async def get_profile_counts(
         Match.status == "saved"
     ).count()
 
-    # Count matches (where intro was requested/accepted)
+    # Count active connected matches (only count one direction to avoid double-counting reciprocal records)
     matches_count = db.query(Match).filter(
-        or_(
-            and_(Match.user_id == current_user.id, Match.intro_requested_at.isnot(None)),
-            and_(Match.target_user_id == current_user.id, Match.intro_accepted_at.isnot(None))
-        ),
-        Match.intro_accepted_at.is_(None)  # Not yet connected
+        Match.user_id == current_user.id,
+        Match.status == "connected",
     ).count()
 
     return {

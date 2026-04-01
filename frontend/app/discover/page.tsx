@@ -3,11 +3,44 @@
 import { useEffect, useState } from "react"
 import { useAuth } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
-import Image from "next/image"
 import { AppShell } from "@/components/layout/AppShell"
 import { api } from "@/lib/api"
 import type { ProfileDiscoverItem } from "@/lib/types"
+import { safeHref } from "@/lib/utils"
+
+import { Card, CardContent } from "@/components/ui/card"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Separator } from "@/components/ui/separator"
+import { Textarea } from "@/components/ui/textarea"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog"
+
+import {
+  ChevronLeft,
+  ChevronRight,
+  Star,
+  Send,
+  SkipForward,
+  Github,
+  Linkedin,
+  Globe,
+  MapPin,
+  Briefcase,
+  Rocket,
+  Loader2,
+  Users,
+  RefreshCw,
+} from "lucide-react"
+import { PageLoader } from "@/components/ui/loader"
 
 export default function DiscoverPage() {
   const { getToken } = useAuth()
@@ -52,7 +85,6 @@ export default function DiscoverPage() {
       setSaving(profileId)
       await api.profiles.save(profileId, token)
 
-      // Mark as saved
       setSavedProfiles((prev) => new Set(prev).add(profileId))
 
       setItems((prev) => prev.filter((i) => i.profile.id !== profileId))
@@ -129,13 +161,7 @@ export default function DiscoverPage() {
   if (loading) {
     return (
       <AppShell>
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center" role="status" aria-label="Loading">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-900 mx-auto"></div>
-            <span className="sr-only">Loading...</span>
-            <p className="mt-4 text-gray-600">Loading profiles...</p>
-          </div>
-        </div>
+        <PageLoader label="Loading profiles..." />
       </AppShell>
     )
   }
@@ -144,17 +170,22 @@ export default function DiscoverPage() {
     return (
       <AppShell>
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-center max-w-md">
-            <h2 className="text-2xl font-semibold text-zinc-900 mb-4">No more profiles to discover</h2>
-            <p className="text-zinc-600 mb-6">
+          <div className="text-center max-w-md px-6">
+            <div className="mx-auto mb-6 flex size-16 items-center justify-center rounded-full bg-muted">
+              <Users className="size-8 text-muted-foreground" />
+            </div>
+            <h2 className="text-2xl font-semibold tracking-tight mb-2">No more profiles to discover</h2>
+            <p className="text-muted-foreground mb-8">
               You&apos;ve reviewed all available profiles. Check back later for new founders!
             </p>
-            <button
+            <Button
               onClick={() => window.location.reload()}
-              className="inline-block px-6 py-2 bg-zinc-900 text-white font-medium rounded-lg hover:bg-zinc-800 transition-colors"
+              size="lg"
+              className="gap-2"
             >
+              <RefreshCw className="size-4" />
               Refresh
-            </button>
+            </Button>
           </div>
         </div>
       </AppShell>
@@ -164,250 +195,342 @@ export default function DiscoverPage() {
   return (
     <AppShell>
       <div className="flex-1 p-4 md:p-8">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-3xl mx-auto">
+          {/* Header */}
           <div className="mb-6">
-            <h1 className="text-3xl font-semibold text-zinc-900 mb-2">Discover Profiles</h1>
-            <p className="text-zinc-600">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight mb-1">
+              Discover Founders
+            </h1>
+            <p className="text-sm text-muted-foreground">
               Profile {currentIndex + 1} of {items.length}
-              {invitesRemaining !== null && ` • ${invitesRemaining} invites left this week`}
+              {invitesRemaining !== null && (
+                <span className="ml-1.5">
+                  &middot; {invitesRemaining} invites left this week
+                </span>
+              )}
             </p>
           </div>
 
           {currentItem && currentProfile && (
-            <div className="bg-white border border-zinc-200 rounded-lg p-8">
-              {currentItem.matched_before && (
-                <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-4">
-                  You matched with this person before
-                </p>
-              )}
-              {/* Header with Avatar and Basic Info */}
-              <div className="flex items-start gap-6 mb-6">
-                {currentProfile.avatar_url ? (
-                  <Image
-                    src={currentProfile.avatar_url}
-                    alt={currentProfile.name}
-                    width={96}
-                    height={96}
-                    className="w-24 h-24 rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="w-24 h-24 rounded-full bg-zinc-200 flex items-center justify-center">
-                    <span className="text-2xl font-semibold text-zinc-600">
-                      {currentProfile.name.charAt(0).toUpperCase()}
-                    </span>
+            <Card className="py-0">
+              <CardContent className="p-6 sm:p-8 md:p-10 space-y-6">
+                {/* Matched before banner */}
+                {currentItem.matched_before && (
+                  <div className="flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                    <Rocket className="size-4 shrink-0" />
+                    You matched with this person before
                   </div>
                 )}
-                <div className="flex-1">
-                  <h2 className="text-2xl font-semibold text-zinc-900 mb-2">{currentProfile.name}</h2>
-                  {currentProfile.location && (
-                    <p className="text-zinc-600 mb-2">{currentProfile.location}</p>
-                  )}
-                  <div className="flex flex-wrap gap-2">
-                    {currentProfile.idea_status && (
-                      <span className="inline-block px-3 py-1 bg-zinc-900 text-white text-sm font-medium rounded-full">
-                        {currentProfile.idea_status.replace(/_/g, " ")}
-                      </span>
-                    )}
-                    {currentProfile.commitment && (
-                      <span className="inline-block px-3 py-1 bg-zinc-100 text-zinc-900 text-sm rounded-full">
-                        {currentProfile.commitment === "full_time" ? "Full-time" : currentProfile.commitment === "part_time" ? "Part-time" : "Exploratory"}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
 
-              {/* Introduction */}
-              {currentProfile.introduction && (
-                <div className="mb-6 pb-6 border-b border-zinc-200">
-                  <h3 className="text-lg font-semibold text-zinc-900 mb-2">About</h3>
-                  <p className="text-zinc-700 leading-relaxed whitespace-pre-wrap">{currentProfile.introduction}</p>
-                </div>
-              )}
+                {/* Header: Avatar + Name + Meta badges */}
+                <div className="flex flex-col sm:flex-row items-start gap-5">
+                  <Avatar className="size-20 sm:size-24">
+                    {currentProfile.avatar_url ? (
+                      <AvatarImage
+                        src={currentProfile.avatar_url}
+                        alt={currentProfile.name}
+                      />
+                    ) : null}
+                    <AvatarFallback className="text-2xl font-semibold">
+                      {currentProfile.name.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
 
-              {/* Experience & Background */}
-              <div className="grid md:grid-cols-2 gap-6 mb-6 pb-6 border-b border-zinc-200">
-                <div>
-                  <h3 className="text-lg font-semibold text-zinc-900 mb-3">Experience</h3>
-                  <div className="space-y-2 text-sm">
-                    {currentProfile.experience_years !== null && currentProfile.experience_years !== undefined && (
-                      <p className="text-zinc-700">
-                        <span className="font-medium">Years of experience:</span> {currentProfile.experience_years}
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-2xl font-semibold tracking-tight mb-1">
+                      {currentProfile.name}
+                    </h2>
+
+                    {currentProfile.location && (
+                      <p className="flex items-center gap-1.5 text-sm text-muted-foreground mb-3">
+                        <MapPin className="size-3.5" />
+                        {currentProfile.location}
                       </p>
                     )}
-                    {currentProfile.previous_startups !== null && currentProfile.previous_startups !== undefined && (
-                      <p className="text-zinc-700">
-                        <span className="font-medium">Previous startups:</span> {currentProfile.previous_startups}
+
+                    <div className="flex flex-wrap gap-2">
+                      {currentProfile.idea_status && (
+                        <Badge variant="default">
+                          {currentProfile.idea_status.replace(/_/g, " ")}
+                        </Badge>
+                      )}
+                      {currentProfile.commitment && (
+                        <Badge variant="secondary">
+                          {currentProfile.commitment === "full_time"
+                            ? "Full-time"
+                            : currentProfile.commitment === "part_time"
+                              ? "Part-time"
+                              : "Exploratory"}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Introduction */}
+                {currentProfile.introduction && (
+                  <>
+                    <Separator />
+                    <div>
+                      <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                        About
+                      </h3>
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                        {currentProfile.introduction}
                       </p>
-                    )}
-                  </div>
-                </div>
-              </div>
+                    </div>
+                  </>
+                )}
 
-              {/* Areas & topics */}
-              {((currentProfile.areas_of_ownership?.length ?? 0) > 0 || (currentProfile.topics_of_interest?.length ?? 0) > 0) && (
-                <div className="mb-6 pb-6 border-b border-zinc-200">
-                  <h3 className="text-lg font-semibold text-zinc-900 mb-3">Areas & interests</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {(currentProfile.areas_of_ownership ?? []).map((area) => (
-                      <span
-                        key={area}
-                        className="px-3 py-1 bg-zinc-100 text-zinc-900 text-sm font-medium rounded-full"
-                      >
-                        {area.replace(/_/g, " ")}
-                      </span>
-                    ))}
-                    {(currentProfile.topics_of_interest ?? []).map((topic) => (
-                      <span
-                        key={topic}
-                        className="px-3 py-1 bg-green-50 text-green-800 text-sm font-medium rounded-full border border-green-200"
-                      >
-                        {topic}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
+                {/* Experience */}
+                {(currentProfile.experience_years !== null && currentProfile.experience_years !== undefined) ||
+                (currentProfile.previous_startups !== null && currentProfile.previous_startups !== undefined) ? (
+                  <>
+                    <Separator />
+                    <div>
+                      <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+                        Experience
+                      </h3>
+                      <div className="grid sm:grid-cols-2 gap-3">
+                        {currentProfile.experience_years !== null && currentProfile.experience_years !== undefined && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Briefcase className="size-4 text-muted-foreground shrink-0" />
+                            <span>
+                              <span className="font-medium">{currentProfile.experience_years}</span>{" "}
+                              years of experience
+                            </span>
+                          </div>
+                        )}
+                        {currentProfile.previous_startups !== null && currentProfile.previous_startups !== undefined && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Rocket className="size-4 text-muted-foreground shrink-0" />
+                            <span>
+                              <span className="font-medium">{currentProfile.previous_startups}</span>{" "}
+                              previous startup{currentProfile.previous_startups !== 1 ? "s" : ""}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                ) : null}
 
-              {/* Social Links */}
-              {(currentProfile.github_url || currentProfile.linkedin_url || currentProfile.portfolio_url) && (
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-zinc-900 mb-3">Links</h3>
-                  <div className="flex flex-wrap gap-3">
-                    {currentProfile.github_url && (
-                      <a
-                        href={currentProfile.github_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-zinc-700 hover:text-zinc-900 underline"
-                      >
-                        GitHub
-                      </a>
-                    )}
-                    {currentProfile.linkedin_url && (
-                      <a
-                        href={currentProfile.linkedin_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-zinc-700 hover:text-zinc-900 underline"
-                      >
-                        LinkedIn
-                      </a>
-                    )}
-                    {currentProfile.portfolio_url && (
-                      <a
-                        href={currentProfile.portfolio_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-zinc-700 hover:text-zinc-900 underline"
-                      >
-                        Portfolio
-                      </a>
-                    )}
-                  </div>
-                </div>
-              )}
+                {/* Areas & Topics */}
+                {((currentProfile.areas_of_ownership?.length ?? 0) > 0 || (currentProfile.topics_of_interest?.length ?? 0) > 0) && (
+                  <>
+                    <Separator />
+                    <div>
+                      <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+                        Areas & Interests
+                      </h3>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(currentProfile.areas_of_ownership ?? []).map((area) => (
+                          <Badge key={area} variant="secondary">
+                            {area.replace(/_/g, " ")}
+                          </Badge>
+                        ))}
+                        {(currentProfile.topics_of_interest ?? []).map((topic) => (
+                          <Badge key={topic} variant="outline">
+                            {topic}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
 
-              {/* Action Buttons - YC Style */}
-              <div className="flex items-center gap-3 pt-6 border-t border-zinc-200">
-                <button
-                  onClick={() => handleSkip(currentProfile.id)}
-                  disabled={skipping === currentProfile.id}
-                  className="px-6 py-3 border border-zinc-300 text-zinc-700 font-medium rounded-lg hover:bg-zinc-50 transition-colors disabled:opacity-50"
-                >
-                  {skipping === currentProfile.id ? "Skipping..." : "Skip"}
-                </button>
-                <button
-                  onClick={() => handleSave(currentProfile.id)}
-                  disabled={saving === currentProfile.id || savedProfiles.has(currentProfile.id)}
-                  className="px-6 py-3 border border-zinc-300 text-zinc-700 font-medium rounded-lg hover:bg-zinc-50 transition-colors disabled:opacity-50 flex items-center gap-2"
-                >
-                  {savedProfiles.has(currentProfile.id) ? (
-                    <svg aria-hidden="true" className="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                  ) : (
-                    <svg aria-hidden="true" className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 20 20">
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                  )}
-                  {saving === currentProfile.id ? "Saving..." : savedProfiles.has(currentProfile.id) ? "Saved" : "Save for Later"}
-                </button>
-                <button
-                  onClick={handleInviteClick}
-                  disabled={inviting === currentProfile.id}
-                  className="flex-1 px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 shadow-xs"
-                >
-                  {inviting === currentProfile.id ? "Sending..." : "Invite to Connect"}
-                </button>
-              </div>
-            </div>
+                {/* Social Links */}
+                {(currentProfile.github_url || currentProfile.linkedin_url || currentProfile.portfolio_url) && (
+                  <>
+                    <Separator />
+                    <div>
+                      <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+                        Links
+                      </h3>
+                      <div className="flex flex-wrap gap-2">
+                        {currentProfile.github_url && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            render={
+                              <a
+                                href={safeHref(currentProfile.github_url)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              />
+                            }
+                          >
+                            <Github className="size-3.5" />
+                            GitHub
+                          </Button>
+                        )}
+                        {currentProfile.linkedin_url && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            render={
+                              <a
+                                href={safeHref(currentProfile.linkedin_url)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              />
+                            }
+                          >
+                            <Linkedin className="size-3.5" />
+                            LinkedIn
+                          </Button>
+                        )}
+                        {currentProfile.portfolio_url && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            render={
+                              <a
+                                href={safeHref(currentProfile.portfolio_url)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              />
+                            }
+                          >
+                            <Globe className="size-3.5" />
+                            Portfolio
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Action Bar */}
+                <Separator />
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    onClick={() => handleSkip(currentProfile.id)}
+                    disabled={skipping === currentProfile.id}
+                    className="gap-2"
+                  >
+                    {skipping === currentProfile.id ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <SkipForward className="size-4" />
+                    )}
+                    {skipping === currentProfile.id ? "Skipping..." : "Skip"}
+                  </Button>
+
+                  <Button
+                    variant="secondary"
+                    size="lg"
+                    onClick={() => handleSave(currentProfile.id)}
+                    disabled={saving === currentProfile.id || savedProfiles.has(currentProfile.id)}
+                    className="gap-2"
+                  >
+                    <Star
+                      className={`size-4 ${savedProfiles.has(currentProfile.id) ? "fill-yellow-500 text-yellow-500" : ""}`}
+                    />
+                    {saving === currentProfile.id
+                      ? "Saving..."
+                      : savedProfiles.has(currentProfile.id)
+                        ? "Saved"
+                        : "Save"}
+                  </Button>
+
+                  <Button
+                    size="lg"
+                    onClick={handleInviteClick}
+                    disabled={inviting === currentProfile.id}
+                    className="flex-1 gap-2 bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    {inviting === currentProfile.id ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Send className="size-4" />
+                    )}
+                    {inviting === currentProfile.id ? "Sending..." : "Invite to Connect"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           )}
 
+          {/* Navigation */}
           {items.length > 1 && (
             <div className="mt-6 flex justify-center gap-2">
-              <button
+              <Button
+                variant="outline"
                 onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))}
                 disabled={currentIndex === 0}
-                className="px-4 py-2 border border-zinc-300 text-zinc-700 rounded-lg hover:bg-zinc-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="gap-1.5"
               >
+                <ChevronLeft className="size-4" />
                 Previous
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="outline"
                 onClick={() => setCurrentIndex(Math.min(items.length - 1, currentIndex + 1))}
                 disabled={currentIndex === items.length - 1}
-                className="px-4 py-2 border border-zinc-300 text-zinc-700 rounded-lg hover:bg-zinc-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="gap-1.5"
               >
                 Next
-              </button>
+                <ChevronRight className="size-4" />
+              </Button>
             </div>
           )}
         </div>
       </div>
 
       {/* Invite Modal */}
-      {showInviteModal && currentProfile && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div role="dialog" aria-modal="true" aria-labelledby="invite-modal-title" className="bg-white rounded-lg max-w-lg w-full p-6">
-            <h3 id="invite-modal-title" className="text-xl font-semibold text-zinc-900 mb-4">
-              Invite {currentProfile.name} to connect
-            </h3>
-            <p className="text-sm text-zinc-600 mb-4">
+      <Dialog open={showInviteModal} onOpenChange={setShowInviteModal}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              Invite {currentProfile?.name} to connect
+            </DialogTitle>
+            <DialogDescription>
               Write a message explaining why you&apos;d like to connect (optional).
-            </p>
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2">
             <label htmlFor="invite-message" className="sr-only">
-              Message to {currentProfile.name}
+              Message to {currentProfile?.name}
             </label>
-            <textarea
+            <Textarea
               id="invite-message"
               value={inviteMessage}
               onChange={(e) => setInviteMessage(e.target.value)}
               placeholder="Hi! I'm interested in connecting because... (optional)"
-              className="w-full px-4 py-3 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-green-600 transition-colors resize-none"
-              rows={6}
+              rows={5}
               maxLength={500}
+              className="resize-none"
             />
-            <p aria-live="polite" aria-atomic="true" className="text-xs text-zinc-500 mt-2">
-              {inviteMessage.length}/500 characters
+            <p aria-live="polite" aria-atomic="true" className="text-xs text-muted-foreground text-right">
+              {inviteMessage.length}/500
             </p>
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => setShowInviteModal(false)}
-                className="flex-1 px-4 py-2 border border-zinc-300 text-zinc-700 rounded-lg hover:bg-zinc-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSendInvite}
-                disabled={inviting === currentProfile?.id}
-                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {inviting === currentProfile?.id ? "Sending..." : "Send Invitation"}
-              </button>
-            </div>
           </div>
-        </div>
-      )}
+
+          <DialogFooter>
+            <DialogClose
+              render={<Button variant="outline" />}
+            >
+              Cancel
+            </DialogClose>
+            <Button
+              onClick={handleSendInvite}
+              disabled={inviting === currentProfile?.id}
+              className="gap-2 bg-green-600 hover:bg-green-700 text-white"
+            >
+              {inviting === currentProfile?.id ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Send className="size-4" />
+              )}
+              {inviting === currentProfile?.id ? "Sending..." : "Send Invitation"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   )
 }

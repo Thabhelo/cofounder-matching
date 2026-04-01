@@ -2,6 +2,7 @@
 
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { PageLoader } from "@/components/ui/loader"
 
 export default function OnboardingPage() {
   const router = useRouter()
@@ -11,11 +12,6 @@ export default function OnboardingPage() {
   }, [router])
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-900 mx-auto" />
-        <p className="mt-4 text-gray-600">Taking you to onboarding...</p>
-      </div>
-    </div>
+    <PageLoader label="Taking you to onboarding..." />
   )
 }

@@ -237,7 +237,7 @@ const VerificationBadgeItem: React.FC<{
   return (
     <TooltipProvider>
       <Tooltip>
-        <TooltipTrigger asChild>
+        <TooltipTrigger >
           {badgeContent}
         </TooltipTrigger>
         <TooltipContent>
@@ -360,7 +360,7 @@ export const CompactVerificationBadges: React.FC<{
         return (
           <TooltipProvider key={badge.type}>
             <Tooltip>
-              <TooltipTrigger asChild>
+              <TooltipTrigger >
                 <div
                   className={cn(
                     'rounded-full p-1.5 border',
