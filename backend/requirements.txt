@@ -13,7 +13,7 @@ pyjwt==2.12.0
 cryptography>=46.0.6
 svix==1.85.0
 python-multipart==0.0.22
-pgvector==0.3.2
+pgvector==0.4.2
 sentry-sdk[fastapi]==2.17.0
 posthog==3.7.4
 
